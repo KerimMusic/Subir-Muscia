@@ -13,15 +13,16 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ============================================
-// ⚠️ REEMPLAZA CON TU CONFIGURACIÓN DE FIREBASE
+// ✅ TU CONFIGURACIÓN REAL DE FIREBASE
 // ============================================
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "kerim-music.firebaseapp.com",
-  projectId: "kerim-music",
-  storageBucket: "kerim-music.appspot.com",
-  messagingSenderId: "TU_SENDER_ID",
-  appId: "TU_APP_ID"
+  apiKey: "AIzaSyDMabE70hIApcNU5RY3_WEEIF-BWUzO0K4",
+  authDomain: "kerim-music-a9c46.firebaseapp.com",
+  projectId: "kerim-music-a9c46",
+  storageBucket: "kerim-music-a9c46.firebasestorage.app",
+  messagingSenderId: "470731440209",
+  appId: "1:470731440209:web:f6eba4784027a5d8c57870",
+  measurementId: "G-LBHTKL8KDK"
 };
 // ============================================
 
