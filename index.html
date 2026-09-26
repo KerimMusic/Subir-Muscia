@@ -84,6 +84,44 @@
     </section>
     <!-- ============================================= -->
 
+    <!-- ================= MODAL REPRODUCTOR ================= -->
+    <div id="playerModal" class="player-modal hidden" aria-hidden="true">
+      <div class="player-backdrop" data-close="1"></div>
+
+      <div class="player-card" role="dialog" aria-modal="true" aria-labelledby="playerTitle">
+        <button type="button" class="player-close" data-close="1" title="Cerrar">✕</button>
+
+        <div class="player-cover">
+          <img id="playerImg" src="" alt="">
+        </div>
+
+        <div class="player-meta">
+          <strong id="playerTitle">—</strong>
+          <small id="playerArtist">—</small>
+        </div>
+
+        <div class="player-progress">
+          <span id="playerCurrent">0:00</span>
+          <input type="range" id="playerSeek" min="0" max="1000" value="0" step="1">
+          <span id="playerDuration">0:00</span>
+        </div>
+
+        <div class="player-controls">
+          <button type="button" id="playerRewind" class="player-btn" title="-10s">⏪</button>
+          <button type="button" id="playerPlay" class="player-btn player-btn-main" title="Reproducir">▶</button>
+          <button type="button" id="playerForward" class="player-btn" title="+10s">⏩</button>
+        </div>
+
+        <div class="player-volume">
+          <span>🔊</span>
+          <input type="range" id="playerVol" min="0" max="1" step="0.01" value="1">
+        </div>
+
+        <p class="player-hint">Vista previa — así se verá y sonará en el reproductor.</p>
+      </div>
+    </div>
+    <!-- ====================================================== -->
+
   </div>
 
   <script type="module" src="script.js"></script>
