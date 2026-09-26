@@ -52,8 +52,22 @@ const historyList    = document.getElementById('historyList');
 const historyCount   = document.getElementById('historyCount');
 const historyEmpty   = document.getElementById('historyEmpty');
 
+// Modal reproductor
+const playerModal    = document.getElementById('playerModal');
+const playerImg      = document.getElementById('playerImg');
+const playerTitle    = document.getElementById('playerTitle');
+const playerArtist   = document.getElementById('playerArtist');
+const playerPlay     = document.getElementById('playerPlay');
+const playerRewind   = document.getElementById('playerRewind');
+const playerForward  = document.getElementById('playerForward');
+const playerSeek     = document.getElementById('playerSeek');
+const playerVol      = document.getElementById('playerVol');
+const playerCurrent  = document.getElementById('playerCurrent');
+const playerDuration = document.getElementById('playerDuration');
+
 let usuarioActual = null;
-let unsubscribeHistorial = null;   // para detener el listener al cerrar sesión
+let unsubscribeHistorial = null;
+let cancionesActuales = [];
 
 const PLACEHOLDER = 'https://via.placeholder.com/64/333/666?text=%E2%99%AB';
 
@@ -137,7 +151,6 @@ onAuthStateChanged(auth, (user) => {
     form.classList.add('hidden');
     historySection.classList.add('hidden');
 
-    // Detener listener y limpiar historial
     if (unsubscribeHistorial) {
       unsubscribeHistorial();
       unsubscribeHistorial = null;
@@ -145,11 +158,15 @@ onAuthStateChanged(auth, (user) => {
     historyList.innerHTML = '';
     historyCount.textContent = '0';
     historyEmpty.classList.add('hidden');
+    cancionesActuales = [];
+
+    // Cerrar player si estaba abierto
+    cerrarPlayer();
   }
 });
 
 // ===================
-// Vista previa dinámica
+// Vista previa dinámica (formulario)
 // ===================
 ['artista', 'titulo', 'imagen'].forEach(id => {
   document.getElementById(id).addEventListener('input', actualizarPreview);
@@ -191,7 +208,6 @@ function escucharHistorial(uid) {
   unsubscribeHistorial = onSnapshot(ref, (snap) => {
     const canciones = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    // Ordenar por fecha descendente (sin usar orderBy para no excluir docs viejos sin fecha)
     canciones.sort((a, b) => {
       const fa = a.fecha?.seconds || 0;
       const fb = b.fecha?.seconds || 0;
@@ -207,6 +223,7 @@ function escucharHistorial(uid) {
 }
 
 function renderHistorial(canciones) {
+  cancionesActuales = canciones;
   historyCount.textContent = canciones.length;
 
   if (!canciones.length) {
@@ -265,7 +282,6 @@ async function eliminarCancion(id, boton, titulo) {
 
     await deleteDoc(doc(db, 'historial_usuarios', usuarioActual.uid, 'canciones', id));
 
-    // El onSnapshot actualizará la lista automáticamente
     mostrarStatus('🗑️ Canción eliminada correctamente', 'ok');
 
   } catch (err) {
@@ -317,7 +333,6 @@ form.addEventListener('submit', async (e) => {
 
     const uid = usuarioActual.uid;
 
-    // 🔥 Guardar en la MISMA ruta que ya usa tu reproductor
     await addDoc(collection(db, 'historial_usuarios', uid, 'canciones'), {
       artista:   artista,
       titulo:    titulo,
@@ -342,5 +357,142 @@ form.addEventListener('submit', async (e) => {
     mostrarStatus('Error al guardar: ' + err.message, 'error');
     submitBtn.disabled = false;
     submitBtn.textContent = 'Subir canción';
+  }
+});
+
+// ================================================================
+// MODAL REPRODUCTOR — VISTA PREVIA
+// ================================================================
+const previewAudio = new Audio();
+previewAudio.preload = 'metadata';
+
+function fmtTiempo(seg) {
+  if (!isFinite(seg) || seg < 0) return '0:00';
+  const m = Math.floor(seg / 60);
+  const s = Math.floor(seg % 60);
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+function abrirPlayer(cancion) {
+  if (!cancion) return;
+
+  playerImg.src = cancion.imagenUrl || PLACEHOLDER;
+  playerImg.onerror = () => { playerImg.onerror = null; playerImg.src = PLACEHOLDER; };
+
+  playerTitle.textContent  = cancion.titulo  || 'Sin título';
+  playerArtist.textContent = cancion.artista || 'Desconocido';
+
+  playerSeek.value = 0;
+  playerCurrent.textContent = '0:00';
+  playerDuration.textContent = '0:00';
+  playerPlay.textContent = '▶';
+
+  previewAudio.pause();
+  previewAudio.src = cancion.audioUrl || '';
+  previewAudio.currentTime = 0;
+
+  playerModal.classList.remove('hidden');
+  playerModal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarPlayer() {
+  previewAudio.pause();
+  previewAudio.currentTime = 0;
+  previewAudio.src = '';
+  if (playerModal) {
+    playerModal.classList.add('hidden');
+    playerModal.setAttribute('aria-hidden', 'true');
+  }
+  document.body.style.overflow = '';
+  if (playerPlay) playerPlay.textContent = '▶';
+}
+
+// Abrir modal al hacer clic en un item del historial (excepto en el botón eliminar)
+historyList.addEventListener('click', (e) => {
+  if (e.target.closest('.btn-delete')) return;
+
+  const item = e.target.closest('.history-item');
+  if (!item) return;
+
+  const id = item.dataset.id;
+  const cancion = cancionesActuales.find(c => c.id === id);
+  if (cancion) abrirPlayer(cancion);
+});
+
+// Cerrar (backdrop y botón ✕)
+playerModal.addEventListener('click', (e) => {
+  if (e.target.dataset.close === '1') cerrarPlayer();
+});
+
+// Cerrar con ESC
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !playerModal.classList.contains('hidden')) {
+    cerrarPlayer();
+  }
+});
+
+// Play / Pause
+playerPlay.addEventListener('click', async () => {
+  if (!previewAudio.src) return;
+  try {
+    if (previewAudio.paused) {
+      await previewAudio.play();
+      playerPlay.textContent = '⏸';
+    } else {
+      previewAudio.pause();
+      playerPlay.textContent = '▶';
+    }
+  } catch (err) {
+    console.warn('No se pudo reproducir:', err);
+  }
+});
+
+// -10s / +10s
+playerRewind.addEventListener('click', () => {
+  previewAudio.currentTime = Math.max(0, previewAudio.currentTime - 10);
+});
+playerForward.addEventListener('click', () => {
+  previewAudio.currentTime = Math.min(
+    previewAudio.duration || 0,
+    previewAudio.currentTime + 10
+  );
+});
+
+// Barra de progreso
+previewAudio.addEventListener('loadedmetadata', () => {
+  playerDuration.textContent = fmtTiempo(previewAudio.duration);
+});
+
+previewAudio.addEventListener('timeupdate', () => {
+  if (!previewAudio.duration) return;
+  const pct = (previewAudio.currentTime / previewAudio.duration) * 1000;
+  playerSeek.value = pct;
+  playerCurrent.textContent = fmtTiempo(previewAudio.currentTime);
+});
+
+playerSeek.addEventListener('input', () => {
+  if (!previewAudio.duration) return;
+  previewAudio.currentTime = (playerSeek.value / 1000) * previewAudio.duration;
+});
+
+previewAudio.addEventListener('ended', () => {
+  playerPlay.textContent = '▶';
+  previewAudio.currentTime = 0;
+  playerSeek.value = 0;
+  playerCurrent.textContent = '0:00';
+});
+
+// Volumen
+playerVol.addEventListener('input', () => {
+  previewAudio.volume = parseFloat(playerVol.value);
+});
+previewAudio.volume = parseFloat(playerVol.value);
+
+// Pausar al cambiar de pestaña
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && !previewAudio.paused) {
+    previewAudio.pause();
+    playerPlay.textContent = '▶';
   }
 });
