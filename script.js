@@ -9,7 +9,10 @@ import {
   getFirestore,
   collection,
   addDoc,
-  serverTimestamp
+  serverTimestamp,
+  onSnapshot,
+  deleteDoc,
+  doc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ============================================
@@ -43,7 +46,16 @@ const previewImg = document.getElementById('previewImg');
 const previewTitulo  = document.getElementById('previewTitulo');
 const previewArtista = document.getElementById('previewArtista');
 
+// Historial
+const historySection = document.getElementById('historySection');
+const historyList    = document.getElementById('historyList');
+const historyCount   = document.getElementById('historyCount');
+const historyEmpty   = document.getElementById('historyEmpty');
+
 let usuarioActual = null;
+let unsubscribeHistorial = null;   // para detener el listener al cerrar sesión
+
+const PLACEHOLDER = 'https://via.placeholder.com/64/333/666?text=%E2%99%AB';
 
 // ===================
 // Utilidades
@@ -69,6 +81,17 @@ function dropboxDirecto(url) {
     .replace('?raw=1', '');
 }
 
+// Evitar inyección de HTML en el historial
+function escapeHtml(str = '') {
+  return String(str).replace(/[&<>"']/g, c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[c]));
+}
+
 // ===================
 // Autenticación
 // ===================
@@ -92,7 +115,12 @@ onAuthStateChanged(auth, (user) => {
     loginBtn.classList.add('hidden');
     userBox.classList.remove('hidden');
     form.classList.remove('hidden');
+    historySection.classList.remove('hidden');
     userEmail.textContent = user.email;
+
+    // 🔥 Escuchar el historial en tiempo real
+    escucharHistorial(user.uid);
+
   } else {
     loginBtn.classList.remove('hidden');
     loginBtn.disabled = false;
@@ -107,6 +135,16 @@ onAuthStateChanged(auth, (user) => {
     `;
     userBox.classList.add('hidden');
     form.classList.add('hidden');
+    historySection.classList.add('hidden');
+
+    // Detener listener y limpiar historial
+    if (unsubscribeHistorial) {
+      unsubscribeHistorial();
+      unsubscribeHistorial = null;
+    }
+    historyList.innerHTML = '';
+    historyCount.textContent = '0';
+    historyEmpty.classList.add('hidden');
   }
 });
 
@@ -133,9 +171,108 @@ function actualizarPreview() {
 
   if (imagen) {
     previewImg.src = dropboxDirecto(imagen);
-    previewImg.onerror = () => { previewImg.src = 'https://via.placeholder.com/64/333/666?text=?'; };
+    previewImg.onerror = () => { previewImg.src = PLACEHOLDER; };
   } else {
-    previewImg.src = 'https://via.placeholder.com/64/333/666?text=?';
+    previewImg.src = PLACEHOLDER;
+  }
+}
+
+// ===================
+// HISTORIAL: escuchar, pintar y eliminar
+// ===================
+function escucharHistorial(uid) {
+  if (unsubscribeHistorial) unsubscribeHistorial();
+
+  historyList.innerHTML = '<p class="history-empty">Cargando canciones...</p>';
+  historyEmpty.classList.add('hidden');
+
+  const ref = collection(db, 'historial_usuarios', uid, 'canciones');
+
+  unsubscribeHistorial = onSnapshot(ref, (snap) => {
+    const canciones = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Ordenar por fecha descendente (sin usar orderBy para no excluir docs viejos sin fecha)
+    canciones.sort((a, b) => {
+      const fa = a.fecha?.seconds || 0;
+      const fb = b.fecha?.seconds || 0;
+      return fb - fa;
+    });
+
+    renderHistorial(canciones);
+  }, (err) => {
+    console.error('Error historial:', err);
+    historyList.innerHTML = '';
+    mostrarStatus('Error al cargar el historial: ' + err.message, 'error');
+  });
+}
+
+function renderHistorial(canciones) {
+  historyCount.textContent = canciones.length;
+
+  if (!canciones.length) {
+    historyList.innerHTML = '';
+    historyEmpty.classList.remove('hidden');
+    return;
+  }
+
+  historyEmpty.classList.add('hidden');
+
+  historyList.innerHTML = canciones.map(c => {
+    const img = c.imagenUrl ? escapeHtml(c.imagenUrl) : PLACEHOLDER;
+    const titulo  = escapeHtml(c.titulo  || 'Sin título');
+    const artista = escapeHtml(c.artista || 'Desconocido');
+
+    return `
+      <div class="history-item" data-id="${escapeHtml(c.id)}">
+        <img src="${img}" alt="" loading="lazy"
+             onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
+        <div class="history-info">
+          <strong title="${titulo}">${titulo}</strong>
+          <small title="${artista}">${artista}</small>
+        </div>
+        <button type="button" class="btn-delete" data-id="${escapeHtml(c.id)}" title="Eliminar canción">
+          🗑️
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+// Delegación de eventos para los botones de eliminar
+historyList.addEventListener('click', (e) => {
+  const btn = e.target.closest('.btn-delete');
+  if (!btn) return;
+
+  const id = btn.dataset.id;
+  const item = btn.closest('.history-item');
+  const titulo = item?.querySelector('.history-info strong')?.textContent || 'esta canción';
+
+  eliminarCancion(id, btn, titulo);
+});
+
+async function eliminarCancion(id, boton, titulo) {
+  if (!usuarioActual) {
+    mostrarStatus('Debes iniciar sesión primero', 'error');
+    return;
+  }
+
+  const confirmado = confirm(`¿Seguro que quieres eliminar "${titulo}"?\nEsta acción no se puede deshacer.`);
+  if (!confirmado) return;
+
+  try {
+    boton.disabled = true;
+    boton.textContent = '⏳';
+
+    await deleteDoc(doc(db, 'historial_usuarios', usuarioActual.uid, 'canciones', id));
+
+    // El onSnapshot actualizará la lista automáticamente
+    mostrarStatus('🗑️ Canción eliminada correctamente', 'ok');
+
+  } catch (err) {
+    console.error('Error al eliminar:', err);
+    mostrarStatus('Error al eliminar: ' + err.message, 'error');
+    boton.disabled = false;
+    boton.textContent = '🗑️';
   }
 }
 
