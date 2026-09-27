@@ -43,14 +43,20 @@
         <input type="text" id="titulo" placeholder="Ej: Dile Barrio Bajo" required>
       </div>
 
+      <!-- ✅ NUEVO CAMPO: Nombre del álbum -->
       <div class="form-group">
-        <label for="audio">3. Link de audio (Dropbox)</label>
+        <label for="album">3. Nombre del álbum</label>
+        <input type="text" id="album" placeholder="Ej: Reggeton 1">
+      </div>
+
+      <div class="form-group">
+        <label for="audio">4. Link de audio (Dropbox)</label>
         <input type="url" id="audio" placeholder="https://www.dropbox.com/s/.../cancion.mp3?dl=0" required>
         <p class="hint">Pega el link normal de Dropbox. Se convertirá automáticamente a enlace directo.</p>
       </div>
 
       <div class="form-group">
-        <label for="imagen">4. Link de imagen (Dropbox)</label>
+        <label for="imagen">5. Link de imagen (Dropbox)</label>
         <input type="url" id="imagen" placeholder="https://www.dropbox.com/s/.../portada.jpg?dl=0">
         <p class="hint">Opcional. Si lo dejas vacío se mostrará una imagen por defecto.</p>
       </div>
@@ -61,6 +67,8 @@
         <div class="preview-info">
           <strong id="previewTitulo">—</strong>
           <small id="previewArtista">—</small>
+          <!-- ✅ NUEVO: nombre del álbum -->
+          <span class="Album">Reggeton 1</span>
         </div>
       </div>
 
