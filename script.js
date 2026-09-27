@@ -166,7 +166,7 @@ onAuthStateChanged(auth, (user) => {
 // ===================
 // Vista previa dinámica (formulario)
 // ===================
-['artista', 'titulo', 'imagen'].forEach(id => {
+['artista', 'titulo', 'imagen', 'album'].forEach(id => {
   document.getElementById(id).addEventListener('input', actualizarPreview);
 });
 
@@ -174,8 +174,9 @@ function actualizarPreview() {
   const artista = document.getElementById('artista').value.trim();
   const titulo  = document.getElementById('titulo').value.trim();
   const imagen  = document.getElementById('imagen').value.trim();
+  const album   = document.getElementById('album').value.trim();
 
-  if (!artista && !titulo && !imagen) {
+  if (!artista && !titulo && !imagen && !album) {
     preview.classList.remove('show');
     return;
   }
@@ -183,6 +184,12 @@ function actualizarPreview() {
   preview.classList.add('show');
   previewTitulo.textContent  = titulo || '—';
   previewArtista.textContent = artista || '—';
+
+  // ✅ Actualizar el nombre del álbum en el span
+  const albumSpan = document.querySelector('.preview-info .Album');
+  if (albumSpan) {
+    albumSpan.textContent = album || 'Reggeton 1';
+  }
 
   if (imagen) {
     previewImg.src = dropboxDirecto(imagen);
@@ -303,6 +310,7 @@ form.addEventListener('submit', async (e) => {
 
   const artista   = document.getElementById('artista').value.trim();
   const titulo    = document.getElementById('titulo').value.trim();
+  const album     = document.getElementById('album').value.trim();
   const audioRaw  = document.getElementById('audio').value.trim();
   const imagenRaw = document.getElementById('imagen').value.trim();
 
@@ -334,6 +342,7 @@ form.addEventListener('submit', async (e) => {
     await addDoc(collection(db, 'historial_usuarios', uid, 'canciones'), {
       artista:   artista,
       titulo:    titulo,
+      album:     album,
       audioUrl:  audioUrl,
       imagenUrl: imagenUrl,
       origen:    'dropbox',
@@ -346,6 +355,10 @@ form.addEventListener('submit', async (e) => {
 
     form.reset();
     preview.classList.remove('show');
+
+    // Resetear el span del álbum al valor por defecto
+    const albumSpan = document.querySelector('.preview-info .Album');
+    if (albumSpan) albumSpan.textContent = 'Reggeton 1';
 
     submitBtn.disabled = false;
     submitBtn.textContent = 'Subir canción';
