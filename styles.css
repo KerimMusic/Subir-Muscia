@@ -1,3 +1,6 @@
+/* ============================================
+   RESET Y BASE
+   ============================================ */
 * {
   margin: 0;
   padding: 0;
@@ -6,68 +9,60 @@
 }
 
 body {
-  background:
-    radial-gradient(1000px 600px at 20% 0%, rgba(220, 38, 38, 0.12), transparent 60%),
-    radial-gradient(900px 500px at 100% 100%, rgba(220, 38, 38, 0.08), transparent 60%),
-    linear-gradient(135deg, #050505 0%, #0a0a0a 50%, #140404 100%);
+  background: #ffffff;
+  color: #000000;
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 20px;
-  color: #fff;
+  line-height: 1.5;
 }
 
 .container {
-  background: linear-gradient(160deg, rgba(20, 8, 8, 0.95) 0%, rgba(10, 10, 10, 0.95) 100%);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(220, 38, 38, 0.28);
-  border-radius: 20px;
-  padding: 40px;
   width: 100%;
-  max-width: 520px;
-  box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.7),
-    0 0 60px rgba(220, 38, 38, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  max-width: 580px;
+  padding: 20px 0;
 }
 
+/* ============================================
+   HEADER
+   ============================================ */
 .header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
 }
 
 .header h1 {
-  font-size: 26px;
-  font-weight: 800;
-  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 6px;
-  letter-spacing: -0.3px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 4px;
+  letter-spacing: -0.5px;
 }
 
 .header p {
   font-size: 13px;
-  color: #ef4444;
-  font-weight: 600;
+  color: #555555;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 2px;
 }
 
-/* ============ USER BOX ============ */
+/* ============================================
+   USER BOX
+   ============================================ */
 .user-box {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(220, 38, 38, 0.08);
-  border: 1px solid rgba(220, 38, 38, 0.25);
-  border-radius: 12px;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
   padding: 12px 16px;
   margin-bottom: 24px;
   font-size: 13px;
-  color: #fecaca;
+  color: #000000;
   overflow: hidden;
 }
 
@@ -80,152 +75,161 @@ body {
 .user-box .dot {
   width: 8px;
   height: 8px;
-  background: #ef4444;
+  background: #000000;
   border-radius: 50%;
-  box-shadow: 0 0 12px #ef4444;
   flex-shrink: 0;
   animation: pulse 1.8s ease-in-out infinite;
 }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50%      { opacity: 0.7; transform: scale(0.9); }
+  50%      { opacity: 0.5; transform: scale(0.9); }
 }
 
-/* ============ FORM ============ */
+/* ============================================
+   FORMULARIO
+   ============================================ */
 .form-group {
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 label {
   display: block;
   font-size: 12px;
   font-weight: 700;
-  color: #f87171;
-  margin-bottom: 8px;
+  color: #000000;
+  margin-bottom: 6px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.8px;
 }
 
 input {
   width: 100%;
   padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  color: #fff;
+  background: #ffffff;
+  border: 1.5px solid #d0d0d0;
+  border-radius: 10px;
+  color: #000000;
   font-size: 15px;
   outline: none;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 input:focus {
-  border-color: #dc2626;
-  background: rgba(220, 38, 38, 0.06);
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
+  border-color: #000000;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
 }
 
 input::placeholder {
-  color: #525252;
+  color: #999999;
 }
 
 .hint {
   font-size: 11px;
-  color: #737373;
+  color: #777777;
   margin-top: 6px;
   line-height: 1.4;
 }
 
-/* ============ BOTONES ============ */
+/* ============================================
+   BOTONES
+   ============================================ */
 button {
   width: 100%;
   padding: 15px;
   margin-top: 10px;
-  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  background: #000000;
   border: none;
-  border-radius: 12px;
-  color: #fff;
+  border-radius: 10px;
+  color: #ffffff;
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
   letter-spacing: 0.3px;
-  box-shadow: 0 8px 22px rgba(220, 38, 38, 0.35);
 }
 
 button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow:
-    0 12px 30px rgba(220, 38, 38, 0.55),
-    0 0 30px rgba(220, 38, 38, 0.35);
+  background: #222222;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
 button:active:not(:disabled) {
   transform: translateY(0);
+  box-shadow: none;
 }
 
 button:disabled {
-  opacity: 0.55;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .btn-google {
   background: #ffffff;
-  color: #1f2937;
+  color: #000000;
+  border: 1.5px solid #d0d0d0;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  box-shadow: 0 8px 22px rgba(255, 255, 255, 0.08);
+  box-shadow: none;
 }
 
 .btn-google:hover:not(:disabled) {
-  box-shadow: 0 12px 30px rgba(255, 255, 255, 0.18);
+  background: #fafafa;
+  border-color: #000000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-/* ============ STATUS ============ */
+/* ============================================
+   STATUS
+   ============================================ */
 .status {
   margin-top: 18px;
   padding: 14px;
-  border-radius: 12px;
+  border-radius: 10px;
   font-size: 14px;
   text-align: center;
   display: none;
   line-height: 1.4;
+  border: 1.5px solid transparent;
 }
 
 .status.ok {
   display: block;
-  background: rgba(220, 38, 38, 0.12);
-  border: 1px solid rgba(220, 38, 38, 0.45);
-  color: #fca5a5;
+  background: #f0f0f0;
+  border-color: #000000;
+  color: #000000;
 }
 
 .status.error {
   display: block;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.5);
-  color: #f87171;
+  background: #fff0f0;
+  border-color: #cc0000;
+  color: #cc0000;
 }
 
 .status.loading {
   display: block;
-  background: rgba(220, 38, 38, 0.08);
-  border: 1px solid rgba(220, 38, 38, 0.3);
-  color: #fca5a5;
+  background: #f5f5f5;
+  border-color: #999999;
+  color: #555555;
 }
 
 .hidden {
   display: none !important;
 }
 
-/* ============ PREVIEW ============ */
+/* ============================================
+   PREVIEW
+   ============================================ */
 .preview {
   margin-top: 20px;
   padding: 16px;
-  background: rgba(220, 38, 38, 0.05);
-  border-radius: 12px;
-  border: 1px dashed rgba(220, 38, 38, 0.35);
+  background: #fafafa;
+  border-radius: 10px;
+  border: 1.5px dashed #d0d0d0;
   display: none;
   align-items: center;
   gap: 14px;
@@ -240,8 +244,8 @@ button:disabled {
   height: 64px;
   border-radius: 8px;
   object-fit: cover;
-  background: #1a0000;
-  border: 1px solid rgba(220, 38, 38, 0.3);
+  background: #f0f0f0;
+  border: 1px solid #e0e0e0;
 }
 
 .preview-info {
@@ -252,15 +256,15 @@ button:disabled {
 .preview-info strong {
   display: block;
   font-size: 15px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #fff;
+  color: #000000;
 }
 
 .preview-info small {
-  color: #ef4444;
+  color: #555555;
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
@@ -269,21 +273,20 @@ button:disabled {
 
 .preview-info .Album {
   display: inline-block;
-  margin-top: 8px;
+  margin-top: 6px;
   padding: 3px 10px;
   font-size: 10px;
   font-weight: 700;
-  color: #ef4444;
-  background: rgba(220, 38, 38, 0.12);
-  border: 1px solid rgba(220, 38, 38, 0.45);
+  color: #000000;
+  background: #e8e8e8;
+  border: 1px solid #d0d0d0;
   border-radius: 999px;
   text-transform: uppercase;
-  letter-spacing: 1.2px;
+  letter-spacing: 1px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
-  box-shadow: 0 0 12px rgba(220, 38, 38, 0.15);
 }
 
 .loader {
@@ -291,7 +294,7 @@ button:disabled {
   width: 16px;
   height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
+  border-top-color: #ffffff;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   vertical-align: middle;
@@ -303,12 +306,12 @@ button:disabled {
 }
 
 /* ============================================
-   HISTORIAL DE CANCIONES
+   HISTORIAL
    ============================================ */
 .history {
-  margin-top: 32px;
+  margin-top: 36px;
   padding-top: 24px;
-  border-top: 1px solid rgba(220, 38, 38, 0.15);
+  border-top: 1.5px solid #e8e8e8;
 }
 
 .history-header {
@@ -319,19 +322,18 @@ button:disabled {
 }
 
 .history-header h2 {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
-  color: #f5f5f5;
-  letter-spacing: 0.3px;
+  color: #000000;
+  letter-spacing: 0.2px;
 }
 
 .badge {
-  background: rgba(220, 38, 38, 0.15);
-  border: 1px solid rgba(220, 38, 38, 0.5);
-  color: #f87171;
+  background: #000000;
+  color: #ffffff;
   font-size: 12px;
   font-weight: 700;
-  padding: 2px 10px;
+  padding: 2px 12px;
   border-radius: 999px;
   min-width: 30px;
   text-align: center;
@@ -341,13 +343,13 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 340px;
+  max-height: 360px;
   overflow-y: auto;
   padding-right: 4px;
 }
 
 .history-list::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 .history-list::-webkit-scrollbar-track {
@@ -355,30 +357,30 @@ button:disabled {
 }
 
 .history-list::-webkit-scrollbar-thumb {
-  background: rgba(220, 38, 38, 0.35);
+  background: #d0d0d0;
   border-radius: 999px;
 }
 
 .history-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(220, 38, 38, 0.7);
+  background: #999999;
 }
 
 .history-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
+  background: #ffffff;
+  border: 1.5px solid #e8e8e8;
+  border-radius: 10px;
   padding: 10px 12px;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   animation: fadeIn 0.25s ease;
   cursor: pointer;
 }
 
 .history-item:hover {
-  background: rgba(220, 38, 38, 0.08);
-  border-color: rgba(220, 38, 38, 0.45);
+  border-color: #000000;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
 }
 
 .history-item img {
@@ -386,9 +388,9 @@ button:disabled {
   height: 48px;
   border-radius: 8px;
   object-fit: cover;
-  background: #1a0000;
+  background: #f0f0f0;
   flex-shrink: 0;
-  border: 1px solid rgba(220, 38, 38, 0.2);
+  border: 1px solid #e0e0e0;
 }
 
 .history-info {
@@ -400,7 +402,7 @@ button:disabled {
   display: block;
   font-size: 14px;
   font-weight: 600;
-  color: #f5f5f5;
+  color: #000000;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -409,17 +411,18 @@ button:disabled {
 .history-info small {
   display: block;
   font-size: 11px;
-  color: #ef4444;
+  color: #555555;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.8px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 3px;
+  margin-top: 2px;
 }
 
-/* Botón eliminar */
+/* Botones de acción (editar / eliminar) */
+.btn-edit,
 .btn-delete {
   width: 36px;
   height: 36px;
@@ -427,65 +430,35 @@ button:disabled {
   padding: 0;
   margin: 0;
   flex-shrink: 0;
-  border-radius: 10px;
-  background: rgba(220, 38, 38, 0.12);
-  border: 1px solid rgba(220, 38, 38, 0.4);
-  color: #f87171;
+  border-radius: 8px;
+  background: #f5f5f5;
+  border: 1.5px solid #e0e0e0;
+  color: #000000;
   font-size: 15px;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: none;
-}
-
-.btn-delete:hover:not(:disabled) {
-  background: rgba(220, 38, 38, 0.3);
-  border-color: rgba(239, 68, 68, 0.8);
-  transform: none;
-  box-shadow: 0 0 18px rgba(220, 38, 38, 0.5);
-}
-
-.btn-delete:active:not(:disabled) {
-  transform: scale(0.94);
-}
-
-/* Botón editar (NUEVO) */
-.btn-edit {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  padding: 0;
-  margin: 0;
-  flex-shrink: 0;
-  border-radius: 10px;
-  background: rgba(220, 38, 38, 0.12);
-  border: 1px solid rgba(220, 38, 38, 0.4);
-  color: #f87171;
-  font-size: 15px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: none;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
+  box-shadow: none;
 }
 
-.btn-edit:hover:not(:disabled) {
-  background: rgba(220, 38, 38, 0.3);
-  border-color: rgba(239, 68, 68, 0.8);
-  transform: none;
-  box-shadow: 0 0 18px rgba(220, 38, 38, 0.5);
+.btn-edit:hover:not(:disabled),
+.btn-delete:hover:not(:disabled) {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
 }
 
-.btn-edit:active:not(:disabled) {
+.btn-edit:active:not(:disabled),
+.btn-delete:active:not(:disabled) {
   transform: scale(0.94);
 }
 
 .history-empty {
   font-size: 13px;
-  color: #737373;
+  color: #777777;
   text-align: center;
   padding: 18px 0;
   line-height: 1.4;
@@ -497,7 +470,7 @@ button:disabled {
 }
 
 /* ============================================
-   MODAL REPRODUCTOR (VISTA PREVIA) — PC
+   MODAL REPRODUCTOR
    ============================================ */
 .player-modal {
   position: fixed;
@@ -517,22 +490,19 @@ button:disabled {
 .player-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.88);
-  backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
 }
 
 .player-card {
   position: relative;
   width: 100%;
   max-width: 820px;
-  background: linear-gradient(145deg, #0a0a0a 0%, #1a0505 60%, #0d0d0d 100%);
-  border: 1px solid rgba(220, 38, 38, 0.35);
-  border-radius: 24px;
+  background: #ffffff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 20px;
   padding: 32px;
-  box-shadow:
-    0 30px 80px rgba(0, 0, 0, 0.85),
-    0 0 70px rgba(220, 38, 38, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
   display: grid;
   grid-template-columns: 240px 1fr;
   grid-template-rows: auto auto auto auto auto;
@@ -562,38 +532,35 @@ button:disabled {
   padding: 0;
   margin: 0;
   border-radius: 50%;
-  background: rgba(220, 38, 38, 0.12);
-  border: 1px solid rgba(220, 38, 38, 0.4);
-  color: #fca5a5;
+  background: #f5f5f5;
+  border: 1.5px solid #e0e0e0;
+  color: #000000;
   font-size: 14px;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
   z-index: 2;
 }
 
 .player-close:hover {
-  background: rgba(220, 38, 38, 0.35);
-  border-color: rgba(239, 68, 68, 0.8);
-  color: #fff;
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
   transform: rotate(90deg);
-  box-shadow: 0 0 22px rgba(220, 38, 38, 0.55);
 }
 
 .player-cover {
   grid-area: cover;
   width: 240px;
   height: 240px;
-  border-radius: 18px;
+  border-radius: 16px;
   overflow: hidden;
-  background: #150000;
-  border: 1px solid rgba(220, 38, 38, 0.25);
-  box-shadow:
-    0 20px 50px rgba(0, 0, 0, 0.7),
-    0 0 50px rgba(220, 38, 38, 0.15);
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
   flex-shrink: 0;
   align-self: center;
 }
@@ -616,8 +583,8 @@ button:disabled {
 .player-meta strong {
   display: block;
   font-size: 22px;
-  font-weight: 800;
-  color: #ffffff;
+  font-weight: 700;
+  color: #000000;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -627,8 +594,8 @@ button:disabled {
 .player-meta small {
   display: block;
   font-size: 12px;
-  color: #ef4444;
-  margin-top: 6px;
+  color: #555555;
+  margin-top: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -644,7 +611,7 @@ button:disabled {
   align-items: center;
   gap: 12px;
   font-size: 11px;
-  color: #9ca3af;
+  color: #555555;
   font-variant-numeric: tabular-nums;
 }
 
@@ -662,19 +629,16 @@ button:disabled {
   padding: 0;
   margin: 0;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+  background: #e0e0e0;
   border: none;
   outline: none;
   cursor: pointer;
-  transition: none;
-  box-shadow: none;
   width: auto;
 }
 
 .player-progress input[type="range"]:focus,
 .player-volume input[type="range"]:focus {
   box-shadow: none;
-  background: rgba(255, 255, 255, 0.1);
 }
 
 .player-progress input[type="range"]::-webkit-slider-thumb,
@@ -684,10 +648,10 @@ button:disabled {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #dc2626;
-  box-shadow: 0 0 14px rgba(220, 38, 38, 0.9);
+  background: #000000;
   cursor: pointer;
   border: 2px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   transition: transform 0.15s ease;
 }
 
@@ -701,9 +665,8 @@ button:disabled {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #dc2626;
+  background: #000000;
   border: 2px solid #ffffff;
-  box-shadow: 0 0 14px rgba(220, 38, 38, 0.9);
   cursor: pointer;
 }
 
@@ -723,25 +686,24 @@ button:disabled {
   padding: 0;
   margin: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #e5e7eb;
+  background: #f5f5f5;
+  border: 1.5px solid #e0e0e0;
+  color: #000000;
   font-size: 16px;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
   box-shadow: none;
 }
 
 .player-btn:hover {
-  background: rgba(220, 38, 38, 0.18);
-  border-color: rgba(220, 38, 38, 0.55);
-  color: #fff;
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
   transform: scale(1.06);
-  box-shadow: 0 0 20px rgba(220, 38, 38, 0.35);
 }
 
 .player-btn-main {
@@ -749,19 +711,16 @@ button:disabled {
   height: 68px;
   min-width: 68px;
   font-size: 24px;
-  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  background: #000000;
   border: none;
-  color: #fff;
-  box-shadow:
-    0 10px 30px rgba(220, 38, 38, 0.5),
-    0 0 40px rgba(220, 38, 38, 0.2);
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
 .player-btn-main:hover {
+  background: #222222;
   transform: scale(1.08);
-  box-shadow:
-    0 12px 36px rgba(220, 38, 38, 0.7),
-    0 0 55px rgba(220, 38, 38, 0.4);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
 }
 
 .player-volume {
@@ -771,7 +730,7 @@ button:disabled {
   gap: 12px;
   width: 100%;
   font-size: 14px;
-  color: #9ca3af;
+  color: #555555;
 }
 
 .player-volume input[type="range"] {
@@ -781,7 +740,7 @@ button:disabled {
 .player-hint {
   grid-area: hint;
   font-size: 11px;
-  color: #6b7280;
+  color: #888888;
   text-align: center;
   margin-top: 0;
 }
@@ -821,7 +780,7 @@ button:disabled {
 }
 
 @media (max-width: 420px) {
-  .container { padding: 28px 22px; }
+  .container { padding: 16px 0; }
 
   .player-cover {
     width: 150px;
@@ -841,7 +800,7 @@ button:disabled {
 }
 
 /* ============================================
-   MENÚ HAMBURGUESA (SUPERIOR DERECHA)
+   MENÚ HAMBURGUESA
    ============================================ */
 .menu-wrap {
   position: fixed;
@@ -856,27 +815,22 @@ button:disabled {
   min-width: 46px;
   padding: 0;
   margin: 0;
-  border-radius: 12px;
-  background: rgba(20, 8, 8, 0.85);
-  border: 1px solid rgba(220, 38, 38, 0.4);
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1.5px solid #d0d0d0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 5px;
   cursor: pointer;
-  backdrop-filter: blur(10px);
-  box-shadow:
-    0 8px 22px rgba(0, 0, 0, 0.5),
-    0 0 22px rgba(220, 38, 38, 0.12);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 }
 
 .menu-btn:hover:not(:disabled) {
-  border-color: rgba(239, 68, 68, 0.85);
-  box-shadow:
-    0 10px 26px rgba(0, 0, 0, 0.6),
-    0 0 28px rgba(220, 38, 38, 0.4);
+  border-color: #000000;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   transform: translateY(-1px);
 }
 
@@ -885,7 +839,7 @@ button:disabled {
   width: 20px;
   height: 2px;
   border-radius: 999px;
-  background: #ef4444;
+  background: #000000;
   transition: transform 0.25s ease, opacity 0.2s ease;
 }
 
@@ -898,14 +852,11 @@ button:disabled {
   top: calc(100% + 10px);
   right: 0;
   min-width: 210px;
-  background: linear-gradient(160deg, rgba(20, 8, 8, 0.98) 0%, rgba(10, 10, 10, 0.98) 100%);
-  border: 1px solid rgba(220, 38, 38, 0.4);
-  border-radius: 14px;
+  background: #ffffff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
   padding: 8px;
-  backdrop-filter: blur(14px);
-  box-shadow:
-    0 20px 50px rgba(0, 0, 0, 0.7),
-    0 0 40px rgba(220, 38, 38, 0.15);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
   animation: menuIn 0.18s ease;
 }
 
@@ -920,8 +871,8 @@ button:disabled {
   padding: 12px 14px;
   background: transparent;
   border: none;
-  border-radius: 10px;
-  color: #fecaca;
+  border-radius: 8px;
+  color: #000000;
   font-size: 14px;
   font-weight: 600;
   text-align: left;
@@ -930,18 +881,17 @@ button:disabled {
   gap: 10px;
   cursor: pointer;
   box-shadow: none;
-  transition: background 0.18s ease, color 0.18s ease;
+  transition: background 0.18s ease;
 }
 
 .menu-item:hover:not(:disabled) {
-  background: rgba(220, 38, 38, 0.18);
-  color: #ffffff;
+  background: #f5f5f5;
   transform: none;
   box-shadow: none;
 }
 
 .menu-item:disabled {
-  opacity: 0.6;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
@@ -951,12 +901,12 @@ button:disabled {
 }
 
 /* ============================================
-   MODAL EDITAR (NUEVO)
+   MODAL EDITAR
    ============================================ */
 .edit-modal {
   position: fixed;
   inset: 0;
-  z-index: 1001; /* Por encima del reproductor */
+  z-index: 1001;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -971,8 +921,8 @@ button:disabled {
 .edit-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.88);
-  backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
 }
 
 .edit-card {
@@ -981,14 +931,11 @@ button:disabled {
   max-width: 860px;
   max-height: 90vh;
   overflow-y: auto;
-  background: linear-gradient(145deg, #0a0a0a 0%, #1a0505 60%, #0d0d0d 100%);
-  border: 1px solid rgba(220, 38, 38, 0.35);
-  border-radius: 24px;
+  background: #ffffff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 20px;
   padding: 32px;
-  box-shadow:
-    0 30px 80px rgba(0, 0, 0, 0.85),
-    0 0 70px rgba(220, 38, 38, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
   display: flex;
   flex-direction: row;
   gap: 34px;
@@ -1006,25 +953,24 @@ button:disabled {
   padding: 0;
   margin: 0;
   border-radius: 50%;
-  background: rgba(220, 38, 38, 0.12);
-  border: 1px solid rgba(220, 38, 38, 0.4);
-  color: #fca5a5;
+  background: #f5f5f5;
+  border: 1.5px solid #e0e0e0;
+  color: #000000;
   font-size: 14px;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
   z-index: 2;
 }
 
 .edit-close:hover {
-  background: rgba(220, 38, 38, 0.35);
-  border-color: rgba(239, 68, 68, 0.8);
-  color: #fff;
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
   transform: rotate(90deg);
-  box-shadow: 0 0 22px rgba(220, 38, 38, 0.55);
 }
 
 .edit-cover {
@@ -1039,13 +985,11 @@ button:disabled {
 .edit-cover img {
   width: 100%;
   aspect-ratio: 1 / 1;
-  border-radius: 18px;
+  border-radius: 16px;
   object-fit: cover;
-  border: 1px solid rgba(220, 38, 38, 0.25);
-  box-shadow:
-    0 20px 50px rgba(0, 0, 0, 0.7),
-    0 0 50px rgba(220, 38, 38, 0.15);
-  background: #150000;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  background: #f5f5f5;
 }
 
 .edit-content {
@@ -1056,8 +1000,8 @@ button:disabled {
 
 .edit-heading {
   font-size: 24px;
-  font-weight: 800;
-  color: #ffffff;
+  font-weight: 700;
+  color: #000000;
   margin-bottom: 24px;
   letter-spacing: 0.5px;
   text-align: center;
@@ -1068,49 +1012,46 @@ button:disabled {
 }
 
 .edit-form label {
-  color: #ef4444;
+  color: #000000;
   font-size: 11px;
   letter-spacing: 1px;
 }
 
 .edit-form input {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: #ffffff;
+  border: 1.5px solid #d0d0d0;
+  color: #000000;
   padding: 12px 14px;
 }
 
 .edit-form input:focus {
-  border-color: #dc2626;
-  background: rgba(220, 38, 38, 0.06);
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
+  border-color: #000000;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
 }
 
 .btn-edit-submit {
   width: 100%;
   padding: 16px;
   margin-top: 10px;
-  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  background: #000000;
   border: none;
-  border-radius: 999px;
-  color: #fff;
+  border-radius: 10px;
+  color: #ffffff;
   font-size: 18px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
   letter-spacing: 0.5px;
-  box-shadow: 0 8px 22px rgba(220, 38, 38, 0.35);
 }
 
 .btn-edit-submit:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow:
-    0 12px 30px rgba(220, 38, 38, 0.55),
-    0 0 30px rgba(220, 38, 38, 0.35);
+  background: #222222;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
 .btn-edit-submit:disabled {
-  opacity: 0.55;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
