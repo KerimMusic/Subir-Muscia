@@ -3,7 +3,8 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore,
@@ -51,6 +52,12 @@ const historySection = document.getElementById('historySection');
 const historyList    = document.getElementById('historyList');
 const historyCount   = document.getElementById('historyCount');
 const historyEmpty   = document.getElementById('historyEmpty');
+
+// Menú hamburguesa
+const menuWrap     = document.getElementById('menuWrap');
+const menuBtn      = document.getElementById('menuBtn');
+const menuDropdown = document.getElementById('menuDropdown');
+const logoutBtn    = document.getElementById('logoutBtn');
 
 // Modal reproductor
 const playerModal    = document.getElementById('playerModal');
@@ -132,6 +139,9 @@ onAuthStateChanged(auth, (user) => {
     historySection.classList.remove('hidden');
     userEmail.textContent = user.email;
 
+    // ✅ Mostrar menú hamburguesa al iniciar sesión
+    menuWrap.classList.remove('hidden');
+
     escucharHistorial(user.uid);
 
   } else {
@@ -149,6 +159,10 @@ onAuthStateChanged(auth, (user) => {
     userBox.classList.add('hidden');
     form.classList.add('hidden');
     historySection.classList.add('hidden');
+
+    // ✅ Ocultar y cerrar menú hamburguesa al salir sesión
+    menuWrap.classList.add('hidden');
+    cerrarMenu();
 
     if (unsubscribeHistorial) {
       unsubscribeHistorial();
@@ -505,5 +519,63 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden && !previewAudio.paused) {
     previewAudio.pause();
     playerPlay.textContent = '▶';
+  }
+});
+
+// ================================================================
+// MENÚ HAMBURGUESA + CERRAR SESIÓN
+// ================================================================
+function abrirMenu() {
+  if (!menuDropdown || !menuBtn) return;
+  menuDropdown.classList.remove('hidden');
+  menuBtn.classList.add('open');
+  menuBtn.setAttribute('aria-expanded', 'true');
+}
+
+function cerrarMenu() {
+  if (!menuDropdown || !menuBtn) return;
+  menuDropdown.classList.add('hidden');
+  menuBtn.classList.remove('open');
+  menuBtn.setAttribute('aria-expanded', 'false');
+}
+
+// Abrir / cerrar al pulsar el botón hamburguesa
+menuBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (menuDropdown.classList.contains('hidden')) {
+    abrirMenu();
+  } else {
+    cerrarMenu();
+  }
+});
+
+// Cerrar al hacer clic fuera del menú
+document.addEventListener('click', (e) => {
+  if (menuWrap.classList.contains('hidden')) return;
+  if (!menuWrap.contains(e.target)) cerrarMenu();
+});
+
+// Cerrar con la tecla ESC
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') cerrarMenu();
+});
+
+// Cerrar sesión
+logoutBtn.addEventListener('click', async () => {
+  try {
+    logoutBtn.disabled = true;
+    logoutBtn.textContent = 'Cerrando sesión...';
+
+    await signOut(auth);
+
+    cerrarMenu();
+    mostrarStatus('👋 Sesión cerrada correctamente', 'ok');
+
+  } catch (err) {
+    console.error('Error al cerrar sesión:', err);
+    mostrarStatus('Error al cerrar sesión: ' + err.message, 'error');
+  } finally {
+    logoutBtn.disabled = false;
+    logoutBtn.innerHTML = '🚪 Cerrar sesión';
   }
 });
