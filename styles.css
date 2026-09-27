@@ -6,7 +6,10 @@
 }
 
 body {
-  background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+  background:
+    radial-gradient(1000px 600px at 20% 0%, rgba(220, 38, 38, 0.12), transparent 60%),
+    radial-gradient(900px 500px at 100% 100%, rgba(220, 38, 38, 0.08), transparent 60%),
+    linear-gradient(135deg, #050505 0%, #0a0a0a 50%, #140404 100%);
   min-height: 100vh;
   display: flex;
   justify-content: center;
@@ -16,14 +19,17 @@ body {
 }
 
 .container {
-  background: rgba(30, 30, 50, 0.85);
+  background: linear-gradient(160deg, rgba(20, 8, 8, 0.95) 0%, rgba(10, 10, 10, 0.95) 100%);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.28);
   border-radius: 20px;
   padding: 40px;
   width: 100%;
   max-width: 520px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.7),
+    0 0 60px rgba(220, 38, 38, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .header {
@@ -33,29 +39,35 @@ body {
 
 .header h1 {
   font-size: 26px;
-  font-weight: 700;
-  background: linear-gradient(135deg, #1db954, #4ade80);
+  font-weight: 800;
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   margin-bottom: 6px;
+  letter-spacing: -0.3px;
 }
 
 .header p {
-  font-size: 14px;
-  color: #9ca3af;
+  font-size: 13px;
+  color: #ef4444;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
 
+/* ============ USER BOX ============ */
 .user-box {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.25);
   border-radius: 12px;
   padding: 12px 16px;
   margin-bottom: 24px;
   font-size: 13px;
-  color: #d1d5db;
+  color: #fecaca;
   overflow: hidden;
 }
 
@@ -68,31 +80,38 @@ body {
 .user-box .dot {
   width: 8px;
   height: 8px;
-  background: #1db954;
+  background: #ef4444;
   border-radius: 50%;
-  box-shadow: 0 0 10px #1db954;
+  box-shadow: 0 0 12px #ef4444;
   flex-shrink: 0;
+  animation: pulse 1.8s ease-in-out infinite;
 }
 
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.7; transform: scale(0.9); }
+}
+
+/* ============ FORM ============ */
 .form-group {
   margin-bottom: 18px;
 }
 
 label {
   display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 700;
+  color: #f87171;
   margin-bottom: 8px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
 }
 
 input {
   width: 100%;
   padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   color: #fff;
   font-size: 15px;
@@ -101,27 +120,28 @@ input {
 }
 
 input:focus {
-  border-color: #1db954;
-  background: rgba(29, 185, 84, 0.08);
-  box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.15);
+  border-color: #dc2626;
+  background: rgba(220, 38, 38, 0.06);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
 }
 
 input::placeholder {
-  color: #6b7280;
+  color: #525252;
 }
 
 .hint {
   font-size: 11px;
-  color: #6b7280;
+  color: #737373;
   margin-top: 6px;
   line-height: 1.4;
 }
 
+/* ============ BOTONES ============ */
 button {
   width: 100%;
   padding: 15px;
   margin-top: 10px;
-  background: linear-gradient(135deg, #1db954, #16a34a);
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
   border: none;
   border-radius: 12px;
   color: #fff;
@@ -130,11 +150,14 @@ button {
   cursor: pointer;
   transition: all 0.2s ease;
   letter-spacing: 0.3px;
+  box-shadow: 0 8px 22px rgba(220, 38, 38, 0.35);
 }
 
 button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(29, 185, 84, 0.35);
+  box-shadow:
+    0 12px 30px rgba(220, 38, 38, 0.55),
+    0 0 30px rgba(220, 38, 38, 0.35);
 }
 
 button:active:not(:disabled) {
@@ -142,23 +165,25 @@ button:active:not(:disabled) {
 }
 
 button:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
 .btn-google {
-  background: #fff;
+  background: #ffffff;
   color: #1f2937;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
+  box-shadow: 0 8px 22px rgba(255, 255, 255, 0.08);
 }
 
 .btn-google:hover:not(:disabled) {
-  box-shadow: 0 10px 25px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 12px 30px rgba(255, 255, 255, 0.18);
 }
 
+/* ============ STATUS ============ */
 .status {
   margin-top: 18px;
   padding: 14px;
@@ -171,35 +196,36 @@ button:disabled {
 
 .status.ok {
   display: block;
-  background: rgba(29, 185, 84, 0.15);
-  border: 1px solid rgba(29, 185, 84, 0.4);
-  color: #4ade80;
+  background: rgba(220, 38, 38, 0.12);
+  border: 1px solid rgba(220, 38, 38, 0.45);
+  color: #fca5a5;
 }
 
 .status.error {
   display: block;
   background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  border: 1px solid rgba(239, 68, 68, 0.5);
   color: #f87171;
 }
 
 .status.loading {
   display: block;
-  background: rgba(59, 130, 246, 0.15);
-  border: 1px solid rgba(59, 130, 246, 0.4);
-  color: #60a5fa;
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  color: #fca5a5;
 }
 
 .hidden {
   display: none !important;
 }
 
+/* ============ PREVIEW ============ */
 .preview {
   margin-top: 20px;
   padding: 16px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(220, 38, 38, 0.05);
   border-radius: 12px;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border: 1px dashed rgba(220, 38, 38, 0.35);
   display: none;
   align-items: center;
   gap: 14px;
@@ -214,7 +240,8 @@ button:disabled {
   height: 64px;
   border-radius: 8px;
   object-fit: cover;
-  background: #333;
+  background: #1a0000;
+  border: 1px solid rgba(220, 38, 38, 0.3);
 }
 
 .preview-info {
@@ -229,11 +256,15 @@ button:disabled {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: #fff;
 }
 
 .preview-info small {
-  color: #9ca3af;
-  font-size: 13px;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .loader {
@@ -258,7 +289,7 @@ button:disabled {
 .history {
   margin-top: 32px;
   padding-top: 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(220, 38, 38, 0.15);
 }
 
 .history-header {
@@ -269,16 +300,16 @@ button:disabled {
 }
 
 .history-header h2 {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
-  color: #e5e7eb;
-  letter-spacing: 0.2px;
+  color: #f5f5f5;
+  letter-spacing: 0.3px;
 }
 
 .badge {
-  background: rgba(29, 185, 84, 0.15);
-  border: 1px solid rgba(29, 185, 84, 0.4);
-  color: #4ade80;
+  background: rgba(220, 38, 38, 0.15);
+  border: 1px solid rgba(220, 38, 38, 0.5);
+  color: #f87171;
   font-size: 12px;
   font-weight: 700;
   padding: 2px 10px;
@@ -305,20 +336,20 @@ button:disabled {
 }
 
 .history-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(220, 38, 38, 0.35);
   border-radius: 999px;
 }
 
 .history-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(29, 185, 84, 0.45);
+  background: rgba(220, 38, 38, 0.7);
 }
 
 .history-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 12px;
   padding: 10px 12px;
   transition: background 0.2s ease, border-color 0.2s ease;
@@ -327,8 +358,8 @@ button:disabled {
 }
 
 .history-item:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(29, 185, 84, 0.35);
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.45);
 }
 
 .history-item img {
@@ -336,8 +367,9 @@ button:disabled {
   height: 48px;
   border-radius: 8px;
   object-fit: cover;
-  background: #333;
+  background: #1a0000;
   flex-shrink: 0;
+  border: 1px solid rgba(220, 38, 38, 0.2);
 }
 
 .history-info {
@@ -349,7 +381,7 @@ button:disabled {
   display: block;
   font-size: 14px;
   font-weight: 600;
-  color: #f3f4f6;
+  color: #f5f5f5;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -357,15 +389,18 @@ button:disabled {
 
 .history-info small {
   display: block;
-  font-size: 12px;
-  color: #9ca3af;
+  font-size: 11px;
+  color: #ef4444;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
-/* Botón eliminar (sobrescribe el estilo global de button) */
+/* Botón eliminar */
 .btn-delete {
   width: 36px;
   height: 36px;
@@ -374,21 +409,22 @@ button:disabled {
   margin: 0;
   flex-shrink: 0;
   border-radius: 10px;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(220, 38, 38, 0.12);
+  border: 1px solid rgba(220, 38, 38, 0.4);
   color: #f87171;
   font-size: 15px;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: none;
 }
 
 .btn-delete:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.25);
-  border-color: rgba(239, 68, 68, 0.6);
+  background: rgba(220, 38, 38, 0.3);
+  border-color: rgba(239, 68, 68, 0.8);
   transform: none;
-  box-shadow: 0 0 18px rgba(239, 68, 68, 0.25);
+  box-shadow: 0 0 18px rgba(220, 38, 38, 0.5);
 }
 
 .btn-delete:active:not(:disabled) {
@@ -397,7 +433,7 @@ button:disabled {
 
 .history-empty {
   font-size: 13px;
-  color: #6b7280;
+  color: #737373;
   text-align: center;
   padding: 18px 0;
   line-height: 1.4;
@@ -434,7 +470,6 @@ button:disabled {
   backdrop-filter: blur(10px);
 }
 
-/* ---------- CONTENEDOR PRINCIPAL (layout horizontal en PC) ---------- */
 .player-card {
   position: relative;
   width: 100%;
@@ -466,7 +501,6 @@ button:disabled {
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* ---------- BOTÓN CERRAR ---------- */
 .player-close {
   position: absolute;
   top: 16px;
@@ -498,7 +532,6 @@ button:disabled {
   box-shadow: 0 0 22px rgba(220, 38, 38, 0.55);
 }
 
-/* ---------- PORTADA ---------- */
 .player-cover {
   grid-area: cover;
   width: 240px;
@@ -521,7 +554,6 @@ button:disabled {
   display: block;
 }
 
-/* ---------- INFO (título + artista) ---------- */
 .player-meta {
   grid-area: meta;
   text-align: left;
@@ -554,7 +586,6 @@ button:disabled {
   letter-spacing: 1.5px;
 }
 
-/* ---------- BARRA DE PROGRESO ---------- */
 .player-progress {
   grid-area: progress;
   width: 100%;
@@ -571,7 +602,6 @@ button:disabled {
   text-align: center;
 }
 
-/* ---------- RANGES (seek + volumen) ---------- */
 .player-progress input[type="range"],
 .player-volume input[type="range"] {
   -webkit-appearance: none;
@@ -626,7 +656,6 @@ button:disabled {
   cursor: pointer;
 }
 
-/* ---------- CONTROLES ---------- */
 .player-controls {
   grid-area: controls;
   display: flex;
@@ -653,6 +682,7 @@ button:disabled {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
+  box-shadow: none;
 }
 
 .player-btn:hover {
@@ -683,7 +713,6 @@ button:disabled {
     0 0 55px rgba(220, 38, 38, 0.4);
 }
 
-/* ---------- VOLUMEN ---------- */
 .player-volume {
   grid-area: volume;
   display: flex;
@@ -698,7 +727,6 @@ button:disabled {
   height: 4px;
 }
 
-/* ---------- HINT ---------- */
 .player-hint {
   grid-area: hint;
   font-size: 11px;
@@ -708,7 +736,7 @@ button:disabled {
 }
 
 /* ============================================
-   RESPONSIVE — se apila en pantallas pequeñas
+   RESPONSIVE
    ============================================ */
 @media (max-width: 700px) {
   .player-card {
@@ -737,23 +765,22 @@ button:disabled {
     padding-right: 0;
   }
 
-  .player-meta strong {
-    font-size: 18px;
-  }
-
-  .player-meta small {
-    font-size: 11px;
-  }
+  .player-meta strong { font-size: 18px; }
+  .player-meta small  { font-size: 11px; }
 }
 
 @media (max-width: 420px) {
+  .container { padding: 28px 22px; }
+
   .player-cover {
     width: 150px;
     height: 150px;
   }
+
   .player-card {
     padding: 24px 18px 18px;
   }
+
   .player-btn-main {
     width: 60px;
     height: 60px;
