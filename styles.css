@@ -267,7 +267,6 @@ button:disabled {
   letter-spacing: 1px;
 }
 
-/* ✅ NUEVO: nombre del álbum dentro del preview */
 .preview-info .Album {
   display: inline-block;
   margin-top: 8px;
@@ -451,6 +450,39 @@ button:disabled {
   transform: scale(0.94);
 }
 
+/* Botón editar (NUEVO) */
+.btn-edit {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: rgba(220, 38, 38, 0.12);
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  color: #f87171;
+  font-size: 15px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-edit:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.3);
+  border-color: rgba(239, 68, 68, 0.8);
+  transform: none;
+  box-shadow: 0 0 18px rgba(220, 38, 38, 0.5);
+}
+
+.btn-edit:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
 .history-empty {
   font-size: 13px;
   color: #737373;
@@ -466,7 +498,6 @@ button:disabled {
 
 /* ============================================
    MODAL REPRODUCTOR (VISTA PREVIA) — PC
-   Paleta: ROJO 🔴 + NEGRO ⚫
    ============================================ */
 .player-modal {
   position: fixed;
@@ -756,7 +787,7 @@ button:disabled {
 }
 
 /* ============================================
-   RESPONSIVE
+   RESPONSIVE GENERAL
    ============================================ */
 @media (max-width: 700px) {
   .player-card {
@@ -858,7 +889,6 @@ button:disabled {
   transition: transform 0.25s ease, opacity 0.2s ease;
 }
 
-/* Animación a ✕ cuando está abierto */
 .menu-btn.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
 .menu-btn.open span:nth-child(2) { opacity: 0; }
 .menu-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
@@ -918,4 +948,188 @@ button:disabled {
 @media (max-width: 420px) {
   .menu-wrap { top: 12px; right: 12px; }
   .menu-btn  { width: 42px; height: 42px; min-width: 42px; }
+}
+
+/* ============================================
+   MODAL EDITAR (NUEVO)
+   ============================================ */
+.edit-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1001; /* Por encima del reproductor */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.2s ease;
+}
+
+.edit-modal.hidden {
+  display: none !important;
+}
+
+.edit-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(10px);
+}
+
+.edit-card {
+  position: relative;
+  width: 100%;
+  max-width: 860px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: linear-gradient(145deg, #0a0a0a 0%, #1a0505 60%, #0d0d0d 100%);
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.85),
+    0 0 70px rgba(220, 38, 38, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: row;
+  gap: 34px;
+  align-items: stretch;
+  animation: playerIn 0.25s ease;
+}
+
+.edit-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  margin: 0;
+  border-radius: 50%;
+  background: rgba(220, 38, 38, 0.12);
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  color: #fca5a5;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 2;
+}
+
+.edit-close:hover {
+  background: rgba(220, 38, 38, 0.35);
+  border-color: rgba(239, 68, 68, 0.8);
+  color: #fff;
+  transform: rotate(90deg);
+  box-shadow: 0 0 22px rgba(220, 38, 38, 0.55);
+}
+
+.edit-cover {
+  flex: 1;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.edit-cover img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 18px;
+  object-fit: cover;
+  border: 1px solid rgba(220, 38, 38, 0.25);
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.7),
+    0 0 50px rgba(220, 38, 38, 0.15);
+  background: #150000;
+}
+
+.edit-content {
+  flex: 1.5;
+  display: flex;
+  flex-direction: column;
+}
+
+.edit-heading {
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 24px;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+.edit-form .form-group {
+  margin-bottom: 14px;
+}
+
+.edit-form label {
+  color: #ef4444;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.edit-form input {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fff;
+  padding: 12px 14px;
+}
+
+.edit-form input:focus {
+  border-color: #dc2626;
+  background: rgba(220, 38, 38, 0.06);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
+}
+
+.btn-edit-submit {
+  width: 100%;
+  padding: 16px;
+  margin-top: 10px;
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  border: none;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.5px;
+  box-shadow: 0 8px 22px rgba(220, 38, 38, 0.35);
+}
+
+.btn-edit-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow:
+    0 12px 30px rgba(220, 38, 38, 0.55),
+    0 0 30px rgba(220, 38, 38, 0.35);
+}
+
+.btn-edit-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Responsive para el modal de edición */
+@media (max-width: 700px) {
+  .edit-card {
+    flex-direction: column;
+    padding: 28px 22px 22px;
+    gap: 16px;
+    max-width: 400px;
+  }
+
+  .edit-cover {
+    max-width: 180px;
+    margin: 0 auto;
+  }
+
+  .edit-heading {
+    font-size: 20px;
+    margin-bottom: 16px;
+  }
 }
