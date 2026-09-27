@@ -132,7 +132,6 @@ onAuthStateChanged(auth, (user) => {
     historySection.classList.remove('hidden');
     userEmail.textContent = user.email;
 
-    // 🔥 Escuchar el historial en tiempo real
     escucharHistorial(user.uid);
 
   } else {
@@ -160,7 +159,6 @@ onAuthStateChanged(auth, (user) => {
     historyEmpty.classList.add('hidden');
     cancionesActuales = [];
 
-    // Cerrar player si estaba abierto
     cerrarPlayer();
   }
 });
