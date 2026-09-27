@@ -17,7 +17,8 @@ import {
   serverTimestamp,
   onSnapshot,
   deleteDoc,
-  doc
+  doc,
+  updateDoc // <-- NUEVO: Importado para la edición
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ============================================
@@ -42,29 +43,18 @@ const provider = new GoogleAuthProvider();
 // ============================================================
 // ✅ COMPATIBILIDAD CON WEBVIEW
 // ============================================================
-
-// 1) Persistencia local: la sesión sobrevive recargas dentro de la WebView
 setPersistence(auth, browserLocalPersistence).catch(err => {
   console.warn('[WebView] No se pudo establecer persistencia:', err);
 });
 
-// 2) Detección de WebView (Android / iOS / bridges JS típicos)
 function esWebView() {
   const ua = (navigator.userAgent || '').toLowerCase();
-
   const esAndroidWV = /android/.test(ua) && /(wv|version\/[\d.]+)/.test(ua);
-  const esIOSWV = /iphone|ipad|ipod/.test(ua) &&
-                  !/safari|crios|fxios|edgios/.test(ua);
-  const tieneBridge = !!(
-    window.Android ||
-    window.ReactNativeWebView ||
-    (window.webkit && window.webkit.messageHandlers)
-  );
-
+  const esIOSWV = /iphone|ipad|ipod/.test(ua) && !/safari|crios|fxios|edgios/.test(ua);
+  const tieneBridge = !!(window.Android || window.ReactNativeWebView || (window.webkit && window.webkit.messageHandlers));
   return esAndroidWV || esIOSWV || tieneBridge;
 }
 
-// 3) HTML del botón de login (una sola fuente de verdad)
 const LOGIN_BTN_HTML = `
   <svg width="18" height="18" viewBox="0 0 24 24">
     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -75,7 +65,6 @@ const LOGIN_BTN_HTML = `
   Iniciar sesión con Google
 `;
 
-// 4) Manejar el retorno del redirect
 getRedirectResult(auth)
   .then(result => {
     if (result && result.user) {
@@ -130,9 +119,21 @@ const playerVol      = document.getElementById('playerVol');
 const playerCurrent  = document.getElementById('playerCurrent');
 const playerDuration = document.getElementById('playerDuration');
 
+// Modal editar (NUEVO)
+const editModal    = document.getElementById('editModal');
+const editForm     = document.getElementById('editForm');
+const editImg      = document.getElementById('editImg');
+const editArtista  = document.getElementById('editArtista');
+const editTitulo   = document.getElementById('editTitulo');
+const editAlbum    = document.getElementById('editAlbum');
+const editAudio    = document.getElementById('editAudio');
+const editImagen   = document.getElementById('editImagen');
+const editSubmitBtn = document.getElementById('editSubmitBtn');
+
 let usuarioActual = null;
 let unsubscribeHistorial = null;
 let cancionesActuales = [];
+let editandoId = null; // ID de la canción que se está editando
 
 const PLACEHOLDER = 'https://via.placeholder.com/64/333/666?text=%E2%99%AB';
 
@@ -147,7 +148,6 @@ function mostrarStatus(msg, tipo = 'ok') {
   }
 }
 
-// Convertir link normal de Dropbox a link directo
 function dropboxDirecto(url) {
   if (!url) return '';
   url = url.trim();
@@ -160,7 +160,6 @@ function dropboxDirecto(url) {
     .replace('?raw=1', '');
 }
 
-// Evitar inyección de HTML en el historial
 function escapeHtml(str = '') {
   return String(str).replace(/[&<>"']/g, c => ({
     '&': '&amp;',
@@ -179,7 +178,6 @@ loginBtn.addEventListener('click', async () => {
     loginBtn.disabled = true;
     loginBtn.innerHTML = '<span class="loader"></span>Iniciando sesión...';
 
-    // En WebView los popups no funcionan → usar redirect
     if (esWebView()) {
       await signInWithRedirect(auth, provider);
       return;
@@ -189,8 +187,6 @@ loginBtn.addEventListener('click', async () => {
 
   } catch (e) {
     console.error('[Auth] Error login:', e);
-
-    // Fallback a redirect si el popup no es soportado
     const necesitaFallback =
       e.code === 'auth/popup-blocked' ||
       e.code === 'auth/operation-not-supported-in-this-environment' ||
@@ -222,20 +218,15 @@ onAuthStateChanged(auth, (user) => {
     form.classList.remove('hidden');
     historySection.classList.remove('hidden');
     userEmail.textContent = user.email;
-
     menuWrap.classList.remove('hidden');
-
     escucharHistorial(user.uid);
-
   } else {
     loginBtn.classList.remove('hidden');
     loginBtn.disabled = false;
     loginBtn.innerHTML = LOGIN_BTN_HTML;
-
     userBox.classList.add('hidden');
     form.classList.add('hidden');
     historySection.classList.add('hidden');
-
     menuWrap.classList.add('hidden');
     cerrarMenu();
 
@@ -247,8 +238,8 @@ onAuthStateChanged(auth, (user) => {
     historyCount.textContent = '0';
     historyEmpty.classList.add('hidden');
     cancionesActuales = [];
-
     cerrarPlayer();
+    cerrarEditModal(); // Cerrar modal de edición si está abierto
   }
 });
 
@@ -340,6 +331,9 @@ function renderHistorial(canciones) {
           <strong title="${titulo}">${titulo}</strong>
           <small title="${artista}">${artista}</small>
         </div>
+        <button type="button" class="btn-edit" data-id="${escapeHtml(c.id)}" title="Editar canción">
+          ✏️
+        </button>
         <button type="button" class="btn-delete" data-id="${escapeHtml(c.id)}" title="Eliminar canción">
           🗑️
         </button>
@@ -348,16 +342,34 @@ function renderHistorial(canciones) {
   }).join('');
 }
 
-// Delegación de eventos para los botones de eliminar
+// Delegación de eventos para los botones de eliminar y editar
 historyList.addEventListener('click', (e) => {
-  const btn = e.target.closest('.btn-delete');
-  if (!btn) return;
+  // 1. Manejar botón eliminar
+  const deleteBtn = e.target.closest('.btn-delete');
+  if (deleteBtn) {
+    const id = deleteBtn.dataset.id;
+    const item = deleteBtn.closest('.history-item');
+    const titulo = item?.querySelector('.history-info strong')?.textContent || 'esta canción';
+    eliminarCancion(id, deleteBtn, titulo);
+    return;
+  }
 
-  const id = btn.dataset.id;
-  const item = btn.closest('.history-item');
-  const titulo = item?.querySelector('.history-info strong')?.textContent || 'esta canción';
+  // 2. Manejar botón editar (NUEVO)
+  const editBtn = e.target.closest('.btn-edit');
+  if (editBtn) {
+    const id = editBtn.dataset.id;
+    const cancion = cancionesActuales.find(c => c.id === id);
+    if (cancion) abrirEditModal(cancion);
+    return;
+  }
 
-  eliminarCancion(id, btn, titulo);
+  // 3. Manejar clic en el item para reproducir
+  const item = e.target.closest('.history-item');
+  if (!item) return;
+
+  const id = item.dataset.id;
+  const cancion = cancionesActuales.find(c => c.id === id);
+  if (cancion) abrirPlayer(cancion);
 });
 
 async function eliminarCancion(id, boton, titulo) {
@@ -374,7 +386,6 @@ async function eliminarCancion(id, boton, titulo) {
     boton.textContent = '⏳';
 
     await deleteDoc(doc(db, 'historial_usuarios', usuarioActual.uid, 'canciones', id));
-
     mostrarStatus('🗑️ Canción eliminada correctamente', 'ok');
 
   } catch (err) {
@@ -506,31 +517,16 @@ function cerrarPlayer() {
   if (playerPlay) playerPlay.textContent = '▶';
 }
 
-// Abrir modal al hacer clic en un item del historial (excepto en el botón eliminar)
-historyList.addEventListener('click', (e) => {
-  if (e.target.closest('.btn-delete')) return;
-
-  const item = e.target.closest('.history-item');
-  if (!item) return;
-
-  const id = item.dataset.id;
-  const cancion = cancionesActuales.find(c => c.id === id);
-  if (cancion) abrirPlayer(cancion);
-});
-
-// Cerrar (backdrop y botón ✕)
 playerModal.addEventListener('click', (e) => {
   if (e.target.dataset.close === '1') cerrarPlayer();
 });
 
-// Cerrar con ESC
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !playerModal.classList.contains('hidden')) {
     cerrarPlayer();
   }
 });
 
-// Play / Pause
 playerPlay.addEventListener('click', async () => {
   if (!previewAudio.src) return;
   try {
@@ -546,7 +542,6 @@ playerPlay.addEventListener('click', async () => {
   }
 });
 
-// -10s / +10s
 playerRewind.addEventListener('click', () => {
   previewAudio.currentTime = Math.max(0, previewAudio.currentTime - 10);
 });
@@ -557,7 +552,6 @@ playerForward.addEventListener('click', () => {
   );
 });
 
-// Barra de progreso
 previewAudio.addEventListener('loadedmetadata', () => {
   playerDuration.textContent = fmtTiempo(previewAudio.duration);
 });
@@ -581,17 +575,129 @@ previewAudio.addEventListener('ended', () => {
   playerCurrent.textContent = '0:00';
 });
 
-// Volumen
 playerVol.addEventListener('input', () => {
   previewAudio.volume = parseFloat(playerVol.value);
 });
 previewAudio.volume = parseFloat(playerVol.value);
 
-// Pausar al cambiar de pestaña
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && !previewAudio.paused) {
     previewAudio.pause();
     playerPlay.textContent = '▶';
+  }
+});
+
+// ================================================================
+// MODAL EDITAR — LÓGICA (NUEVO)
+// ================================================================
+function abrirEditModal(cancion) {
+  if (!cancion) return;
+
+  editandoId = cancion.id;
+
+  // Rellenar campos
+  editArtista.value = cancion.artista || '';
+  editTitulo.value  = cancion.titulo  || '';
+  editAlbum.value   = cancion.album   || '';
+  
+  // Convertir links directos de vuelta a links normales de Dropbox para editar
+  const revertirDropbox = (url) => {
+    if (!url) return '';
+    return url.replace('dl.dropboxusercontent.com', 'www.dropbox.com');
+  };
+
+  editAudio.value   = revertirDropbox(cancion.audioUrl || '');
+  editImagen.value  = revertirDropbox(cancion.imagenUrl || '');
+
+  // Imagen de portada
+  editImg.src = cancion.imagenUrl || PLACEHOLDER;
+  editImg.onerror = () => { editImg.onerror = null; editImg.src = PLACEHOLDER; };
+
+  // Mostrar modal
+  editModal.classList.remove('hidden');
+  editModal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarEditModal() {
+  editModal.classList.add('hidden');
+  editModal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+  editandoId = null;
+  editForm.reset();
+}
+
+// Cerrar modal con backdrop o botón ✕
+editModal.addEventListener('click', (e) => {
+  if (e.target.dataset.close === '1') cerrarEditModal();
+});
+
+// Cerrar con ESC
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !editModal.classList.contains('hidden')) {
+    cerrarEditModal();
+  }
+});
+
+// Guardar cambios
+editForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  if (!usuarioActual || !editandoId) {
+    mostrarStatus('Error: No hay sesión o canción seleccionada', 'error');
+    return;
+  }
+
+  const artista   = editArtista.value.trim();
+  const titulo    = editTitulo.value.trim();
+  const album     = editAlbum.value.trim();
+  const audioRaw  = editAudio.value.trim();
+  const imagenRaw = editImagen.value.trim();
+
+  if (!artista || !titulo || !audioRaw) {
+    mostrarStatus('Completa artista, título y audio', 'error');
+    return;
+  }
+
+  const audioUrl  = dropboxDirecto(audioRaw);
+  const imagenUrl = imagenRaw ? dropboxDirecto(imagenRaw) : '';
+
+  editSubmitBtn.disabled = true;
+  editSubmitBtn.innerHTML = '<span class="loader"></span>Guardando cambios...';
+
+  try {
+    const uid = usuarioActual.uid;
+    const docRef = doc(db, 'historial_usuarios', uid, 'canciones', editandoId);
+
+    await updateDoc(docRef, {
+      artista:   artista,
+      titulo:    titulo,
+      album:     album,
+      audioUrl:  audioUrl,
+      imagenUrl: imagenUrl,
+      fechaEdicion: serverTimestamp()
+    });
+
+    mostrarStatus('✅ Canción actualizada correctamente', 'ok');
+    cerrarEditModal();
+
+  } catch (err) {
+    console.error('Error al editar:', err);
+    mostrarStatus('Error al guardar cambios: ' + err.message, 'error');
+  } finally {
+    editSubmitBtn.disabled = false;
+    editSubmitBtn.textContent = 'TEREMINAR';
+  }
+});
+
+// Vista previa en vivo de la imagen al editar
+editImagen.addEventListener('input', () => {
+  const url = editImagen.value.trim();
+  if (url) {
+    editImg.src = dropboxDirecto(url);
+    editImg.onerror = () => { editImg.src = PLACEHOLDER; };
+  } else {
+    editImg.src = PLACEHOLDER;
   }
 });
 
@@ -612,7 +718,6 @@ function cerrarMenu() {
   menuBtn.setAttribute('aria-expanded', 'false');
 }
 
-// Abrir / cerrar al pulsar el botón hamburguesa
 menuBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   if (menuDropdown.classList.contains('hidden')) {
@@ -622,18 +727,15 @@ menuBtn.addEventListener('click', (e) => {
   }
 });
 
-// Cerrar al hacer clic fuera del menú
 document.addEventListener('click', (e) => {
   if (menuWrap.classList.contains('hidden')) return;
   if (!menuWrap.contains(e.target)) cerrarMenu();
 });
 
-// Cerrar con la tecla ESC
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') cerrarMenu();
 });
 
-// Cerrar sesión
 logoutBtn.addEventListener('click', async () => {
   try {
     logoutBtn.disabled = true;
