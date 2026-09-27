@@ -10,7 +10,198 @@
 
   <!-- ============ MENÚ HAMBURGUESA (SUPERIOR DERECHA) ============ -->
   <div id="menuWrap" class="menu-wrap hidden">
+    <button id="menuBtn" class="menu-btn" type="button" aria-label="Abrir menú" aria-expanded="false">a<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subir Canción - Kerim Music</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ============ MENÚ HAMBURGUESA (SUPERIOR DERECHA) ============ -->
+  <div id="menuWrap" class="menu-wrap hidden">
     <button id="menuBtn" class="menu-btn" type="button" aria-label="Abrir menú" aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <div id="menuDropdown" class="menu-dropdown hidden">
+      <button id="logoutBtn" class="menu-item" type="button">
+        🚪 Cerrar sesión
+      </button>
+    </div>
+  </div>
+  <!-- ============================================================= -->
+
+  <div class="container">
+    <div class="header">
+      <h1>🎵 Subir Canción</h1>
+      <p>Kerim Music</p>
+    </div>
+
+    <!-- Estado del usuario -->
+    <div id="userBox" class="user-box hidden">
+      <span class="dot"></span>
+      <span id="userEmail">Cargando...</span>
+    </div>
+
+    <!-- Botón login si no está autenticado -->
+    <button id="loginBtn" class="btn-google">
+      <svg width="18" height="18" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
+      Iniciar sesión con Google
+    </button>
+
+    <!-- Formulario -->
+    <form id="formCancion" class="hidden">
+      <div class="form-group">
+        <label for="artista">1. Nombre del artista</label>
+        <input type="text" id="artista" placeholder="Ej: Artista" required>
+      </div>
+
+      <div class="form-group">
+        <label for="titulo">2. Título de la canción</label>
+        <input type="text" id="titulo" placeholder="Ej: Nombre de la cancion" required>
+      </div>
+
+      <div class="form-group">
+        <label for="album">3. Nombre del álbum</label>
+        <input type="text" id="album" placeholder="Ej: Nombre del Album">
+      </div>
+
+      <div class="form-group">
+        <label for="audio">4. Link de audio (Dropbox)</label>
+        <input type="url" id="audio" placeholder="https://www.dropbox.com/s/.../cancion.mp3?dl=0" required>
+        <p class="hint">Pega el link normal de Dropbox. Se convertirá automáticamente a enlace directo.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="imagen">5. Link de imagen (Dropbox)</label>
+        <input type="url" id="imagen" placeholder="https://www.dropbox.com/s/.../portada.jpg?dl=0">
+        <p class="hint">Opcional. Si lo dejas vacío se mostrará una imagen por defecto.</p>
+      </div>
+
+      <!-- Vista previa -->
+      <div id="preview" class="preview">
+        <img id="previewImg" src="" alt="">
+        <div class="preview-info">
+          <strong id="previewTitulo">—</strong>
+          <small id="previewArtista">—</small>
+          <span class="Album">Reggeton 1</span>
+        </div>
+      </div>
+
+      <button type="submit" id="submitBtn">Subir canción</button>
+    </form>
+
+    <div id="status" class="status"></div>
+
+    <!-- ================= HISTORIAL ================= -->
+    <section id="historySection" class="history hidden">
+      <div class="history-header">
+        <h2>📚 Mis canciones subidas</h2>
+        <span id="historyCount" class="badge">0</span>
+      </div>
+
+      <div id="historyList" class="history-list"></div>
+
+      <p id="historyEmpty" class="history-empty hidden">
+        Todavía no has subido ninguna canción.
+      </p>
+    </section>
+    <!-- ============================================= -->
+
+    <!-- ================= MODAL REPRODUCTOR ================= -->
+    <div id="playerModal" class="player-modal hidden" aria-hidden="true">
+      <div class="player-backdrop" data-close="1"></div>
+
+      <div class="player-card" role="dialog" aria-modal="true" aria-labelledby="playerTitle">
+        <button type="button" class="player-close" data-close="1" title="Cerrar">✕</button>
+
+        <div class="player-cover">
+          <img id="playerImg" src="" alt="">
+        </div>
+
+        <div class="player-meta">
+          <strong id="playerTitle">—</strong>
+          <small id="playerArtist">—</small>
+        </div>
+
+        <div class="player-progress">
+          <span id="playerCurrent">0:00</span>
+          <input type="range" id="playerSeek" min="0" max="1000" value="0" step="1">
+          <span id="playerDuration">0:00</span>
+        </div>
+
+        <div class="player-controls">
+          <button type="button" id="playerRewind" class="player-btn" title="-10s">⏪</button>
+          <button type="button" id="playerPlay" class="player-btn player-btn-main" title="Reproducir">▶</button>
+          <button type="button" id="playerForward" class="player-btn" title="+10s">⏩</button>
+        </div>
+
+        <div class="player-volume">
+          <span>🔊</span>
+          <input type="range" id="playerVol" min="0" max="1" step="0.01" value="1">
+        </div>
+
+        <p class="player-hint">Vista previa — así se verá y sonará en el reproductor.</p>
+      </div>
+    </div>
+    <!-- ====================================================== -->
+
+    <!-- ================= MODAL EDITAR ================= -->
+    <div id="editModal" class="edit-modal hidden" aria-hidden="true">
+      <div class="edit-backdrop" data-close="1"></div>
+
+      <div class="edit-card" role="dialog" aria-modal="true" aria-labelledby="editHeading">
+        <button type="button" class="edit-close" data-close="1" title="Cerrar">✕</button>
+
+        <div class="edit-cover">
+          <img id="editImg" src="" alt="">
+        </div>
+
+        <div class="edit-content">
+          <h2 id="editHeading" class="edit-heading">EDITAR TU MUSICA</h2>
+          <form id="editForm" class="edit-form">
+            <div class="form-group">
+              <label for="editArtista">1. NOMBRE DEL ARTISTA</label>
+              <input type="text" id="editArtista" placeholder="Ej: Artista" required>
+            </div>
+            <div class="form-group">
+              <label for="editTitulo">2. TÍTULO DE LA CANCIÓN</label>
+              <input type="text" id="editTitulo" placeholder="Ej: Nombre de la cancion" required>
+            </div>
+            <div class="form-group">
+              <label for="editAlbum">3. NOMBRE DEL ÁLBUM</label>
+              <input type="text" id="editAlbum" placeholder="Ej: Nombre del Album">
+            </div>
+            <div class="form-group">
+              <label for="editAudio">4. LINK DE AUDIO (DROPBOX)</label>
+              <input type="url" id="editAudio" placeholder="https://www.dropbox.com/s/.../cancion.mp3?dl=0" required>
+            </div>
+            <div class="form-group">
+              <label for="editImagen">5. LINK DE IMAGEN (DROPBOX)</label>
+              <input type="url" id="editImagen" placeholder="https://www.dropbox.com/s/.../portada.jpg?dl=0">
+            </div>
+            <button type="submit" id="editSubmitBtn" class="btn-edit-submit">TEREMINAR</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <!-- ====================================================== -->
+
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
       <span></span>
       <span></span>
       <span></span>
