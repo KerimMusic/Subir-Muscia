@@ -59,7 +59,6 @@
         <input type="text" id="titulo" placeholder="Ej: Nombre de la cancion" required>
       </div>
 
-      <!-- ✅ NUEVO CAMPO: Nombre del álbum -->
       <div class="form-group">
         <label for="album">3. Nombre del álbum</label>
         <input type="text" id="album" placeholder="Ej: Nombre del Album">
@@ -83,7 +82,6 @@
         <div class="preview-info">
           <strong id="previewTitulo">—</strong>
           <small id="previewArtista">—</small>
-          <!-- ✅ NUEVO: nombre del álbum -->
           <span class="Album">Reggeton 1</span>
         </div>
       </div>
@@ -142,6 +140,47 @@
         </div>
 
         <p class="player-hint">Vista previa — así se verá y sonará en el reproductor.</p>
+      </div>
+    </div>
+    <!-- ====================================================== -->
+
+    <!-- ================= MODAL EDITAR ================= -->
+    <div id="editModal" class="edit-modal hidden" aria-hidden="true">
+      <div class="edit-backdrop" data-close="1"></div>
+
+      <div class="edit-card" role="dialog" aria-modal="true" aria-labelledby="editHeading">
+        <button type="button" class="edit-close" data-close="1" title="Cerrar">✕</button>
+
+        <div class="edit-cover">
+          <img id="editImg" src="" alt="">
+        </div>
+
+        <div class="edit-content">
+          <h2 id="editHeading" class="edit-heading">EDITAR TU MUSICA</h2>
+          <form id="editForm" class="edit-form">
+            <div class="form-group">
+              <label for="editArtista">1. NOMBRE DEL ARTISTA</label>
+              <input type="text" id="editArtista" placeholder="Ej: Artista" required>
+            </div>
+            <div class="form-group">
+              <label for="editTitulo">2. TÍTULO DE LA CANCIÓN</label>
+              <input type="text" id="editTitulo" placeholder="Ej: Nombre de la cancion" required>
+            </div>
+            <div class="form-group">
+              <label for="editAlbum">3. NOMBRE DEL ÁLBUM</label>
+              <input type="text" id="editAlbum" placeholder="Ej: Nombre del Album">
+            </div>
+            <div class="form-group">
+              <label for="editAudio">4. LINK DE AUDIO (DROPBOX)</label>
+              <input type="url" id="editAudio" placeholder="https://www.dropbox.com/s/.../cancion.mp3?dl=0" required>
+            </div>
+            <div class="form-group">
+              <label for="editImagen">5. LINK DE IMAGEN (DROPBOX)</label>
+              <input type="url" id="editImagen" placeholder="https://www.dropbox.com/s/.../portada.jpg?dl=0">
+            </div>
+            <button type="submit" id="editSubmitBtn" class="btn-edit-submit">TEREMINAR</button>
+          </form>
+        </div>
       </div>
     </div>
     <!-- ====================================================== -->
