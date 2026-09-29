@@ -64,14 +64,41 @@
         <input type="text" id="album" placeholder="Ej: Nombre del Album">
       </div>
 
+      <!-- ===== NUEVO: SELECTOR DE GÉNERO ===== -->
       <div class="form-group">
-        <label for="audio">4. Link de audio (Dropbox)</label>
+        <label for="genreToggle">4. Género musical</label>
+
+        <div class="genre-select" id="genreSelect">
+          <button type="button" id="genreToggle" class="genre-toggle"
+                  aria-haspopup="listbox" aria-expanded="false" aria-controls="genrePanel">
+            <span id="genreValue" class="genre-value placeholder">Selecciona un género</span>
+            <span class="genre-arrow" aria-hidden="true">▾</span>
+          </button>
+
+          <div id="genrePanel" class="genre-panel hidden">
+            <div class="genre-search-wrap">
+              <input type="text" id="genreSearch" class="genre-search"
+                     placeholder="🔍 Buscar género..." autocomplete="off"
+                     aria-label="Buscar género" aria-controls="genreList">
+            </div>
+            <div id="genreList" class="genre-list" role="listbox" aria-label="Lista de géneros"></div>
+            <p id="genreEmpty" class="genre-empty hidden">No se encontraron géneros</p>
+          </div>
+        </div>
+
+        <input type="hidden" id="genero" name="genero" value="">
+        <p class="hint">Opcional. Abre la lista y usa el buscador para encontrar tu género.</p>
+      </div>
+      <!-- ===== FIN NUEVO ===== -->
+
+      <div class="form-group">
+        <label for="audio">5. Link de audio (Dropbox)</label>
         <input type="url" id="audio" placeholder="https://www.dropbox.com/s/.../cancion.mp3?dl=0" required>
         <p class="hint">Pega el link normal de Dropbox. Se convertirá automáticamente a enlace directo.</p>
       </div>
 
       <div class="form-group">
-        <label for="imagen">5. Link de imagen (Dropbox)</label>
+        <label for="imagen">6. Link de imagen (Dropbox)</label>
         <input type="url" id="imagen" placeholder="https://www.dropbox.com/s/.../portada.jpg?dl=0">
         <p class="hint">Opcional. Si lo dejas vacío se mostrará una imagen por defecto.</p>
       </div>
