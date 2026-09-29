@@ -750,8 +750,11 @@ logoutBtn.addEventListener('click', async () => {
 // NUEVO: SELECTOR DE GÉNERO MUSICAL CON BUSCADOR
 // ================================================================
 const GENEROS_RAW = [
-  //0. Acustica
-  "Acústica Pop, Acústica, Rock Acústica, Folk Acústica, Latina Acústica, Indie Acústica, Regional Mexicana, Acústica Instrumental,
+  // 0. Acústica
+  "Acústica", "Acústica Pop", "Rock Acústico", "Folk Acústico",
+  "Latino Acústico", "Indie Acústico", "Regional Mexicano Acústico",
+  "Acústica Instrumental", "Unplugged", "Balada Acústica", "Bolero Acústico",
+
   // 1. Pop
   "Pop", "Art Pop", "Dance Pop", "Electropop", "Synth-pop", "Indie Pop", "Dream Pop",
   "Bedroom Pop", "Hyperpop", "Teen Pop", "Bubblegum Pop", "Power Pop", "K-Pop", "J-Pop",
