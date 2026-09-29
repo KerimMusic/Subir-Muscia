@@ -64,7 +64,7 @@
         <input type="text" id="album" placeholder="Ej: Nombre del Album">
       </div>
 
-      <!-- ===== NUEVO: SELECTOR DE GÉNERO ===== -->
+      <!-- ===== SELECTOR DE GÉNERO ===== -->
       <div class="form-group">
         <label for="genreToggle">4. Género musical</label>
 
@@ -89,7 +89,33 @@
         <input type="hidden" id="genero" name="genero" value="">
         <p class="hint">Opcional. Abre la lista y usa el buscador para encontrar tu género.</p>
       </div>
-      <!-- ===== FIN NUEVO ===== -->
+
+      <!-- ===== SUBSELECTOR: SOLO APARECE SI ELIGES "Regional Mexicano" ===== -->
+      <div class="form-group hidden" id="subgenreGroup">
+        <label for="subgenreToggle">4b. Subgénero (Regional Mexicano)</label>
+
+        <div class="genre-select" id="subgenreSelect">
+          <button type="button" id="subgenreToggle" class="genre-toggle"
+                  aria-haspopup="listbox" aria-expanded="false" aria-controls="subgenrePanel">
+            <span id="subgenreValue" class="genre-value placeholder">Selecciona un subgénero</span>
+            <span class="genre-arrow" aria-hidden="true">▾</span>
+          </button>
+
+          <div id="subgenrePanel" class="genre-panel hidden">
+            <div class="genre-search-wrap">
+              <input type="text" id="subgenreSearch" class="genre-search"
+                     placeholder="🔍 Buscar subgénero..." autocomplete="off"
+                     aria-label="Buscar subgénero" aria-controls="subgenreList">
+            </div>
+            <div id="subgenreList" class="genre-list" role="listbox" aria-label="Lista de subgéneros"></div>
+            <p id="subgenreEmpty" class="genre-empty hidden">No se encontraron subgéneros</p>
+          </div>
+        </div>
+
+        <input type="hidden" id="subgenero" name="subgenero" value="">
+        <p class="hint">Elige el subgénero específico (ej: Corridos Tumbados, Banda, Sierreño...).</p>
+      </div>
+      <!-- ===== FIN SUBSELECTOR ===== -->
 
       <div class="form-group">
         <label for="audio">5. Link de audio (Dropbox)</label>
