@@ -18,8 +18,7 @@ import {
   onSnapshot,
   deleteDoc,
   doc,
-  updateDoc,
-  increment
+  updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ============================================
@@ -106,7 +105,6 @@ const menuWrap     = document.getElementById('menuWrap');
 const menuBtn      = document.getElementById('menuBtn');
 const menuDropdown = document.getElementById('menuDropdown');
 const logoutBtn    = document.getElementById('logoutBtn');
-const statsBtn     = document.getElementById('statsBtn');
 
 // Modal reproductor
 const playerModal    = document.getElementById('playerModal');
@@ -132,24 +130,12 @@ const editAudio    = document.getElementById('editAudio');
 const editImagen   = document.getElementById('editImagen');
 const editSubmitBtn = document.getElementById('editSubmitBtn');
 
-// Modal estadísticas
-const statsModal          = document.getElementById('statsModal');
-const statsList           = document.getElementById('statsList');
-const statsEmpty          = document.getElementById('statsEmpty');
-const statsTotalPlays     = document.getElementById('statsTotalPlays');
-const statsTotalListeners = document.getElementById('statsTotalListeners');
-const statsTotalEarnings  = document.getElementById('statsTotalEarnings');
-
 let usuarioActual = null;
 let unsubscribeHistorial = null;
 let cancionesActuales = [];
 let editandoId = null;
-let statsAbierto = false;
-let cancionEnPlayer = null;
-let reproduccionContada = false;
 
 const PLACEHOLDER = 'https://via.placeholder.com/64/333/666?text=%E2%99%AB';
-const PAGO_POR_REPRODUCCION = 0.10; // MXN
 
 // ===================
 // Utilidades
@@ -182,17 +168,6 @@ function escapeHtml(str = '') {
     '"': '&quot;',
     "'": '&#39;'
   }[c]));
-}
-
-function fmtNumero(n) {
-  return (Number(n) || 0).toLocaleString('es-MX');
-}
-
-function fmtDinero(n) {
-  return '$' + (Number(n) || 0).toLocaleString('es-MX', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }) + ' MXN';
 }
 
 // ===================
@@ -265,12 +240,11 @@ onAuthStateChanged(auth, (user) => {
     cancionesActuales = [];
     cerrarPlayer();
     cerrarEditModal();
-    cerrarStatsModal();
   }
 });
 
 // ===================
-// Vista previa dinámica
+// Vista previa dinámica (formulario)
 // ===================
 ['artista', 'titulo', 'imagen', 'album'].forEach(id => {
   document.getElementById(id).addEventListener('input', actualizarPreview);
@@ -292,7 +266,9 @@ function actualizarPreview() {
   previewArtista.textContent = artista || '—';
 
   const albumSpan = document.querySelector('.preview-info .Album');
-  if (albumSpan) albumSpan.textContent = album || 'Reggeton 1';
+  if (albumSpan) {
+    albumSpan.textContent = album || 'Reggeton 1';
+  }
 
   if (imagen) {
     previewImg.src = dropboxDirecto(imagen);
@@ -303,7 +279,7 @@ function actualizarPreview() {
 }
 
 // ===================
-// HISTORIAL — onSnapshot en vivo
+// HISTORIAL
 // ===================
 function escucharHistorial(uid) {
   if (unsubscribeHistorial) unsubscribeHistorial();
@@ -323,49 +299,11 @@ function escucharHistorial(uid) {
     });
 
     renderHistorial(canciones);
-
-    if (statsAbierto) renderStats(canciones);
-
-    // 🔄 Inicializar canciones viejas sin contadores (una sola vez)
-    inicializarContadoresViejos(canciones);
-
   }, (err) => {
     console.error('Error historial:', err);
     historyList.innerHTML = '';
     mostrarStatus('Error al cargar el historial: ' + err.message, 'error');
   });
-}
-
-// 🔄 Inicializa `reproducciones` y `oyentes` en canciones antiguas (solo una vez)
-let migracionCorriendo = false;
-async function inicializarContadoresViejos(canciones) {
-  if (migracionCorriendo || !usuarioActual) return;
-
-  const pendientes = canciones.filter(c =>
-    c.reproducciones === undefined || c.oyentes === undefined
-  );
-
-  if (!pendientes.length) return;
-
-  migracionCorriendo = true;
-  console.log(`[Migración] Inicializando ${pendientes.length} canciones...`);
-
-  for (const c of pendientes) {
-    try {
-      await updateDoc(
-        doc(db, 'historial_usuarios', usuarioActual.uid, 'canciones', c.id),
-        {
-          reproducciones: c.reproducciones ?? 0,
-          oyentes:        c.oyentes ?? 0
-        }
-      );
-    } catch (err) {
-      console.warn('[Migración] Error en', c.id, err);
-    }
-  }
-
-  migracionCorriendo = false;
-  console.log('[Migración] ✅ Listo');
 }
 
 function renderHistorial(canciones) {
@@ -455,7 +393,7 @@ async function eliminarCancion(id, boton, titulo) {
 }
 
 // ===================
-// Guardar canción (con contadores en 0)
+// Guardar canción
 // ===================
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -503,14 +441,12 @@ form.addEventListener('submit', async (e) => {
       titulo:    titulo,
       album:     album,
       genero:    genero,
-      subgenero: subgenero,
+      subgenero: subgenero,   // ← NUEVO
       audioUrl:  audioUrl,
       imagenUrl: imagenUrl,
       origen:    'dropbox',
       uid:       uid,
       email:     usuarioActual.email,
-      reproducciones: 0,   // 🔥 Contador inicial en Firebase
-      oyentes: 0,          // 🔥 Contador inicial en Firebase
       fecha:     serverTimestamp()
     });
 
@@ -534,35 +470,6 @@ form.addEventListener('submit', async (e) => {
 });
 
 // ================================================================
-// 🔥 TRACKING: incrementa reproducciones y oyentes en Firebase
-// ================================================================
-async function registrarReproduccion(cancion) {
-  if (!usuarioActual || !cancion || !cancion.id) return;
-
-  try {
-    const ref = doc(db, 'historial_usuarios', usuarioActual.uid, 'canciones', cancion.id);
-
-    const update = {
-      reproducciones: increment(1)
-    };
-
-    // Oyente único por navegador (usa localStorage como huella)
-    const playsKey = `kerim_played_${cancion.id}`;
-    const yaEscuchado = localStorage.getItem(playsKey);
-    if (!yaEscuchado) {
-      update.oyentes = increment(1);
-      localStorage.setItem(playsKey, '1');
-    }
-
-    await updateDoc(ref, update);
-    console.log('[Tracking] ✅', cancion.titulo, 'reproducción registrada');
-
-  } catch (err) {
-    console.warn('[Tracking] Error:', err);
-  }
-}
-
-// ================================================================
 // MODAL REPRODUCTOR
 // ================================================================
 const previewAudio = new Audio();
@@ -577,9 +484,6 @@ function fmtTiempo(seg) {
 
 function abrirPlayer(cancion) {
   if (!cancion) return;
-
-  cancionEnPlayer = cancion;
-  reproduccionContada = false;
 
   playerImg.src = cancion.imagenUrl || PLACEHOLDER;
   playerImg.onerror = () => { playerImg.onerror = null; playerImg.src = PLACEHOLDER; };
@@ -611,9 +515,6 @@ function cerrarPlayer() {
   }
   document.body.style.overflow = '';
   if (playerPlay) playerPlay.textContent = '▶';
-
-  cancionEnPlayer = null;
-  reproduccionContada = false;
 }
 
 playerModal.addEventListener('click', (e) => {
@@ -638,14 +539,6 @@ playerPlay.addEventListener('click', async () => {
     }
   } catch (err) {
     console.warn('No se pudo reproducir:', err);
-  }
-});
-
-// 🔥 Solo cuenta 1 reproducción por sesión de player
-previewAudio.addEventListener('play', () => {
-  if (cancionEnPlayer && !reproduccionContada) {
-    reproduccionContada = true;
-    registrarReproduccion(cancionEnPlayer);
   }
 });
 
@@ -801,104 +694,7 @@ editImagen.addEventListener('input', () => {
 });
 
 // ================================================================
-// 📊 MODAL ESTADÍSTICAS — datos REALES desde Firebase
-// ================================================================
-function renderStats(canciones) {
-  const lista = canciones || cancionesActuales || [];
-
-  if (!lista.length) {
-    statsList.innerHTML = '';
-    statsEmpty.classList.remove('hidden');
-    statsTotalPlays.textContent     = '0';
-    statsTotalListeners.textContent = '0';
-    statsTotalEarnings.textContent  = fmtDinero(0);
-    return;
-  }
-
-  statsEmpty.classList.add('hidden');
-
-  let totalReproducciones = 0;
-  let totalOyentes        = 0;
-
-  statsList.innerHTML = lista.map(c => {
-    const img     = c.imagenUrl ? escapeHtml(c.imagenUrl) : PLACEHOLDER;
-    const titulo  = escapeHtml(c.titulo  || 'Sin título');
-    const artista = escapeHtml(c.artista || 'Desconocido');
-
-    // 🔥 Estos números vienen DIRECTO de Firestore
-    const plays     = Number(c.reproducciones) || 0;
-    const listeners = Number(c.oyentes)        || 0;
-    const ganancia  = plays * PAGO_POR_REPRODUCCION;
-
-    totalReproducciones += plays;
-    totalOyentes        += listeners;
-
-    return `
-      <div class="stats-item">
-        <img src="${img}" alt="" loading="lazy"
-             onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
-        <div class="stats-item-info">
-          <span class="stats-item-title" title="${titulo}">${titulo}</span>
-          <span class="stats-item-artist" title="${artista}">${artista}</span>
-        </div>
-        <div class="stats-item-grid">
-          <div class="stats-cell">
-            <span class="stats-cell-label">👥 Oyentes</span>
-            <span class="stats-cell-value">${fmtNumero(listeners)}</span>
-          </div>
-          <div class="stats-cell">
-            <span class="stats-cell-label">▶️ Repros</span>
-            <span class="stats-cell-value">${fmtNumero(plays)}</span>
-          </div>
-          <div class="stats-cell earn">
-            <span class="stats-cell-label">💰 Ganancias</span>
-            <span class="stats-cell-value">${fmtDinero(ganancia)}</span>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  const totalGanancias = totalReproducciones * PAGO_POR_REPRODUCCION;
-
-  statsTotalPlays.textContent     = fmtNumero(totalReproducciones);
-  statsTotalListeners.textContent = fmtNumero(totalOyentes);
-  statsTotalEarnings.textContent  = fmtDinero(totalGanancias);
-}
-
-function abrirStatsModal() {
-  statsAbierto = true;
-  renderStats(cancionesActuales);
-  statsModal.classList.remove('hidden');
-  statsModal.setAttribute('aria-hidden', 'false');
-  document.body.style.overflow = 'hidden';
-}
-
-function cerrarStatsModal() {
-  statsAbierto = false;
-  if (!statsModal) return;
-  statsModal.classList.add('hidden');
-  statsModal.setAttribute('aria-hidden', 'true');
-  document.body.style.overflow = '';
-}
-
-statsModal.addEventListener('click', (e) => {
-  if (e.target.dataset.close === '1') cerrarStatsModal();
-});
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !statsModal.classList.contains('hidden')) {
-    cerrarStatsModal();
-  }
-});
-
-statsBtn.addEventListener('click', () => {
-  cerrarMenu();
-  setTimeout(abrirStatsModal, 120);
-});
-
-// ================================================================
-// MENÚ HAMBURGUESA
+// MENÚ HAMBURGUESA + CERRAR SESIÓN
 // ================================================================
 function abrirMenu() {
   if (!menuDropdown || !menuBtn) return;
@@ -916,8 +712,11 @@ function cerrarMenu() {
 
 menuBtn.addEventListener('click', (e) => {
   e.stopPropagation();
-  if (menuDropdown.classList.contains('hidden')) abrirMenu();
-  else cerrarMenu();
+  if (menuDropdown.classList.contains('hidden')) {
+    abrirMenu();
+  } else {
+    cerrarMenu();
+  }
 });
 
 document.addEventListener('click', (e) => {
@@ -949,106 +748,229 @@ logoutBtn.addEventListener('click', async () => {
 });
 
 // ================================================================
-// GÉNERO + SUBGÉNERO
+// SELECTOR DE GÉNERO MUSICAL CON BUSCADOR
 // ================================================================
 const GENEROS_RAW = [
-  "Regional Mexicano","Reggaetón","Pop","Rock","Hip-Hop / Rap","Música Latina","Cumbia",
-  "Electrónica","R&B / Soul","Indie / Alternativo","Metal","Punk","Reggae","Afrobeat",
-  "Country","Folk","Jazz","Blues","K-Pop","J-Pop","Cristiana / Gospel","Clásica","Flamenco",
-  "Acústica","Instrumental","Soundtrack","Otros",
-  "Art Pop","Dance Pop","Electropop","Synth-pop","Indie Pop","Dream Pop","Bedroom Pop",
-  "Hyperpop","Teen Pop","Bubblegum Pop","Power Pop","C-Pop","Latin Pop","Europop","Britpop",
-  "Sophisti-Pop","Baroque Pop","Sunshine Pop","Chamber Pop","Experimental Pop",
-  "Alternative Rock","Indie Rock","Hard Rock","Soft Rock","Classic Rock","Progressive Rock",
-  "Psychedelic Rock","Garage Rock","Blues Rock","Folk Rock","Southern Rock","Surf Rock",
-  "Glam Rock","Art Rock","Experimental Rock","Post-Rock","Math Rock","Noise Rock","Space Rock",
-  "Gothic Rock","Industrial Rock","Christian Rock","Grunge","Brit Rock","Emo","Shoegaze","Dream Rock",
-  "Heavy Metal","Thrash Metal","Death Metal","Black Metal","Doom Metal","Power Metal","Speed Metal",
-  "Progressive Metal","Symphonic Metal","Folk Metal","Groove Metal","Nu Metal","Alternative Metal",
-  "Industrial Metal","Gothic Metal","Metalcore","Deathcore","Grindcore","Sludge Metal","Stoner Metal",
-  "Funeral Doom","Melodic Death Metal","Technical Death Metal","Viking Metal","Pagan Metal","Post-Metal","Djent",
-  "Punk Rock","Hardcore Punk","Post-Punk","Pop Punk","Skate Punk","Street Punk","Anarcho-Punk",
-  "Crust Punk","D-Beat","Garage Punk","Riot Grrrl","Emo Punk","Ska Punk","Celtic Punk","Folk Punk",
-  "Horror Punk","Psychobilly",
-  "Hip-Hop","Rap","Trap","Drill","Gangsta Rap","Boom Bap","Conscious Hip-Hop","Underground Hip-Hop",
-  "Alternative Hip-Hop","Old School Hip-Hop","West Coast Hip-Hop","East Coast Hip-Hop","Southern Hip-Hop",
-  "Crunk","Dirty South","G-Funk","Cloud Rap","Emo Rap","Jazz Rap","Experimental Hip-Hop","Hardcore Hip-Hop",
-  "Latin Hip-Hop","Chicano Rap","UK Hip-Hop","UK Drill","Grime","Freestyle Rap","Trap Latino",
-  "R&B","Contemporary R&B","Alternative R&B","Neo Soul","Soul","Classic Soul","Southern Soul","Motown",
-  "Funk","P-Funk","Quiet Storm","New Jack Swing","Blue-Eyed Soul","Psychedelic Soul","Gospel Soul","Soul Jazz",
-  "Blues","Delta Blues","Chicago Blues","Texas Blues","Electric Blues","Acoustic Blues","Country Blues",
-  "Piedmont Blues","British Blues","Jump Blues","Swamp Blues","Gospel Blues","Soul Blues",
-  "Jazz","Bebop","Hard Bop","Cool Jazz","Free Jazz","Fusion","Jazz Fusion","Smooth Jazz","Acid Jazz",
-  "Latin Jazz","Afro-Cuban Jazz","Gypsy Jazz","Swing","Big Band","Dixieland","Ragtime","Modal Jazz",
-  "Avant-Garde Jazz","Jazz Funk","Nu Jazz","Vocal Jazz","Contemporary Jazz",
-  "Electronic","EDM","House","Deep House","Tech House","Progressive House","Electro House","Future House",
-  "Tropical House","Bass House","Acid House","Chicago House","French House","Minimal House","Techno",
-  "Detroit Techno","Minimal Techno","Industrial Techno","Hard Techno","Acid Techno","Trance",
-  "Progressive Trance","Psytrance","Goa Trance","Uplifting Trance","Hard Trance","Electro","Ambient",
-  "Dark Ambient","Chillout","Downtempo","IDM","Breakbeat","Drum & Bass","Jungle","Liquid Drum & Bass",
-  "Dubstep","Brostep","UK Garage","Future Bass","Synthwave","Vaporwave","Retrowave","Lo-Fi","Chillwave",
-  "Glitch","Industrial","EBM","Hardcore","Gabber","Hardstyle","Future Rave",
-  "Reggae","Roots Reggae","Dancehall","Dub","Rocksteady","Ska","Lovers Rock","Ragga","Reggae Fusion",
-  "Digital Reggae","Dub Poetry",
-  "Música Latina","Latin Urban","Salsa","Salsa Romántica","Salsa Dura","Son Cubano","Bachata","Merengue",
-  "Cumbia","Cumbia Mexicana","Cumbia Colombiana","Cumbia Villera","Cumbia Peruana","Cumbia Andina",
-  "Vallenato","Bolero","Mambo","Cha-cha-chá","Rumba","Guaracha","Danzón","Timba","Latin Rock","Latin Soul",
-  "Tango","Milonga","Bossa Nova","Samba","MPB","Forró","Axé","Frevo","Sertanejo",
-  "Mariachi","Ranchera","Norteño","Norteño-Banda","Banda","Banda Sinaloense","Corridos",
-  "Corrido Tradicional","Corrido Tumbado","Corrido Bélico","Corridos Alterados","Tejano","Grupero",
-  "Duranguense","Sierreño","Huapango","Son Jarocho","Son Huasteco","Música de Tierra Caliente",
-  "Música Norteña","Cumbia Norteña","Bolero Ranchero","Mariachi Moderno",
-  "Country","Country Pop","Country Rock","Traditional Country","Outlaw Country","Alternative Country",
-  "Bluegrass","Americana","Honky Tonk","Country Blues","Western Swing","Nashville Sound","Red Dirt",
-  "Contemporary Country","Country Folk",
-  "Folk","Contemporary Folk","Traditional Folk","Celtic Folk","Irish Folk","Scottish Folk","English Folk",
-  "American Folk","Appalachian","Nordic Folk","Balkan Folk","Slavic Folk","Gypsy / Romani","Klezmer",
-  "Neofolk","World Folk","Folk Fusion",
-  "Música Clásica","Medieval","Renacimiento","Barroco","Clasicismo","Romanticismo","Impresionismo",
-  "Modernismo","Música Contemporánea","Música de Cámara","Sinfónica","Coral","Ópera","Opereta","Oratorio",
-  "Cantata","Concierto","Sonata","Sinfonía","Música Minimalista","Música Experimental",
-  "Gospel","Christian","Christian Pop","Christian Hip-Hop","Christian Metal","Worship",
-  "Contemporary Christian","Spiritual","Hymns","Islamic Music","Nasheed","Jewish Music","Buddhist Music",
-  "Hindu Devotional","Mantra",
-  "Afrobeat","Afrobeats","Afro-Pop","Amapiano","Highlife","Hiplife","Kizomba","Kuduro","Kwaito","Gqom",
-  "Mbalax","Juju","Fuji","Makossa","Soukous","Congolese Rumba","Benga","Bikutsi","Chimurenga","Jit",
-  "Marrabenta","Mbube","Marabi","Township Jazz","Rai","Gnawa","Desert Blues","Maloya","Sega","Cape Jazz",
-  "Calypso","Soca","Zouk","Kompa","Son","Mento","Steelpan","Bouyon","Punta",
-  "Pagode","Choro","Tropicália","Maracatu","Baião","Carimbó","Lambada","Música Caipira","Samba-Reggae","Funk Carioca",
-  "K-Rock","K-Hip-Hop","J-Rock","J-Hip-Hop","City Pop","Enka","Shibuya-kei","Mandopop","Cantopop",
-  "Bollywood","Bhangra","Qawwali","Ghazal","Carnatic","Hindustani Classical","Raga","Dhrupad","Gamelan",
-  "Dangdut","Thai Pop","V-Pop","Pinoy Pop","Persian Pop","Arabic Pop","Turkish Pop",
-  "Arabic Music","Shaabi","Dabke","Khaleeji","Egyptian Pop","Lebanese Pop","Iraqi Music","Persian Music",
-  "Turkish Music","Kurdish Music","Armenian Music","Israeli Music","Mizrahi","Andalusian Music","Oud Music",
-  "Traditional Middle Eastern",
-  "Hawaiian","Hawaiian Pop","Polynesian","Samoan","Tahitian","Tongan","Maori","Aboriginal Australian",
-  "Melanesian","Micronesian","Pacific Island Music","New Zealand Folk",
-  "Experimental","Avant-Garde","Noise","Drone","Musique Concrète","Electroacoustic","Minimalism",
-  "Sound Art","Free Improvisation","Experimental Electronic",
-  "Film Score","Soundtrack","Movie Soundtrack","Television Score","Video Game Music","Anime Music",
-  "Orchestral Score","Cinematic","Trailer Music","Ambient Score","Musical Theatre","Broadway","Stage & Screen",
-  "A Cappella","Vocal Pop","Choral","Choir","Barbershop","Doo-Wop","Beatboxing","Gregorian Chant",
-  "Operatic","Vocal Classical",
-  "Children's Music","Nursery Rhymes","Educational Music","Comedy Music","Novelty","Parody","Comedy Rock",
-  "Comedy Rap","Comedy Pop",
-  "Dance","Dance-Pop","Eurodance","Eurobeat","Disco","Nu-Disco","Garage","Jersey Club","Baltimore Club",
-  "Footwork","Juke",
-  "Acústica","Acústica Pop","Rock Acústico","Folk Acústico","Latino Acústico","Indie Acústico",
-  "Regional Mexicano Acústico","Acústica Instrumental","Unplugged","Balada Acústica","Bolero Acústico"
+  // ===== CATEGORÍAS PRINCIPALES (NUEVO) =====
+  "Regional Mexicano",
+  "Reggaetón",
+  "Pop",
+  "Rock",
+  "Hip-Hop / Rap",
+  "Música Latina",
+  "Cumbia",
+  "Electrónica",
+  "R&B / Soul",
+  "Indie / Alternativo",
+  "Metal",
+  "Punk",
+  "Reggae",
+  "Afrobeat",
+  "Country",
+  "Folk",
+  "Jazz",
+  "Blues",
+  "K-Pop",
+  "J-Pop",
+  "Cristiana / Gospel",
+  "Clásica",
+  "Flamenco",
+  "Acústica",
+  "Instrumental",
+  "Soundtrack",
+  "Otros",
+
+  // ===== POP =====
+  "Art Pop", "Dance Pop", "Electropop", "Synth-pop", "Indie Pop", "Dream Pop",
+  "Bedroom Pop", "Hyperpop", "Teen Pop", "Bubblegum Pop", "Power Pop",
+  "C-Pop", "Latin Pop", "Europop", "Britpop", "Sophisti-Pop", "Baroque Pop",
+  "Sunshine Pop", "Chamber Pop", "Experimental Pop",
+
+  // ===== ROCK =====
+  "Alternative Rock", "Indie Rock", "Hard Rock", "Soft Rock", "Classic Rock",
+  "Progressive Rock", "Psychedelic Rock", "Garage Rock", "Blues Rock", "Folk Rock",
+  "Southern Rock", "Surf Rock", "Glam Rock", "Art Rock", "Experimental Rock", "Post-Rock",
+  "Math Rock", "Noise Rock", "Space Rock", "Gothic Rock", "Industrial Rock",
+  "Christian Rock", "Grunge", "Brit Rock", "Emo", "Shoegaze", "Dream Rock",
+
+  // ===== METAL =====
+  "Heavy Metal", "Thrash Metal", "Death Metal", "Black Metal", "Doom Metal", "Power Metal",
+  "Speed Metal", "Progressive Metal", "Symphonic Metal", "Folk Metal", "Groove Metal",
+  "Nu Metal", "Alternative Metal", "Industrial Metal", "Gothic Metal", "Metalcore",
+  "Deathcore", "Grindcore", "Sludge Metal", "Stoner Metal", "Funeral Doom",
+  "Melodic Death Metal", "Technical Death Metal", "Viking Metal", "Pagan Metal",
+  "Post-Metal", "Djent",
+
+  // ===== PUNK =====
+  "Punk Rock", "Hardcore Punk", "Post-Punk", "Pop Punk", "Skate Punk", "Street Punk",
+  "Anarcho-Punk", "Crust Punk", "D-Beat", "Garage Punk", "Riot Grrrl", "Emo Punk",
+  "Ska Punk", "Celtic Punk", "Folk Punk", "Horror Punk", "Psychobilly",
+
+  // ===== HIP-HOP / RAP =====
+  "Hip-Hop", "Rap", "Trap", "Drill", "Gangsta Rap", "Boom Bap", "Conscious Hip-Hop",
+  "Underground Hip-Hop", "Alternative Hip-Hop", "Old School Hip-Hop", "West Coast Hip-Hop",
+  "East Coast Hip-Hop", "Southern Hip-Hop", "Crunk", "Dirty South", "G-Funk", "Cloud Rap",
+  "Emo Rap", "Jazz Rap", "Experimental Hip-Hop", "Hardcore Hip-Hop", "Latin Hip-Hop",
+  "Chicano Rap", "UK Hip-Hop", "UK Drill", "Grime", "Freestyle Rap", "Trap Latino",
+
+  // ===== R&B / SOUL =====
+  "R&B", "Contemporary R&B", "Alternative R&B", "Neo Soul", "Soul", "Classic Soul",
+  "Southern Soul", "Motown", "Funk", "P-Funk", "Quiet Storm", "New Jack Swing",
+  "Blue-Eyed Soul", "Psychedelic Soul", "Gospel Soul", "Soul Jazz",
+
+  // ===== BLUES =====
+  "Blues", "Delta Blues", "Chicago Blues", "Texas Blues", "Electric Blues",
+  "Acoustic Blues", "Country Blues", "Piedmont Blues", "British Blues", "Jump Blues",
+  "Swamp Blues", "Gospel Blues", "Soul Blues",
+
+  // ===== JAZZ =====
+  "Jazz", "Bebop", "Hard Bop", "Cool Jazz", "Free Jazz", "Fusion", "Jazz Fusion",
+  "Smooth Jazz", "Acid Jazz", "Latin Jazz", "Afro-Cuban Jazz", "Gypsy Jazz", "Swing",
+  "Big Band", "Dixieland", "Ragtime", "Modal Jazz", "Avant-Garde Jazz", "Jazz Funk",
+  "Nu Jazz", "Vocal Jazz", "Contemporary Jazz",
+
+  // ===== ELECTRÓNICA =====
+  "Electronic", "EDM", "House", "Deep House", "Tech House", "Progressive House",
+  "Electro House", "Future House", "Tropical House", "Bass House", "Acid House",
+  "Chicago House", "French House", "Minimal House", "Techno", "Detroit Techno",
+  "Minimal Techno", "Industrial Techno", "Hard Techno", "Acid Techno", "Trance",
+  "Progressive Trance", "Psytrance", "Goa Trance", "Uplifting Trance", "Hard Trance",
+  "Electro", "Ambient", "Dark Ambient", "Chillout", "Downtempo", "IDM", "Breakbeat",
+  "Drum & Bass", "Jungle", "Liquid Drum & Bass", "Dubstep", "Brostep", "UK Garage",
+  "Future Bass", "Synthwave", "Vaporwave", "Retrowave", "Lo-Fi", "Chillwave", "Glitch",
+  "Industrial", "EBM", "Hardcore", "Gabber", "Hardstyle", "Future Rave",
+
+  // ===== REGGAE =====
+  "Reggae", "Roots Reggae", "Dancehall", "Dub", "Rocksteady", "Ska", "Lovers Rock",
+  "Ragga", "Reggae Fusion", "Digital Reggae", "Dub Poetry",
+
+  // ===== MÚSICA LATINA =====
+  "Música Latina", "Latin Urban", "Salsa", "Salsa Romántica", "Salsa Dura",
+  "Son Cubano", "Bachata", "Merengue", "Cumbia", "Cumbia Mexicana", "Cumbia Colombiana",
+  "Cumbia Villera", "Cumbia Peruana", "Cumbia Andina", "Vallenato", "Bolero", "Mambo",
+  "Cha-cha-chá", "Rumba", "Guaracha", "Danzón", "Timba", "Latin Rock", "Latin Soul",
+  "Tango", "Milonga", "Bossa Nova", "Samba", "MPB", "Forró", "Axé",
+  "Frevo", "Sertanejo",
+
+  // ===== REGIONAL MEXICANO (subgéneros también) =====
+  "Mariachi", "Ranchera", "Norteño", "Norteño-Banda", "Banda", "Banda Sinaloense",
+  "Corridos", "Corrido Tradicional", "Corrido Tumbado", "Corrido Bélico",
+  "Corridos Alterados", "Tejano", "Grupero", "Duranguense", "Sierreño", "Huapango",
+  "Son Jarocho", "Son Huasteco", "Música de Tierra Caliente", "Música Norteña",
+  "Cumbia Norteña", "Bolero Ranchero", "Mariachi Moderno",
+
+  // ===== COUNTRY =====
+  "Country", "Country Pop", "Country Rock", "Traditional Country", "Outlaw Country",
+  "Alternative Country", "Bluegrass", "Americana", "Honky Tonk", "Country Blues",
+  "Western Swing", "Nashville Sound", "Red Dirt", "Contemporary Country", "Country Folk",
+
+  // ===== FOLK =====
+  "Folk", "Contemporary Folk", "Traditional Folk", "Celtic Folk", "Irish Folk",
+  "Scottish Folk", "English Folk", "American Folk", "Appalachian", "Nordic Folk",
+  "Balkan Folk", "Slavic Folk", "Gypsy / Romani", "Klezmer", "Neofolk", "World Folk",
+  "Folk Fusion",
+
+  // ===== CLÁSICA =====
+  "Música Clásica", "Medieval", "Renacimiento", "Barroco", "Clasicismo", "Romanticismo",
+  "Impresionismo", "Modernismo", "Música Contemporánea", "Música de Cámara", "Sinfónica",
+  "Coral", "Ópera", "Opereta", "Oratorio", "Cantata", "Concierto", "Sonata", "Sinfonía",
+  "Música Minimalista", "Música Experimental",
+
+  // ===== CRISTIANA / GOSPEL =====
+  "Gospel", "Christian", "Christian Pop", "Christian Hip-Hop", "Christian Metal",
+  "Worship", "Contemporary Christian", "Spiritual", "Hymns", "Islamic Music", "Nasheed",
+  "Jewish Music", "Buddhist Music", "Hindu Devotional", "Mantra",
+
+  // ===== AFRO =====
+  "Afrobeat", "Afrobeats", "Afro-Pop", "Amapiano", "Highlife", "Hiplife", "Kizomba",
+  "Kuduro", "Kwaito", "Gqom", "Mbalax", "Juju", "Fuji", "Makossa", "Soukous",
+  "Congolese Rumba", "Benga", "Bikutsi", "Chimurenga", "Jit", "Marrabenta", "Mbube",
+  "Marabi", "Township Jazz", "Rai", "Gnawa", "Desert Blues", "Maloya", "Sega", "Cape Jazz",
+
+  // ===== CARIBEÑA =====
+  "Calypso", "Soca", "Zouk", "Kompa", "Son", "Mento", "Steelpan", "Bouyon", "Punta",
+
+  // ===== BRASILEÑA =====
+  "Pagode", "Choro", "Tropicália", "Maracatu", "Baião", "Carimbó", "Lambada",
+  "Música Caipira", "Samba-Reggae", "Funk Carioca",
+
+  // ===== ASIÁTICA =====
+  "K-Rock", "K-Hip-Hop", "J-Rock", "J-Hip-Hop", "City Pop", "Enka", "Shibuya-kei",
+  "Mandopop", "Cantopop", "Bollywood", "Bhangra", "Qawwali", "Ghazal", "Carnatic",
+  "Hindustani Classical", "Raga", "Dhrupad", "Gamelan", "Dangdut", "Thai Pop", "V-Pop",
+  "Pinoy Pop", "Persian Pop", "Arabic Pop", "Turkish Pop",
+
+  // ===== ÁRABE / MEDIO ORIENTE =====
+  "Arabic Music", "Shaabi", "Dabke", "Khaleeji", "Egyptian Pop", "Lebanese Pop",
+  "Iraqi Music", "Persian Music", "Turkish Music", "Kurdish Music", "Armenian Music",
+  "Israeli Music", "Mizrahi", "Andalusian Music", "Oud Music", "Traditional Middle Eastern",
+
+  // ===== OCEÁNICA =====
+  "Hawaiian", "Hawaiian Pop", "Polynesian", "Samoan", "Tahitian", "Tongan", "Maori",
+  "Aboriginal Australian", "Melanesian", "Micronesian", "Pacific Island Music",
+  "New Zealand Folk",
+
+  // ===== EXPERIMENTAL =====
+  "Experimental", "Avant-Garde", "Noise", "Drone", "Musique Concrète",
+  "Electroacoustic", "Minimalism", "Sound Art", "Free Improvisation",
+  "Experimental Electronic",
+
+  // ===== CINE / TV / VIDEOJUEGOS =====
+  "Film Score", "Soundtrack", "Movie Soundtrack", "Television Score", "Video Game Music",
+  "Anime Music", "Orchestral Score", "Cinematic", "Trailer Music", "Ambient Score",
+  "Musical Theatre", "Broadway", "Stage & Screen",
+
+  // ===== VOCAL =====
+  "A Cappella", "Vocal Pop", "Choral", "Choir", "Barbershop", "Doo-Wop", "Beatboxing",
+  "Gregorian Chant", "Operatic", "Vocal Classical",
+
+  // ===== INFANTIL / HUMOR =====
+  "Children's Music", "Nursery Rhymes", "Educational Music", "Comedy Music", "Novelty",
+  "Parody", "Comedy Rock", "Comedy Rap", "Comedy Pop",
+
+  // ===== BAILE / CLUB =====
+  "Dance", "Dance-Pop", "Eurodance", "Eurobeat", "Disco", "Nu-Disco", "Garage",
+  "Jersey Club", "Baltimore Club", "Footwork", "Juke",
+
+  // ===== ACÚSTICA =====
+  "Acústica", "Acústica Pop", "Rock Acústico", "Folk Acústico", "Latino Acústico",
+  "Indie Acústico", "Regional Mexicano Acústico", "Acústica Instrumental",
+  "Unplugged", "Balada Acústica", "Bolero Acústico"
 ];
 
+// Limpiar duplicados y ordenar alfabéticamente (ignorando acentos)
 const GENEROS = [...new Set(GENEROS_RAW.map(g => g.trim()).filter(Boolean))]
   .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
 
+// ================================================================
+// SUBGÉNEROS DE "REGIONAL MEXICANO"
+// ================================================================
 const SUBGENEROS_RAW = [
-  "Corridos","Corridos Tumbados","Corridos Bélicos","Corridos Tradicionales","Banda","Banda Sinaloense",
-  "Norteño","Norteño-Banda","Sierreño","Sad Sierreño","Grupero","Mariachi","Ranchera","Huapango",
-  "Duranguense","Tejano","Cumbia Norteña"
+  "Corridos",
+  "Corridos Tumbados",
+  "Corridos Bélicos",
+  "Corridos Tradicionales",
+  "Banda",
+  "Banda Sinaloense",
+  "Norteño",
+  "Norteño-Banda",
+  "Sierreño",
+  "Sad Sierreño",
+  "Grupero",
+  "Mariachi",
+  "Ranchera",
+  "Huapango",
+  "Duranguense",
+  "Tejano",
+  "Cumbia Norteña"
 ];
 
 const SUBGENEROS = [...new Set(SUBGENEROS_RAW.map(g => g.trim()).filter(Boolean))]
   .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
 
+// ================================================================
+// ELEMENTOS DEL DOM — GÉNERO
+// ================================================================
 const generoHidden  = document.getElementById('genero');
 const genreSelect   = document.getElementById('genreSelect');
 const genreToggle   = document.getElementById('genreToggle');
@@ -1058,6 +980,7 @@ const genreSearch   = document.getElementById('genreSearch');
 const genreValue    = document.getElementById('genreValue');
 const genreEmpty    = document.getElementById('genreEmpty');
 
+// Elementos del DOM — SUBGÉNERO
 const subgenreGroup  = document.getElementById('subgenreGroup');
 const subgeneroHidden = document.getElementById('subgenero');
 const subgenreSelect = document.getElementById('subgenreSelect');
@@ -1074,6 +997,9 @@ let subgeneroSeleccionado = '';
 const normalizarTexto = (s = '') =>
   String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
+// ================================================================
+// RENDERIZADO DE GÉNEROS
+// ================================================================
 function pintarGeneros(filtro = '') {
   const q = normalizarTexto(filtro);
   const lista = q ? GENEROS.filter(g => normalizarTexto(g).includes(q)) : GENEROS;
@@ -1083,6 +1009,7 @@ function pintarGeneros(filtro = '') {
     genreEmpty.classList.remove('hidden');
     return;
   }
+
   genreEmpty.classList.add('hidden');
 
   genreList.innerHTML = lista.map(g => {
@@ -1116,10 +1043,12 @@ function seleccionarGenero(valor) {
   genreValue.classList.toggle('placeholder', !generoSeleccionado);
   cerrarGeneros();
 
+  // 👇 Mostrar/ocultar subgénero según la elección
   if (generoSeleccionado === 'Regional Mexicano') {
     if (subgenreGroup) subgenreGroup.classList.remove('hidden');
   } else {
     if (subgenreGroup) subgenreGroup.classList.add('hidden');
+    // Limpiar subgénero al cambiar de género
     subgeneroSeleccionado = '';
     if (subgeneroHidden) subgeneroHidden.value = '';
     if (subgenreValue) {
@@ -1130,6 +1059,9 @@ function seleccionarGenero(valor) {
   }
 }
 
+// ================================================================
+// RENDERIZADO DE SUBGÉNEROS
+// ================================================================
 function pintarSubgeneros(filtro = '') {
   const q = normalizarTexto(filtro);
   const lista = q ? SUBGENEROS.filter(g => normalizarTexto(g).includes(q)) : SUBGENEROS;
@@ -1139,6 +1071,7 @@ function pintarSubgeneros(filtro = '') {
     subgenreEmpty.classList.remove('hidden');
     return;
   }
+
   subgenreEmpty.classList.add('hidden');
 
   subgenreList.innerHTML = lista.map(g => {
@@ -1176,12 +1109,17 @@ function seleccionarSubgenero(valor) {
   cerrarSubgeneros();
 }
 
+// ================================================================
+// EVENTOS — GÉNERO
+// ================================================================
 genreToggle.addEventListener('click', (e) => {
   e.stopPropagation();
   if (genrePanel.classList.contains('hidden')) abrirGeneros();
   else cerrarGeneros();
 });
+
 genreSearch.addEventListener('input', () => pintarGeneros(genreSearch.value));
+
 genreSearch.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     e.preventDefault();
@@ -1190,25 +1128,33 @@ genreSearch.addEventListener('keydown', (e) => {
   }
   if (e.key === 'Escape') cerrarGeneros();
 });
+
 genreList.addEventListener('click', (e) => {
   const btn = e.target.closest('.genre-item');
   if (!btn) return;
   seleccionarGenero(btn.dataset.genero);
 });
+
 document.addEventListener('click', (e) => {
   if (genrePanel.classList.contains('hidden')) return;
   if (genreSelect && !genreSelect.contains(e.target)) cerrarGeneros();
 });
+
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !genrePanel.classList.contains('hidden')) cerrarGeneros();
 });
 
+// ================================================================
+// EVENTOS — SUBGÉNERO
+// ================================================================
 subgenreToggle.addEventListener('click', (e) => {
   e.stopPropagation();
   if (subgenrePanel.classList.contains('hidden')) abrirSubgeneros();
   else cerrarSubgeneros();
 });
+
 subgenreSearch.addEventListener('input', () => pintarSubgeneros(subgenreSearch.value));
+
 subgenreSearch.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     e.preventDefault();
@@ -1217,19 +1163,25 @@ subgenreSearch.addEventListener('keydown', (e) => {
   }
   if (e.key === 'Escape') cerrarSubgeneros();
 });
+
 subgenreList.addEventListener('click', (e) => {
   const btn = e.target.closest('.genre-item');
   if (!btn) return;
   seleccionarSubgenero(btn.dataset.subgenero);
 });
+
 document.addEventListener('click', (e) => {
   if (subgenrePanel.classList.contains('hidden')) return;
   if (subgenreSelect && !subgenreSelect.contains(e.target)) cerrarSubgeneros();
 });
+
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !subgenrePanel.classList.contains('hidden')) cerrarSubgeneros();
 });
 
+// ================================================================
+// RESET DEL FORMULARIO
+// ================================================================
 document.getElementById('formCancion').addEventListener('reset', () => {
   generoSeleccionado = '';
   generoHidden.value = '';
@@ -1247,5 +1199,8 @@ document.getElementById('formCancion').addEventListener('reset', () => {
   cerrarSubgeneros();
 });
 
+// ================================================================
+// INICIALIZAR
+// ================================================================
 pintarGeneros('');
 pintarSubgeneros('');
