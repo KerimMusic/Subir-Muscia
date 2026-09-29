@@ -17,9 +17,6 @@
     </button>
 
     <div id="menuDropdown" class="menu-dropdown hidden">
-      <button id="statsBtn" class="menu-item" type="button">
-        📚 Mis canciones subidas
-      </button>
       <button id="logoutBtn" class="menu-item" type="button">
         🚪 Cerrar sesión
       </button>
@@ -240,42 +237,6 @@
       </div>
     </div>
     <!-- ====================================================== -->
-
-    <!-- ================= MODAL ESTADÍSTICAS (NUEVO) ================= -->
-    <div id="statsModal" class="stats-modal hidden" aria-hidden="true">
-      <div class="stats-backdrop" data-close="1"></div>
-
-      <div class="stats-card" role="dialog" aria-modal="true" aria-labelledby="statsHeading">
-        <button type="button" class="stats-close" data-close="1" title="Cerrar">✕</button>
-
-        <h2 id="statsHeading" class="stats-heading">📚 Mis canciones subidas</h2>
-
-        <div id="statsList" class="stats-list"></div>
-
-        <p id="statsEmpty" class="stats-empty hidden">
-          Todavía no has subido ninguna canción.
-        </p>
-
-        <!-- Resumen general -->
-        <div id="statsSummary" class="stats-summary">
-          <div class="stats-summary-item">
-            <span class="stats-summary-label">📊 Total reproducciones</span>
-            <strong id="statsTotalPlays" class="stats-summary-value">0</strong>
-          </div>
-          <div class="stats-summary-item">
-            <span class="stats-summary-label">👥 Total oyentes</span>
-            <strong id="statsTotalListeners" class="stats-summary-value">0</strong>
-          </div>
-          <div class="stats-summary-item stats-summary-earnings">
-            <span class="stats-summary-label">💰 Ganancias totales</span>
-            <strong id="statsTotalEarnings" class="stats-summary-value">$0.00 MXN</strong>
-          </div>
-        </div>
-
-        <p class="stats-hint">💵 Tarifa: $0.10 MXN por reproducción. Las cifras se actualizan automáticamente.</p>
-      </div>
-    </div>
-    <!-- ============================================================== -->
 
   </div>
 
