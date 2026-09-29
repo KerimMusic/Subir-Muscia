@@ -1,285 +1,1206 @@
-/* ============================================
-   MODAL ESTADÍSTICAS — MIS CANCIONES SUBIDAS (NUEVO)
-   ============================================ */
-.stats-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 1002;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  animation: fadeIn 0.2s ease;
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  onAuthStateChanged,
+  signOut,
+  setPersistence,
+  browserLocalPersistence
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  serverTimestamp,
+  onSnapshot,
+  deleteDoc,
+  doc,
+  updateDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ============================================
+// ✅ TU CONFIGURACIÓN REAL DE FIREBASE
+// ============================================
+const firebaseConfig = {
+  apiKey: "AIzaSyDMabE70hIApcNU5RY3_WEEIF-BWUzO0K4",
+  authDomain: "kerim-music-a9c46.firebaseapp.com",
+  projectId: "kerim-music-a9c46",
+  storageBucket: "kerim-music-a9c46.firebasestorage.app",
+  messagingSenderId: "470731440209",
+  appId: "1:470731440209:web:f6eba4784027a5d8c57870",
+  measurementId: "G-LBHTKL8KDK"
+};
+// ============================================
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+// ============================================================
+// ✅ COMPATIBILIDAD CON WEBVIEW
+// ============================================================
+setPersistence(auth, browserLocalPersistence).catch(err => {
+  console.warn('[WebView] No se pudo establecer persistencia:', err);
+});
+
+function esWebView() {
+  const ua = (navigator.userAgent || '').toLowerCase();
+  const esAndroidWV = /android/.test(ua) && /(wv|version\/[\d.]+)/.test(ua);
+  const esIOSWV = /iphone|ipad|ipod/.test(ua) && !/safari|crios|fxios|edgios/.test(ua);
+  const tieneBridge = !!(window.Android || window.ReactNativeWebView || (window.webkit && window.webkit.messageHandlers));
+  return esAndroidWV || esIOSWV || tieneBridge;
 }
 
-.stats-modal.hidden { display: none !important; }
+const LOGIN_BTN_HTML = `
+  <svg width="18" height="18" viewBox="0 0 24 24">
+    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+  </svg>
+  Iniciar sesión con Google
+`;
 
-.stats-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(4px);
+getRedirectResult(auth)
+  .then(result => {
+    if (result && result.user) {
+      mostrarStatus('✅ Sesión iniciada correctamente', 'ok');
+    }
+  })
+  .catch(err => {
+    if (err && err.code && err.code !== 'auth/no-auth-event') {
+      console.error('[Auth] getRedirectResult:', err);
+      mostrarStatus('Error al iniciar sesión: ' + err.message, 'error');
+    }
+  });
+
+// ============================================================
+// FIN BLOQUE WEBVIEW
+// ============================================================
+
+// Elementos del DOM
+const loginBtn   = document.getElementById('loginBtn');
+const form       = document.getElementById('formCancion');
+const userBox    = document.getElementById('userBox');
+const userEmail  = document.getElementById('userEmail');
+const status     = document.getElementById('status');
+const submitBtn  = document.getElementById('submitBtn');
+const preview    = document.getElementById('preview');
+const previewImg = document.getElementById('previewImg');
+const previewTitulo  = document.getElementById('previewTitulo');
+const previewArtista = document.getElementById('previewArtista');
+
+// Historial
+const historySection = document.getElementById('historySection');
+const historyList    = document.getElementById('historyList');
+const historyCount   = document.getElementById('historyCount');
+const historyEmpty   = document.getElementById('historyEmpty');
+
+// Menú hamburguesa
+const menuWrap     = document.getElementById('menuWrap');
+const menuBtn      = document.getElementById('menuBtn');
+const menuDropdown = document.getElementById('menuDropdown');
+const logoutBtn    = document.getElementById('logoutBtn');
+
+// Modal reproductor
+const playerModal    = document.getElementById('playerModal');
+const playerImg      = document.getElementById('playerImg');
+const playerTitle    = document.getElementById('playerTitle');
+const playerArtist   = document.getElementById('playerArtist');
+const playerPlay     = document.getElementById('playerPlay');
+const playerRewind   = document.getElementById('playerRewind');
+const playerForward  = document.getElementById('playerForward');
+const playerSeek     = document.getElementById('playerSeek');
+const playerVol      = document.getElementById('playerVol');
+const playerCurrent  = document.getElementById('playerCurrent');
+const playerDuration = document.getElementById('playerDuration');
+
+// Modal editar
+const editModal    = document.getElementById('editModal');
+const editForm     = document.getElementById('editForm');
+const editImg      = document.getElementById('editImg');
+const editArtista  = document.getElementById('editArtista');
+const editTitulo   = document.getElementById('editTitulo');
+const editAlbum    = document.getElementById('editAlbum');
+const editAudio    = document.getElementById('editAudio');
+const editImagen   = document.getElementById('editImagen');
+const editSubmitBtn = document.getElementById('editSubmitBtn');
+
+let usuarioActual = null;
+let unsubscribeHistorial = null;
+let cancionesActuales = [];
+let editandoId = null;
+
+const PLACEHOLDER = 'https://via.placeholder.com/64/333/666?text=%E2%99%AB';
+
+// ===================
+// Utilidades
+// ===================
+function mostrarStatus(msg, tipo = 'ok') {
+  status.textContent = msg;
+  status.className = 'status ' + tipo;
+  if (tipo === 'ok') {
+    setTimeout(() => { status.className = 'status'; }, 4000);
+  }
 }
 
-.stats-card {
-  position: relative;
-  width: 100%;
-  max-width: 720px;
-  max-height: 90vh;
-  overflow-y: auto;
-  background: #ffffff;
-  border: 1.5px solid #e0e0e0;
-  border-radius: 20px;
-  padding: 32px 28px 24px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-  animation: playerIn 0.25s ease;
+function dropboxDirecto(url) {
+  if (!url) return '';
+  url = url.trim();
+  return url
+    .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
+    .replace('?dl=0', '')
+    .replace('?dl=1', '')
+    .replace('&dl=0', '')
+    .replace('&dl=1', '')
+    .replace('?raw=1', '');
 }
 
-.stats-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  padding: 0;
-  margin: 0;
-  border-radius: 50%;
-  background: #f5f5f5;
-  border: 1.5px solid #e0e0e0;
-  color: #000000;
-  font-size: 14px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
-  z-index: 2;
+function escapeHtml(str = '') {
+  return String(str).replace(/[&<>"']/g, c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[c]));
 }
 
-.stats-close:hover {
-  background: #000000;
-  border-color: #000000;
-  color: #ffffff;
-  transform: rotate(90deg);
-}
+// ===================
+// Autenticación
+// ===================
+loginBtn.addEventListener('click', async () => {
+  try {
+    loginBtn.disabled = true;
+    loginBtn.innerHTML = '<span class="loader"></span>Iniciando sesión...';
 
-.stats-heading {
-  font-size: 22px;
-  font-weight: 700;
-  color: #000000;
-  text-align: center;
-  margin-bottom: 22px;
-  letter-spacing: 0.3px;
-  padding-right: 40px;
-}
+    if (esWebView()) {
+      await signInWithRedirect(auth, provider);
+      return;
+    }
 
-.stats-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-height: 46vh;
-  overflow-y: auto;
-  padding-right: 4px;
-  margin-bottom: 20px;
-}
+    await signInWithPopup(auth, provider);
 
-.stats-list::-webkit-scrollbar { width: 5px; }
-.stats-list::-webkit-scrollbar-track { background: transparent; }
-.stats-list::-webkit-scrollbar-thumb { background: #d0d0d0; border-radius: 999px; }
-.stats-list::-webkit-scrollbar-thumb:hover { background: #999999; }
+  } catch (e) {
+    console.error('[Auth] Error login:', e);
+    const necesitaFallback =
+      e.code === 'auth/popup-blocked' ||
+      e.code === 'auth/operation-not-supported-in-this-environment' ||
+      e.code === 'auth/web-storage-unsupported';
 
-.stats-item {
-  display: grid;
-  grid-template-columns: 56px 1fr;
-  gap: 12px;
-  align-items: center;
-  background: #fafafa;
-  border: 1.5px solid #e8e8e8;
-  border-radius: 12px;
-  padding: 12px 14px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
+    if (necesitaFallback) {
+      try {
+        await signInWithRedirect(auth, provider);
+        return;
+      } catch (e2) {
+        console.error('[Auth] Fallback redirect falló:', e2);
+        mostrarStatus('Error al iniciar sesión: ' + e2.message, 'error');
+      }
+    } else {
+      mostrarStatus('Error al iniciar sesión: ' + e.message, 'error');
+    }
 
-.stats-item:hover {
-  border-color: #000000;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
-}
+    loginBtn.disabled = false;
+    loginBtn.innerHTML = LOGIN_BTN_HTML;
+  }
+});
 
-.stats-item img {
-  width: 56px;
-  height: 56px;
-  border-radius: 10px;
-  object-fit: cover;
-  background: #f0f0f0;
-  border: 1px solid #e0e0e0;
-  grid-row: span 2;
-}
+onAuthStateChanged(auth, (user) => {
+  usuarioActual = user;
 
-.stats-item-info {
-  min-width: 0;
-}
+  if (user) {
+    loginBtn.classList.add('hidden');
+    userBox.classList.remove('hidden');
+    form.classList.remove('hidden');
+    historySection.classList.remove('hidden');
+    userEmail.textContent = user.email;
+    menuWrap.classList.remove('hidden');
+    escucharHistorial(user.uid);
+  } else {
+    loginBtn.classList.remove('hidden');
+    loginBtn.disabled = false;
+    loginBtn.innerHTML = LOGIN_BTN_HTML;
+    userBox.classList.add('hidden');
+    form.classList.add('hidden');
+    historySection.classList.add('hidden');
+    menuWrap.classList.add('hidden');
+    cerrarMenu();
 
-.stats-item-title {
-  display: block;
-  font-size: 14px;
-  font-weight: 700;
-  color: #000000;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+    if (unsubscribeHistorial) {
+      unsubscribeHistorial();
+      unsubscribeHistorial = null;
+    }
+    historyList.innerHTML = '';
+    historyCount.textContent = '0';
+    historyEmpty.classList.add('hidden');
+    cancionesActuales = [];
+    cerrarPlayer();
+    cerrarEditModal();
+  }
+});
 
-.stats-item-artist {
-  display: block;
-  font-size: 11px;
-  color: #666666;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-top: 2px;
-}
+// ===================
+// Vista previa dinámica (formulario)
+// ===================
+['artista', 'titulo', 'imagen', 'album'].forEach(id => {
+  document.getElementById(id).addEventListener('input', actualizarPreview);
+});
 
-.stats-item-grid {
-  grid-column: 2;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-top: 6px;
-}
+function actualizarPreview() {
+  const artista = document.getElementById('artista').value.trim();
+  const titulo  = document.getElementById('titulo').value.trim();
+  const imagen  = document.getElementById('imagen').value.trim();
+  const album   = document.getElementById('album').value.trim();
 
-.stats-cell {
-  background: #ffffff;
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
-  padding: 7px 8px;
-  text-align: center;
-}
-
-.stats-cell-label {
-  display: block;
-  font-size: 9px;
-  font-weight: 700;
-  color: #777777;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  margin-bottom: 3px;
-}
-
-.stats-cell-value {
-  display: block;
-  font-size: 13px;
-  font-weight: 700;
-  color: #000000;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.stats-cell.earn .stats-cell-value { color: #0a7d3a; }
-
-.stats-empty {
-  font-size: 13px;
-  color: #777777;
-  text-align: center;
-  padding: 20px 0;
-}
-
-/* Resumen general */
-.stats-summary {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  background: #000000;
-  border-radius: 14px;
-  padding: 16px;
-  margin-bottom: 12px;
-}
-
-.stats-summary-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  text-align: center;
-  min-width: 0;
-}
-
-.stats-summary-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: #cccccc;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-}
-
-.stats-summary-value {
-  font-size: 16px;
-  font-weight: 800;
-  color: #ffffff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.stats-summary-earnings .stats-summary-value {
-  color: #4ade80;
-}
-
-.stats-hint {
-  font-size: 11px;
-  color: #888888;
-  text-align: center;
-  line-height: 1.4;
-}
-
-/* Responsive */
-@media (max-width: 640px) {
-  .stats-card {
-    padding: 26px 18px 20px;
-    border-radius: 16px;
-    max-height: 92vh;
+  if (!artista && !titulo && !imagen && !album) {
+    preview.classList.remove('show');
+    return;
   }
 
-  .stats-heading { font-size: 18px; margin-bottom: 16px; }
+  preview.classList.add('show');
+  previewTitulo.textContent  = titulo || '—';
+  previewArtista.textContent = artista || '—';
 
-  .stats-list { max-height: 42vh; gap: 10px; }
-
-  .stats-item {
-    grid-template-columns: 48px 1fr;
-    padding: 10px 10px;
+  const albumSpan = document.querySelector('.preview-info .Album');
+  if (albumSpan) {
+    albumSpan.textContent = album || 'Reggeton 1';
   }
 
-  .stats-item img { width: 48px; height: 48px; }
-
-  .stats-item-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 5px;
+  if (imagen) {
+    previewImg.src = dropboxDirecto(imagen);
+    previewImg.onerror = () => { previewImg.src = PLACEHOLDER; };
+  } else {
+    previewImg.src = PLACEHOLDER;
   }
-
-  .stats-cell { padding: 6px 4px; }
-  .stats-cell-label { font-size: 8px; }
-  .stats-cell-value { font-size: 11px; }
-
-  .stats-summary {
-    grid-template-columns: 1fr;
-    gap: 10px;
-    padding: 14px;
-  }
-
-  .stats-summary-item {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .stats-summary-value { font-size: 15px; }
 }
 
-@media (max-width: 380px) {
-  .stats-cell-label { display: none; }
-  .stats-cell-value { font-size: 12px; }
+// ===================
+// HISTORIAL
+// ===================
+function escucharHistorial(uid) {
+  if (unsubscribeHistorial) unsubscribeHistorial();
+
+  historyList.innerHTML = '<p class="history-empty">Cargando canciones...</p>';
+  historyEmpty.classList.add('hidden');
+
+  const ref = collection(db, 'historial_usuarios', uid, 'canciones');
+
+  unsubscribeHistorial = onSnapshot(ref, (snap) => {
+    const canciones = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    canciones.sort((a, b) => {
+      const fa = a.fecha?.seconds || 0;
+      const fb = b.fecha?.seconds || 0;
+      return fb - fa;
+    });
+
+    renderHistorial(canciones);
+  }, (err) => {
+    console.error('Error historial:', err);
+    historyList.innerHTML = '';
+    mostrarStatus('Error al cargar el historial: ' + err.message, 'error');
+  });
 }
+
+function renderHistorial(canciones) {
+  cancionesActuales = canciones;
+  historyCount.textContent = canciones.length;
+
+  if (!canciones.length) {
+    historyList.innerHTML = '';
+    historyEmpty.classList.remove('hidden');
+    return;
+  }
+
+  historyEmpty.classList.add('hidden');
+
+  historyList.innerHTML = canciones.map(c => {
+    const img = c.imagenUrl ? escapeHtml(c.imagenUrl) : PLACEHOLDER;
+    const titulo  = escapeHtml(c.titulo  || 'Sin título');
+    const artista = escapeHtml(c.artista || 'Desconocido');
+
+    return `
+      <div class="history-item" data-id="${escapeHtml(c.id)}">
+        <img src="${img}" alt="" loading="lazy"
+             onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
+        <div class="history-info">
+          <strong title="${titulo}">${titulo}</strong>
+          <small title="${artista}">${artista}</small>
+        </div>
+        <button type="button" class="btn-edit" data-id="${escapeHtml(c.id)}" title="Editar canción">
+          ✏️
+        </button>
+        <button type="button" class="btn-delete" data-id="${escapeHtml(c.id)}" title="Eliminar canción">
+          🗑️
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+historyList.addEventListener('click', (e) => {
+  const deleteBtn = e.target.closest('.btn-delete');
+  if (deleteBtn) {
+    const id = deleteBtn.dataset.id;
+    const item = deleteBtn.closest('.history-item');
+    const titulo = item?.querySelector('.history-info strong')?.textContent || 'esta canción';
+    eliminarCancion(id, deleteBtn, titulo);
+    return;
+  }
+
+  const editBtn = e.target.closest('.btn-edit');
+  if (editBtn) {
+    const id = editBtn.dataset.id;
+    const cancion = cancionesActuales.find(c => c.id === id);
+    if (cancion) abrirEditModal(cancion);
+    return;
+  }
+
+  const item = e.target.closest('.history-item');
+  if (!item) return;
+
+  const id = item.dataset.id;
+  const cancion = cancionesActuales.find(c => c.id === id);
+  if (cancion) abrirPlayer(cancion);
+});
+
+async function eliminarCancion(id, boton, titulo) {
+  if (!usuarioActual) {
+    mostrarStatus('Debes iniciar sesión primero', 'error');
+    return;
+  }
+
+  const confirmado = confirm(`¿Seguro que quieres eliminar "${titulo}"?\nEsta acción no se puede deshacer.`);
+  if (!confirmado) return;
+
+  try {
+    boton.disabled = true;
+    boton.textContent = '⏳';
+
+    await deleteDoc(doc(db, 'historial_usuarios', usuarioActual.uid, 'canciones', id));
+    mostrarStatus('🗑️ Canción eliminada correctamente', 'ok');
+
+  } catch (err) {
+    console.error('Error al eliminar:', err);
+    mostrarStatus('Error al eliminar: ' + err.message, 'error');
+    boton.disabled = false;
+    boton.textContent = '🗑️';
+  }
+}
+
+// ===================
+// Guardar canción
+// ===================
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  if (!usuarioActual) {
+    mostrarStatus('Debes iniciar sesión primero', 'error');
+    return;
+  }
+
+  const artista   = document.getElementById('artista').value.trim();
+  const titulo    = document.getElementById('titulo').value.trim();
+  const album     = document.getElementById('album').value.trim();
+  const genero    = (document.getElementById('genero')?.value || '').trim();
+  const subgenero = (document.getElementById('subgenero')?.value || '').trim();
+  const audioRaw  = document.getElementById('audio').value.trim();
+  const imagenRaw = document.getElementById('imagen').value.trim();
+
+  if (!artista || !titulo || !audioRaw) {
+    mostrarStatus('Completa artista, título y audio', 'error');
+    return;
+  }
+
+  const audioUrl  = dropboxDirecto(audioRaw);
+  const imagenUrl = imagenRaw ? dropboxDirecto(imagenRaw) : '';
+
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<span class="loader"></span>Verificando audio...';
+  mostrarStatus('Verificando que el audio de Dropbox sea accesible...', 'loading');
+
+  try {
+    const res = await fetch(audioUrl, { method: 'HEAD' });
+    if (!res.ok) throw new Error('El link de audio no responde correctamente');
+  } catch (err) {
+    console.warn('Validación de audio:', err);
+  }
+
+  try {
+    submitBtn.innerHTML = '<span class="loader"></span>Guardando...';
+    mostrarStatus('Guardando en la base de datos...', 'loading');
+
+    const uid = usuarioActual.uid;
+
+    await addDoc(collection(db, 'historial_usuarios', uid, 'canciones'), {
+      artista:   artista,
+      titulo:    titulo,
+      album:     album,
+      genero:    genero,
+      subgenero: subgenero,   // ← NUEVO
+      audioUrl:  audioUrl,
+      imagenUrl: imagenUrl,
+      origen:    'dropbox',
+      uid:       uid,
+      email:     usuarioActual.email,
+      fecha:     serverTimestamp()
+    });
+
+    mostrarStatus('✅ Canción subida correctamente', 'ok');
+
+    form.reset();
+    preview.classList.remove('show');
+
+    const albumSpan = document.querySelector('.preview-info .Album');
+    if (albumSpan) albumSpan.textContent = 'Reggeton 1';
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Subir canción';
+
+  } catch (err) {
+    console.error(err);
+    mostrarStatus('Error al guardar: ' + err.message, 'error');
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Subir canción';
+  }
+});
+
+// ================================================================
+// MODAL REPRODUCTOR
+// ================================================================
+const previewAudio = new Audio();
+previewAudio.preload = 'metadata';
+
+function fmtTiempo(seg) {
+  if (!isFinite(seg) || seg < 0) return '0:00';
+  const m = Math.floor(seg / 60);
+  const s = Math.floor(seg % 60);
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+function abrirPlayer(cancion) {
+  if (!cancion) return;
+
+  playerImg.src = cancion.imagenUrl || PLACEHOLDER;
+  playerImg.onerror = () => { playerImg.onerror = null; playerImg.src = PLACEHOLDER; };
+
+  playerTitle.textContent  = cancion.titulo  || 'Sin título';
+  playerArtist.textContent = cancion.artista || 'Desconocido';
+
+  playerSeek.value = 0;
+  playerCurrent.textContent = '0:00';
+  playerDuration.textContent = '0:00';
+  playerPlay.textContent = '▶';
+
+  previewAudio.pause();
+  previewAudio.src = cancion.audioUrl || '';
+  previewAudio.currentTime = 0;
+
+  playerModal.classList.remove('hidden');
+  playerModal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarPlayer() {
+  previewAudio.pause();
+  previewAudio.currentTime = 0;
+  previewAudio.src = '';
+  if (playerModal) {
+    playerModal.classList.add('hidden');
+    playerModal.setAttribute('aria-hidden', 'true');
+  }
+  document.body.style.overflow = '';
+  if (playerPlay) playerPlay.textContent = '▶';
+}
+
+playerModal.addEventListener('click', (e) => {
+  if (e.target.dataset.close === '1') cerrarPlayer();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !playerModal.classList.contains('hidden')) {
+    cerrarPlayer();
+  }
+});
+
+playerPlay.addEventListener('click', async () => {
+  if (!previewAudio.src) return;
+  try {
+    if (previewAudio.paused) {
+      await previewAudio.play();
+      playerPlay.textContent = '⏸';
+    } else {
+      previewAudio.pause();
+      playerPlay.textContent = '▶';
+    }
+  } catch (err) {
+    console.warn('No se pudo reproducir:', err);
+  }
+});
+
+playerRewind.addEventListener('click', () => {
+  previewAudio.currentTime = Math.max(0, previewAudio.currentTime - 10);
+});
+playerForward.addEventListener('click', () => {
+  previewAudio.currentTime = Math.min(
+    previewAudio.duration || 0,
+    previewAudio.currentTime + 10
+  );
+});
+
+previewAudio.addEventListener('loadedmetadata', () => {
+  playerDuration.textContent = fmtTiempo(previewAudio.duration);
+});
+
+previewAudio.addEventListener('timeupdate', () => {
+  if (!previewAudio.duration) return;
+  const pct = (previewAudio.currentTime / previewAudio.duration) * 1000;
+  playerSeek.value = pct;
+  playerCurrent.textContent = fmtTiempo(previewAudio.currentTime);
+});
+
+playerSeek.addEventListener('input', () => {
+  if (!previewAudio.duration) return;
+  previewAudio.currentTime = (playerSeek.value / 1000) * previewAudio.duration;
+});
+
+previewAudio.addEventListener('ended', () => {
+  playerPlay.textContent = '▶';
+  previewAudio.currentTime = 0;
+  playerSeek.value = 0;
+  playerCurrent.textContent = '0:00';
+});
+
+playerVol.addEventListener('input', () => {
+  previewAudio.volume = parseFloat(playerVol.value);
+});
+previewAudio.volume = parseFloat(playerVol.value);
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && !previewAudio.paused) {
+    previewAudio.pause();
+    playerPlay.textContent = '▶';
+  }
+});
+
+// ================================================================
+// MODAL EDITAR
+// ================================================================
+function abrirEditModal(cancion) {
+  if (!cancion) return;
+
+  editandoId = cancion.id;
+
+  editArtista.value = cancion.artista || '';
+  editTitulo.value  = cancion.titulo  || '';
+  editAlbum.value   = cancion.album   || '';
+
+  const revertirDropbox = (url) => {
+    if (!url) return '';
+    return url.replace('dl.dropboxusercontent.com', 'www.dropbox.com');
+  };
+
+  editAudio.value   = revertirDropbox(cancion.audioUrl || '');
+  editImagen.value  = revertirDropbox(cancion.imagenUrl || '');
+
+  editImg.src = cancion.imagenUrl || PLACEHOLDER;
+  editImg.onerror = () => { editImg.onerror = null; editImg.src = PLACEHOLDER; };
+
+  editModal.classList.remove('hidden');
+  editModal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarEditModal() {
+  editModal.classList.add('hidden');
+  editModal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+  editandoId = null;
+  editForm.reset();
+}
+
+editModal.addEventListener('click', (e) => {
+  if (e.target.dataset.close === '1') cerrarEditModal();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !editModal.classList.contains('hidden')) {
+    cerrarEditModal();
+  }
+});
+
+editForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  if (!usuarioActual || !editandoId) {
+    mostrarStatus('Error: No hay sesión o canción seleccionada', 'error');
+    return;
+  }
+
+  const artista   = editArtista.value.trim();
+  const titulo    = editTitulo.value.trim();
+  const album     = editAlbum.value.trim();
+  const audioRaw  = editAudio.value.trim();
+  const imagenRaw = editImagen.value.trim();
+
+  if (!artista || !titulo || !audioRaw) {
+    mostrarStatus('Completa artista, título y audio', 'error');
+    return;
+  }
+
+  const audioUrl  = dropboxDirecto(audioRaw);
+  const imagenUrl = imagenRaw ? dropboxDirecto(imagenRaw) : '';
+
+  editSubmitBtn.disabled = true;
+  editSubmitBtn.innerHTML = '<span class="loader"></span>Guardando cambios...';
+
+  try {
+    const uid = usuarioActual.uid;
+    const docRef = doc(db, 'historial_usuarios', uid, 'canciones', editandoId);
+
+    await updateDoc(docRef, {
+      artista:   artista,
+      titulo:    titulo,
+      album:     album,
+      audioUrl:  audioUrl,
+      imagenUrl: imagenUrl,
+      fechaEdicion: serverTimestamp()
+    });
+
+    mostrarStatus('✅ Canción actualizada correctamente', 'ok');
+    cerrarEditModal();
+
+  } catch (err) {
+    console.error('Error al editar:', err);
+    mostrarStatus('Error al guardar cambios: ' + err.message, 'error');
+  } finally {
+    editSubmitBtn.disabled = false;
+    editSubmitBtn.textContent = 'TEREMINAR';
+  }
+});
+
+editImagen.addEventListener('input', () => {
+  const url = editImagen.value.trim();
+  if (url) {
+    editImg.src = dropboxDirecto(url);
+    editImg.onerror = () => { editImg.src = PLACEHOLDER; };
+  } else {
+    editImg.src = PLACEHOLDER;
+  }
+});
+
+// ================================================================
+// MENÚ HAMBURGUESA + CERRAR SESIÓN
+// ================================================================
+function abrirMenu() {
+  if (!menuDropdown || !menuBtn) return;
+  menuDropdown.classList.remove('hidden');
+  menuBtn.classList.add('open');
+  menuBtn.setAttribute('aria-expanded', 'true');
+}
+
+function cerrarMenu() {
+  if (!menuDropdown || !menuBtn) return;
+  menuDropdown.classList.add('hidden');
+  menuBtn.classList.remove('open');
+  menuBtn.setAttribute('aria-expanded', 'false');
+}
+
+menuBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (menuDropdown.classList.contains('hidden')) {
+    abrirMenu();
+  } else {
+    cerrarMenu();
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if (menuWrap.classList.contains('hidden')) return;
+  if (!menuWrap.contains(e.target)) cerrarMenu();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') cerrarMenu();
+});
+
+logoutBtn.addEventListener('click', async () => {
+  try {
+    logoutBtn.disabled = true;
+    logoutBtn.textContent = 'Cerrando sesión...';
+
+    await signOut(auth);
+
+    cerrarMenu();
+    mostrarStatus('👋 Sesión cerrada correctamente', 'ok');
+
+  } catch (err) {
+    console.error('Error al cerrar sesión:', err);
+    mostrarStatus('Error al cerrar sesión: ' + err.message, 'error');
+  } finally {
+    logoutBtn.disabled = false;
+    logoutBtn.innerHTML = '🚪 Cerrar sesión';
+  }
+});
+
+// ================================================================
+// SELECTOR DE GÉNERO MUSICAL CON BUSCADOR
+// ================================================================
+const GENEROS_RAW = [
+  // ===== CATEGORÍAS PRINCIPALES (NUEVO) =====
+  "Regional Mexicano",
+  "Reggaetón",
+  "Pop",
+  "Rock",
+  "Hip-Hop / Rap",
+  "Música Latina",
+  "Cumbia",
+  "Electrónica",
+  "R&B / Soul",
+  "Indie / Alternativo",
+  "Metal",
+  "Punk",
+  "Reggae",
+  "Afrobeat",
+  "Country",
+  "Folk",
+  "Jazz",
+  "Blues",
+  "K-Pop",
+  "J-Pop",
+  "Cristiana / Gospel",
+  "Clásica",
+  "Flamenco",
+  "Acústica",
+  "Instrumental",
+  "Soundtrack",
+  "Otros",
+
+  // ===== POP =====
+  "Art Pop", "Dance Pop", "Electropop", "Synth-pop", "Indie Pop", "Dream Pop",
+  "Bedroom Pop", "Hyperpop", "Teen Pop", "Bubblegum Pop", "Power Pop",
+  "C-Pop", "Latin Pop", "Europop", "Britpop", "Sophisti-Pop", "Baroque Pop",
+  "Sunshine Pop", "Chamber Pop", "Experimental Pop",
+
+  // ===== ROCK =====
+  "Alternative Rock", "Indie Rock", "Hard Rock", "Soft Rock", "Classic Rock",
+  "Progressive Rock", "Psychedelic Rock", "Garage Rock", "Blues Rock", "Folk Rock",
+  "Southern Rock", "Surf Rock", "Glam Rock", "Art Rock", "Experimental Rock", "Post-Rock",
+  "Math Rock", "Noise Rock", "Space Rock", "Gothic Rock", "Industrial Rock",
+  "Christian Rock", "Grunge", "Brit Rock", "Emo", "Shoegaze", "Dream Rock",
+
+  // ===== METAL =====
+  "Heavy Metal", "Thrash Metal", "Death Metal", "Black Metal", "Doom Metal", "Power Metal",
+  "Speed Metal", "Progressive Metal", "Symphonic Metal", "Folk Metal", "Groove Metal",
+  "Nu Metal", "Alternative Metal", "Industrial Metal", "Gothic Metal", "Metalcore",
+  "Deathcore", "Grindcore", "Sludge Metal", "Stoner Metal", "Funeral Doom",
+  "Melodic Death Metal", "Technical Death Metal", "Viking Metal", "Pagan Metal",
+  "Post-Metal", "Djent",
+
+  // ===== PUNK =====
+  "Punk Rock", "Hardcore Punk", "Post-Punk", "Pop Punk", "Skate Punk", "Street Punk",
+  "Anarcho-Punk", "Crust Punk", "D-Beat", "Garage Punk", "Riot Grrrl", "Emo Punk",
+  "Ska Punk", "Celtic Punk", "Folk Punk", "Horror Punk", "Psychobilly",
+
+  // ===== HIP-HOP / RAP =====
+  "Hip-Hop", "Rap", "Trap", "Drill", "Gangsta Rap", "Boom Bap", "Conscious Hip-Hop",
+  "Underground Hip-Hop", "Alternative Hip-Hop", "Old School Hip-Hop", "West Coast Hip-Hop",
+  "East Coast Hip-Hop", "Southern Hip-Hop", "Crunk", "Dirty South", "G-Funk", "Cloud Rap",
+  "Emo Rap", "Jazz Rap", "Experimental Hip-Hop", "Hardcore Hip-Hop", "Latin Hip-Hop",
+  "Chicano Rap", "UK Hip-Hop", "UK Drill", "Grime", "Freestyle Rap", "Trap Latino",
+
+  // ===== R&B / SOUL =====
+  "R&B", "Contemporary R&B", "Alternative R&B", "Neo Soul", "Soul", "Classic Soul",
+  "Southern Soul", "Motown", "Funk", "P-Funk", "Quiet Storm", "New Jack Swing",
+  "Blue-Eyed Soul", "Psychedelic Soul", "Gospel Soul", "Soul Jazz",
+
+  // ===== BLUES =====
+  "Blues", "Delta Blues", "Chicago Blues", "Texas Blues", "Electric Blues",
+  "Acoustic Blues", "Country Blues", "Piedmont Blues", "British Blues", "Jump Blues",
+  "Swamp Blues", "Gospel Blues", "Soul Blues",
+
+  // ===== JAZZ =====
+  "Jazz", "Bebop", "Hard Bop", "Cool Jazz", "Free Jazz", "Fusion", "Jazz Fusion",
+  "Smooth Jazz", "Acid Jazz", "Latin Jazz", "Afro-Cuban Jazz", "Gypsy Jazz", "Swing",
+  "Big Band", "Dixieland", "Ragtime", "Modal Jazz", "Avant-Garde Jazz", "Jazz Funk",
+  "Nu Jazz", "Vocal Jazz", "Contemporary Jazz",
+
+  // ===== ELECTRÓNICA =====
+  "Electronic", "EDM", "House", "Deep House", "Tech House", "Progressive House",
+  "Electro House", "Future House", "Tropical House", "Bass House", "Acid House",
+  "Chicago House", "French House", "Minimal House", "Techno", "Detroit Techno",
+  "Minimal Techno", "Industrial Techno", "Hard Techno", "Acid Techno", "Trance",
+  "Progressive Trance", "Psytrance", "Goa Trance", "Uplifting Trance", "Hard Trance",
+  "Electro", "Ambient", "Dark Ambient", "Chillout", "Downtempo", "IDM", "Breakbeat",
+  "Drum & Bass", "Jungle", "Liquid Drum & Bass", "Dubstep", "Brostep", "UK Garage",
+  "Future Bass", "Synthwave", "Vaporwave", "Retrowave", "Lo-Fi", "Chillwave", "Glitch",
+  "Industrial", "EBM", "Hardcore", "Gabber", "Hardstyle", "Future Rave",
+
+  // ===== REGGAE =====
+  "Reggae", "Roots Reggae", "Dancehall", "Dub", "Rocksteady", "Ska", "Lovers Rock",
+  "Ragga", "Reggae Fusion", "Digital Reggae", "Dub Poetry",
+
+  // ===== MÚSICA LATINA =====
+  "Música Latina", "Latin Urban", "Salsa", "Salsa Romántica", "Salsa Dura",
+  "Son Cubano", "Bachata", "Merengue", "Cumbia", "Cumbia Mexicana", "Cumbia Colombiana",
+  "Cumbia Villera", "Cumbia Peruana", "Cumbia Andina", "Vallenato", "Bolero", "Mambo",
+  "Cha-cha-chá", "Rumba", "Guaracha", "Danzón", "Timba", "Latin Rock", "Latin Soul",
+  "Tango", "Milonga", "Bossa Nova", "Samba", "MPB", "Forró", "Axé",
+  "Frevo", "Sertanejo",
+
+  // ===== REGIONAL MEXICANO (subgéneros también) =====
+  "Mariachi", "Ranchera", "Norteño", "Norteño-Banda", "Banda", "Banda Sinaloense",
+  "Corridos", "Corrido Tradicional", "Corrido Tumbado", "Corrido Bélico",
+  "Corridos Alterados", "Tejano", "Grupero", "Duranguense", "Sierreño", "Huapango",
+  "Son Jarocho", "Son Huasteco", "Música de Tierra Caliente", "Música Norteña",
+  "Cumbia Norteña", "Bolero Ranchero", "Mariachi Moderno",
+
+  // ===== COUNTRY =====
+  "Country", "Country Pop", "Country Rock", "Traditional Country", "Outlaw Country",
+  "Alternative Country", "Bluegrass", "Americana", "Honky Tonk", "Country Blues",
+  "Western Swing", "Nashville Sound", "Red Dirt", "Contemporary Country", "Country Folk",
+
+  // ===== FOLK =====
+  "Folk", "Contemporary Folk", "Traditional Folk", "Celtic Folk", "Irish Folk",
+  "Scottish Folk", "English Folk", "American Folk", "Appalachian", "Nordic Folk",
+  "Balkan Folk", "Slavic Folk", "Gypsy / Romani", "Klezmer", "Neofolk", "World Folk",
+  "Folk Fusion",
+
+  // ===== CLÁSICA =====
+  "Música Clásica", "Medieval", "Renacimiento", "Barroco", "Clasicismo", "Romanticismo",
+  "Impresionismo", "Modernismo", "Música Contemporánea", "Música de Cámara", "Sinfónica",
+  "Coral", "Ópera", "Opereta", "Oratorio", "Cantata", "Concierto", "Sonata", "Sinfonía",
+  "Música Minimalista", "Música Experimental",
+
+  // ===== CRISTIANA / GOSPEL =====
+  "Gospel", "Christian", "Christian Pop", "Christian Hip-Hop", "Christian Metal",
+  "Worship", "Contemporary Christian", "Spiritual", "Hymns", "Islamic Music", "Nasheed",
+  "Jewish Music", "Buddhist Music", "Hindu Devotional", "Mantra",
+
+  // ===== AFRO =====
+  "Afrobeat", "Afrobeats", "Afro-Pop", "Amapiano", "Highlife", "Hiplife", "Kizomba",
+  "Kuduro", "Kwaito", "Gqom", "Mbalax", "Juju", "Fuji", "Makossa", "Soukous",
+  "Congolese Rumba", "Benga", "Bikutsi", "Chimurenga", "Jit", "Marrabenta", "Mbube",
+  "Marabi", "Township Jazz", "Rai", "Gnawa", "Desert Blues", "Maloya", "Sega", "Cape Jazz",
+
+  // ===== CARIBEÑA =====
+  "Calypso", "Soca", "Zouk", "Kompa", "Son", "Mento", "Steelpan", "Bouyon", "Punta",
+
+  // ===== BRASILEÑA =====
+  "Pagode", "Choro", "Tropicália", "Maracatu", "Baião", "Carimbó", "Lambada",
+  "Música Caipira", "Samba-Reggae", "Funk Carioca",
+
+  // ===== ASIÁTICA =====
+  "K-Rock", "K-Hip-Hop", "J-Rock", "J-Hip-Hop", "City Pop", "Enka", "Shibuya-kei",
+  "Mandopop", "Cantopop", "Bollywood", "Bhangra", "Qawwali", "Ghazal", "Carnatic",
+  "Hindustani Classical", "Raga", "Dhrupad", "Gamelan", "Dangdut", "Thai Pop", "V-Pop",
+  "Pinoy Pop", "Persian Pop", "Arabic Pop", "Turkish Pop",
+
+  // ===== ÁRABE / MEDIO ORIENTE =====
+  "Arabic Music", "Shaabi", "Dabke", "Khaleeji", "Egyptian Pop", "Lebanese Pop",
+  "Iraqi Music", "Persian Music", "Turkish Music", "Kurdish Music", "Armenian Music",
+  "Israeli Music", "Mizrahi", "Andalusian Music", "Oud Music", "Traditional Middle Eastern",
+
+  // ===== OCEÁNICA =====
+  "Hawaiian", "Hawaiian Pop", "Polynesian", "Samoan", "Tahitian", "Tongan", "Maori",
+  "Aboriginal Australian", "Melanesian", "Micronesian", "Pacific Island Music",
+  "New Zealand Folk",
+
+  // ===== EXPERIMENTAL =====
+  "Experimental", "Avant-Garde", "Noise", "Drone", "Musique Concrète",
+  "Electroacoustic", "Minimalism", "Sound Art", "Free Improvisation",
+  "Experimental Electronic",
+
+  // ===== CINE / TV / VIDEOJUEGOS =====
+  "Film Score", "Soundtrack", "Movie Soundtrack", "Television Score", "Video Game Music",
+  "Anime Music", "Orchestral Score", "Cinematic", "Trailer Music", "Ambient Score",
+  "Musical Theatre", "Broadway", "Stage & Screen",
+
+  // ===== VOCAL =====
+  "A Cappella", "Vocal Pop", "Choral", "Choir", "Barbershop", "Doo-Wop", "Beatboxing",
+  "Gregorian Chant", "Operatic", "Vocal Classical",
+
+  // ===== INFANTIL / HUMOR =====
+  "Children's Music", "Nursery Rhymes", "Educational Music", "Comedy Music", "Novelty",
+  "Parody", "Comedy Rock", "Comedy Rap", "Comedy Pop",
+
+  // ===== BAILE / CLUB =====
+  "Dance", "Dance-Pop", "Eurodance", "Eurobeat", "Disco", "Nu-Disco", "Garage",
+  "Jersey Club", "Baltimore Club", "Footwork", "Juke",
+
+  // ===== ACÚSTICA =====
+  "Acústica", "Acústica Pop", "Rock Acústico", "Folk Acústico", "Latino Acústico",
+  "Indie Acústico", "Regional Mexicano Acústico", "Acústica Instrumental",
+  "Unplugged", "Balada Acústica", "Bolero Acústico"
+];
+
+// Limpiar duplicados y ordenar alfabéticamente (ignorando acentos)
+const GENEROS = [...new Set(GENEROS_RAW.map(g => g.trim()).filter(Boolean))]
+  .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+// ================================================================
+// SUBGÉNEROS DE "REGIONAL MEXICANO"
+// ================================================================
+const SUBGENEROS_RAW = [
+  "Corridos",
+  "Corridos Tumbados",
+  "Corridos Bélicos",
+  "Corridos Tradicionales",
+  "Banda",
+  "Banda Sinaloense",
+  "Norteño",
+  "Norteño-Banda",
+  "Sierreño",
+  "Sad Sierreño",
+  "Grupero",
+  "Mariachi",
+  "Ranchera",
+  "Huapango",
+  "Duranguense",
+  "Tejano",
+  "Cumbia Norteña"
+];
+
+const SUBGENEROS = [...new Set(SUBGENEROS_RAW.map(g => g.trim()).filter(Boolean))]
+  .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+// ================================================================
+// ELEMENTOS DEL DOM — GÉNERO
+// ================================================================
+const generoHidden  = document.getElementById('genero');
+const genreSelect   = document.getElementById('genreSelect');
+const genreToggle   = document.getElementById('genreToggle');
+const genrePanel    = document.getElementById('genrePanel');
+const genreList     = document.getElementById('genreList');
+const genreSearch   = document.getElementById('genreSearch');
+const genreValue    = document.getElementById('genreValue');
+const genreEmpty    = document.getElementById('genreEmpty');
+
+// Elementos del DOM — SUBGÉNERO
+const subgenreGroup  = document.getElementById('subgenreGroup');
+const subgeneroHidden = document.getElementById('subgenero');
+const subgenreSelect = document.getElementById('subgenreSelect');
+const subgenreToggle = document.getElementById('subgenreToggle');
+const subgenrePanel  = document.getElementById('subgenrePanel');
+const subgenreList   = document.getElementById('subgenreList');
+const subgenreSearch = document.getElementById('subgenreSearch');
+const subgenreValue  = document.getElementById('subgenreValue');
+const subgenreEmpty  = document.getElementById('subgenreEmpty');
+
+let generoSeleccionado = '';
+let subgeneroSeleccionado = '';
+
+const normalizarTexto = (s = '') =>
+  String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+// ================================================================
+// RENDERIZADO DE GÉNEROS
+// ================================================================
+function pintarGeneros(filtro = '') {
+  const q = normalizarTexto(filtro);
+  const lista = q ? GENEROS.filter(g => normalizarTexto(g).includes(q)) : GENEROS;
+
+  if (!lista.length) {
+    genreList.innerHTML = '';
+    genreEmpty.classList.remove('hidden');
+    return;
+  }
+
+  genreEmpty.classList.add('hidden');
+
+  genreList.innerHTML = lista.map(g => {
+    const sel = g === generoSeleccionado;
+    return `<button type="button" class="genre-item${sel ? ' selected' : ''}"
+              role="option" aria-selected="${sel}"
+              data-genero="${escapeHtml(g)}">
+              <span>${escapeHtml(g)}</span>
+              <span class="check">✓</span>
+            </button>`;
+  }).join('');
+}
+
+function abrirGeneros() {
+  genrePanel.classList.remove('hidden');
+  genreToggle.setAttribute('aria-expanded', 'true');
+  genreSearch.value = '';
+  pintarGeneros('');
+  setTimeout(() => { try { genreSearch.focus(); } catch (e) {} }, 30);
+}
+
+function cerrarGeneros() {
+  genrePanel.classList.add('hidden');
+  genreToggle.setAttribute('aria-expanded', 'false');
+}
+
+function seleccionarGenero(valor) {
+  generoSeleccionado = valor || '';
+  generoHidden.value = generoSeleccionado;
+  genreValue.textContent = generoSeleccionado || 'Selecciona un género';
+  genreValue.classList.toggle('placeholder', !generoSeleccionado);
+  cerrarGeneros();
+
+  // 👇 Mostrar/ocultar subgénero según la elección
+  if (generoSeleccionado === 'Regional Mexicano') {
+    if (subgenreGroup) subgenreGroup.classList.remove('hidden');
+  } else {
+    if (subgenreGroup) subgenreGroup.classList.add('hidden');
+    // Limpiar subgénero al cambiar de género
+    subgeneroSeleccionado = '';
+    if (subgeneroHidden) subgeneroHidden.value = '';
+    if (subgenreValue) {
+      subgenreValue.textContent = 'Selecciona un subgénero';
+      subgenreValue.classList.add('placeholder');
+    }
+    if (typeof cerrarSubgeneros === 'function') cerrarSubgeneros();
+  }
+}
+
+// ================================================================
+// RENDERIZADO DE SUBGÉNEROS
+// ================================================================
+function pintarSubgeneros(filtro = '') {
+  const q = normalizarTexto(filtro);
+  const lista = q ? SUBGENEROS.filter(g => normalizarTexto(g).includes(q)) : SUBGENEROS;
+
+  if (!lista.length) {
+    subgenreList.innerHTML = '';
+    subgenreEmpty.classList.remove('hidden');
+    return;
+  }
+
+  subgenreEmpty.classList.add('hidden');
+
+  subgenreList.innerHTML = lista.map(g => {
+    const sel = g === subgeneroSeleccionado;
+    return `<button type="button" class="genre-item${sel ? ' selected' : ''}"
+              role="option" aria-selected="${sel}"
+              data-subgenero="${escapeHtml(g)}">
+              <span>${escapeHtml(g)}</span>
+              <span class="check">✓</span>
+            </button>`;
+  }).join('');
+}
+
+function abrirSubgeneros() {
+  subgenrePanel.classList.remove('hidden');
+  subgenreToggle.setAttribute('aria-expanded', 'true');
+  subgenreSearch.value = '';
+  pintarSubgeneros('');
+  setTimeout(() => { try { subgenreSearch.focus(); } catch (e) {} }, 30);
+}
+
+function cerrarSubgeneros() {
+  if (!subgenrePanel) return;
+  subgenrePanel.classList.add('hidden');
+  if (subgenreToggle) subgenreToggle.setAttribute('aria-expanded', 'false');
+}
+
+function seleccionarSubgenero(valor) {
+  subgeneroSeleccionado = valor || '';
+  if (subgeneroHidden) subgeneroHidden.value = subgeneroSeleccionado;
+  if (subgenreValue) {
+    subgenreValue.textContent = subgeneroSeleccionado || 'Selecciona un subgénero';
+    subgenreValue.classList.toggle('placeholder', !subgeneroSeleccionado);
+  }
+  cerrarSubgeneros();
+}
+
+// ================================================================
+// EVENTOS — GÉNERO
+// ================================================================
+genreToggle.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (genrePanel.classList.contains('hidden')) abrirGeneros();
+  else cerrarGeneros();
+});
+
+genreSearch.addEventListener('input', () => pintarGeneros(genreSearch.value));
+
+genreSearch.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const primero = genreList.querySelector('.genre-item');
+    if (primero) seleccionarGenero(primero.dataset.genero);
+  }
+  if (e.key === 'Escape') cerrarGeneros();
+});
+
+genreList.addEventListener('click', (e) => {
+  const btn = e.target.closest('.genre-item');
+  if (!btn) return;
+  seleccionarGenero(btn.dataset.genero);
+});
+
+document.addEventListener('click', (e) => {
+  if (genrePanel.classList.contains('hidden')) return;
+  if (genreSelect && !genreSelect.contains(e.target)) cerrarGeneros();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !genrePanel.classList.contains('hidden')) cerrarGeneros();
+});
+
+// ================================================================
+// EVENTOS — SUBGÉNERO
+// ================================================================
+subgenreToggle.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (subgenrePanel.classList.contains('hidden')) abrirSubgeneros();
+  else cerrarSubgeneros();
+});
+
+subgenreSearch.addEventListener('input', () => pintarSubgeneros(subgenreSearch.value));
+
+subgenreSearch.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const primero = subgenreList.querySelector('.genre-item');
+    if (primero) seleccionarSubgenero(primero.dataset.subgenero);
+  }
+  if (e.key === 'Escape') cerrarSubgeneros();
+});
+
+subgenreList.addEventListener('click', (e) => {
+  const btn = e.target.closest('.genre-item');
+  if (!btn) return;
+  seleccionarSubgenero(btn.dataset.subgenero);
+});
+
+document.addEventListener('click', (e) => {
+  if (subgenrePanel.classList.contains('hidden')) return;
+  if (subgenreSelect && !subgenreSelect.contains(e.target)) cerrarSubgeneros();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !subgenrePanel.classList.contains('hidden')) cerrarSubgeneros();
+});
+
+// ================================================================
+// RESET DEL FORMULARIO
+// ================================================================
+document.getElementById('formCancion').addEventListener('reset', () => {
+  generoSeleccionado = '';
+  generoHidden.value = '';
+  genreValue.textContent = 'Selecciona un género';
+  genreValue.classList.add('placeholder');
+  cerrarGeneros();
+
+  subgeneroSeleccionado = '';
+  if (subgeneroHidden) subgeneroHidden.value = '';
+  if (subgenreValue) {
+    subgenreValue.textContent = 'Selecciona un subgénero';
+    subgenreValue.classList.add('placeholder');
+  }
+  if (subgenreGroup) subgenreGroup.classList.add('hidden');
+  cerrarSubgeneros();
+});
+
+// ================================================================
+// INICIALIZAR
+// ================================================================
+pintarGeneros('');
+pintarSubgeneros('');
