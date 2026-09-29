@@ -279,7 +279,7 @@ function actualizarPreview() {
 }
 
 // ===================
-// HISTORIAL: escuchar, pintar y eliminar
+// HISTORIAL
 // ===================
 function escucharHistorial(uid) {
   if (unsubscribeHistorial) unsubscribeHistorial();
@@ -342,7 +342,6 @@ function renderHistorial(canciones) {
   }).join('');
 }
 
-// Delegación de eventos para los botones de eliminar y editar
 historyList.addEventListener('click', (e) => {
   const deleteBtn = e.target.closest('.btn-delete');
   if (deleteBtn) {
@@ -408,6 +407,7 @@ form.addEventListener('submit', async (e) => {
   const titulo    = document.getElementById('titulo').value.trim();
   const album     = document.getElementById('album').value.trim();
   const genero    = (document.getElementById('genero')?.value || '').trim();
+  const subgenero = (document.getElementById('subgenero')?.value || '').trim();
   const audioRaw  = document.getElementById('audio').value.trim();
   const imagenRaw = document.getElementById('imagen').value.trim();
 
@@ -440,7 +440,8 @@ form.addEventListener('submit', async (e) => {
       artista:   artista,
       titulo:    titulo,
       album:     album,
-      genero:    genero,          // ← NUEVO
+      genero:    genero,
+      subgenero: subgenero,   // ← NUEVO
       audioUrl:  audioUrl,
       imagenUrl: imagenUrl,
       origen:    'dropbox',
@@ -469,7 +470,7 @@ form.addEventListener('submit', async (e) => {
 });
 
 // ================================================================
-// MODAL REPRODUCTOR — VISTA PREVIA
+// MODAL REPRODUCTOR
 // ================================================================
 const previewAudio = new Audio();
 previewAudio.preload = 'metadata';
@@ -587,7 +588,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ================================================================
-// MODAL EDITAR — LÓGICA
+// MODAL EDITAR
 // ================================================================
 function abrirEditModal(cancion) {
   if (!cancion) return;
@@ -747,23 +748,52 @@ logoutBtn.addEventListener('click', async () => {
 });
 
 // ================================================================
-// NUEVO: SELECTOR DE GÉNERO MUSICAL CON BUSCADOR
+// SELECTOR DE GÉNERO MUSICAL CON BUSCADOR
 // ================================================================
 const GENEROS_RAW = [
-  // 1. Pop
-  "Pop", "Art Pop", "Dance Pop", "Electropop", "Synth-pop", "Indie Pop", "Dream Pop",
-  "Bedroom Pop", "Hyperpop", "Teen Pop", "Bubblegum Pop", "Power Pop", "K-Pop", "J-Pop",
+  // ===== CATEGORÍAS PRINCIPALES (NUEVO) =====
+  "Regional Mexicano",
+  "Reggaetón",
+  "Pop",
+  "Rock",
+  "Hip-Hop / Rap",
+  "Música Latina",
+  "Cumbia",
+  "Electrónica",
+  "R&B / Soul",
+  "Indie / Alternativo",
+  "Metal",
+  "Punk",
+  "Reggae",
+  "Afrobeat",
+  "Country",
+  "Folk",
+  "Jazz",
+  "Blues",
+  "K-Pop",
+  "J-Pop",
+  "Cristiana / Gospel",
+  "Clásica",
+  "Flamenco",
+  "Acústica",
+  "Instrumental",
+  "Soundtrack",
+  "Otros",
+
+  // ===== POP =====
+  "Art Pop", "Dance Pop", "Electropop", "Synth-pop", "Indie Pop", "Dream Pop",
+  "Bedroom Pop", "Hyperpop", "Teen Pop", "Bubblegum Pop", "Power Pop",
   "C-Pop", "Latin Pop", "Europop", "Britpop", "Sophisti-Pop", "Baroque Pop",
   "Sunshine Pop", "Chamber Pop", "Experimental Pop",
 
-  // 2. Rock
-  "Rock", "Alternative Rock", "Indie Rock", "Hard Rock", "Soft Rock", "Classic Rock",
+  // ===== ROCK =====
+  "Alternative Rock", "Indie Rock", "Hard Rock", "Soft Rock", "Classic Rock",
   "Progressive Rock", "Psychedelic Rock", "Garage Rock", "Blues Rock", "Folk Rock",
   "Southern Rock", "Surf Rock", "Glam Rock", "Art Rock", "Experimental Rock", "Post-Rock",
   "Math Rock", "Noise Rock", "Space Rock", "Gothic Rock", "Industrial Rock",
   "Christian Rock", "Grunge", "Brit Rock", "Emo", "Shoegaze", "Dream Rock",
 
-  // 3. Metal
+  // ===== METAL =====
   "Heavy Metal", "Thrash Metal", "Death Metal", "Black Metal", "Doom Metal", "Power Metal",
   "Speed Metal", "Progressive Metal", "Symphonic Metal", "Folk Metal", "Groove Metal",
   "Nu Metal", "Alternative Metal", "Industrial Metal", "Gothic Metal", "Metalcore",
@@ -771,35 +801,35 @@ const GENEROS_RAW = [
   "Melodic Death Metal", "Technical Death Metal", "Viking Metal", "Pagan Metal",
   "Post-Metal", "Djent",
 
-  // 4. Punk
+  // ===== PUNK =====
   "Punk Rock", "Hardcore Punk", "Post-Punk", "Pop Punk", "Skate Punk", "Street Punk",
   "Anarcho-Punk", "Crust Punk", "D-Beat", "Garage Punk", "Riot Grrrl", "Emo Punk",
   "Ska Punk", "Celtic Punk", "Folk Punk", "Horror Punk", "Psychobilly",
 
-  // 5. Hip-Hop / Rap
+  // ===== HIP-HOP / RAP =====
   "Hip-Hop", "Rap", "Trap", "Drill", "Gangsta Rap", "Boom Bap", "Conscious Hip-Hop",
   "Underground Hip-Hop", "Alternative Hip-Hop", "Old School Hip-Hop", "West Coast Hip-Hop",
   "East Coast Hip-Hop", "Southern Hip-Hop", "Crunk", "Dirty South", "G-Funk", "Cloud Rap",
   "Emo Rap", "Jazz Rap", "Experimental Hip-Hop", "Hardcore Hip-Hop", "Latin Hip-Hop",
   "Chicano Rap", "UK Hip-Hop", "UK Drill", "Grime", "Freestyle Rap", "Trap Latino",
 
-  // 6. R&B / Soul
+  // ===== R&B / SOUL =====
   "R&B", "Contemporary R&B", "Alternative R&B", "Neo Soul", "Soul", "Classic Soul",
   "Southern Soul", "Motown", "Funk", "P-Funk", "Quiet Storm", "New Jack Swing",
   "Blue-Eyed Soul", "Psychedelic Soul", "Gospel Soul", "Soul Jazz",
 
-  // 7. Blues
+  // ===== BLUES =====
   "Blues", "Delta Blues", "Chicago Blues", "Texas Blues", "Electric Blues",
   "Acoustic Blues", "Country Blues", "Piedmont Blues", "British Blues", "Jump Blues",
   "Swamp Blues", "Gospel Blues", "Soul Blues",
 
-  // 8. Jazz
+  // ===== JAZZ =====
   "Jazz", "Bebop", "Hard Bop", "Cool Jazz", "Free Jazz", "Fusion", "Jazz Fusion",
   "Smooth Jazz", "Acid Jazz", "Latin Jazz", "Afro-Cuban Jazz", "Gypsy Jazz", "Swing",
   "Big Band", "Dixieland", "Ragtime", "Modal Jazz", "Avant-Garde Jazz", "Jazz Funk",
   "Nu Jazz", "Vocal Jazz", "Contemporary Jazz",
 
-  // 9. Electrónica
+  // ===== ELECTRÓNICA =====
   "Electronic", "EDM", "House", "Deep House", "Tech House", "Progressive House",
   "Electro House", "Future House", "Tropical House", "Bass House", "Acid House",
   "Chicago House", "French House", "Minimal House", "Techno", "Detroit Techno",
@@ -810,104 +840,137 @@ const GENEROS_RAW = [
   "Future Bass", "Synthwave", "Vaporwave", "Retrowave", "Lo-Fi", "Chillwave", "Glitch",
   "Industrial", "EBM", "Hardcore", "Gabber", "Hardstyle", "Future Rave",
 
-  // 10. Reggae
+  // ===== REGGAE =====
   "Reggae", "Roots Reggae", "Dancehall", "Dub", "Rocksteady", "Ska", "Lovers Rock",
   "Ragga", "Reggae Fusion", "Digital Reggae", "Dub Poetry",
 
-  // 11. Música latina
-  "Música Latina", "Reggaetón", "Latin Urban", "Salsa", "Salsa Romántica", "Salsa Dura",
+  // ===== MÚSICA LATINA =====
+  "Música Latina", "Latin Urban", "Salsa", "Salsa Romántica", "Salsa Dura",
   "Son Cubano", "Bachata", "Merengue", "Cumbia", "Cumbia Mexicana", "Cumbia Colombiana",
   "Cumbia Villera", "Cumbia Peruana", "Cumbia Andina", "Vallenato", "Bolero", "Mambo",
   "Cha-cha-chá", "Rumba", "Guaracha", "Danzón", "Timba", "Latin Rock", "Latin Soul",
-  "Tango", "Milonga", "Flamenco", "Bossa Nova", "Samba", "MPB", "Forró", "Axé",
+  "Tango", "Milonga", "Bossa Nova", "Samba", "MPB", "Forró", "Axé",
   "Frevo", "Sertanejo",
 
-  // 12. Música mexicana
-  "Música Mexicana", "Regional Mexicano", "Mariachi", "Ranchera", "Norteño",
-  "Norteño-Banda", "Banda", "Banda Sinaloense", "Corridos", "Corrido Tradicional",
-  "Corrido Tumbado", "Corrido Bélico", "Corridos Alterados", "Tejano", "Grupero",
-  "Duranguense", "Sierreño", "Huapango", "Son Jarocho", "Son Huasteco",
-  "Música de Tierra Caliente", "Música Norteña", "Cumbia Norteña", "Bolero Ranchero",
-  "Mariachi Moderno",
+  // ===== REGIONAL MEXICANO (subgéneros también) =====
+  "Mariachi", "Ranchera", "Norteño", "Norteño-Banda", "Banda", "Banda Sinaloense",
+  "Corridos", "Corrido Tradicional", "Corrido Tumbado", "Corrido Bélico",
+  "Corridos Alterados", "Tejano", "Grupero", "Duranguense", "Sierreño", "Huapango",
+  "Son Jarocho", "Son Huasteco", "Música de Tierra Caliente", "Música Norteña",
+  "Cumbia Norteña", "Bolero Ranchero", "Mariachi Moderno",
 
-  // 13. Country
+  // ===== COUNTRY =====
   "Country", "Country Pop", "Country Rock", "Traditional Country", "Outlaw Country",
   "Alternative Country", "Bluegrass", "Americana", "Honky Tonk", "Country Blues",
   "Western Swing", "Nashville Sound", "Red Dirt", "Contemporary Country", "Country Folk",
 
-  // 14. Folk / Tradicional
+  // ===== FOLK =====
   "Folk", "Contemporary Folk", "Traditional Folk", "Celtic Folk", "Irish Folk",
   "Scottish Folk", "English Folk", "American Folk", "Appalachian", "Nordic Folk",
   "Balkan Folk", "Slavic Folk", "Gypsy / Romani", "Klezmer", "Neofolk", "World Folk",
   "Folk Fusion",
 
-  // 15. Música clásica
+  // ===== CLÁSICA =====
   "Música Clásica", "Medieval", "Renacimiento", "Barroco", "Clasicismo", "Romanticismo",
   "Impresionismo", "Modernismo", "Música Contemporánea", "Música de Cámara", "Sinfónica",
   "Coral", "Ópera", "Opereta", "Oratorio", "Cantata", "Concierto", "Sonata", "Sinfonía",
   "Música Minimalista", "Música Experimental",
 
-  // 16. Música religiosa / espiritual
+  // ===== CRISTIANA / GOSPEL =====
   "Gospel", "Christian", "Christian Pop", "Christian Hip-Hop", "Christian Metal",
   "Worship", "Contemporary Christian", "Spiritual", "Hymns", "Islamic Music", "Nasheed",
   "Jewish Music", "Buddhist Music", "Hindu Devotional", "Mantra",
 
-  // 17. Música africana
+  // ===== AFRO =====
   "Afrobeat", "Afrobeats", "Afro-Pop", "Amapiano", "Highlife", "Hiplife", "Kizomba",
   "Kuduro", "Kwaito", "Gqom", "Mbalax", "Juju", "Fuji", "Makossa", "Soukous",
   "Congolese Rumba", "Benga", "Bikutsi", "Chimurenga", "Jit", "Marrabenta", "Mbube",
   "Marabi", "Township Jazz", "Rai", "Gnawa", "Desert Blues", "Maloya", "Sega", "Cape Jazz",
 
-  // 18. Música caribeña
+  // ===== CARIBEÑA =====
   "Calypso", "Soca", "Zouk", "Kompa", "Son", "Mento", "Steelpan", "Bouyon", "Punta",
 
-  // 19. Música brasileña
+  // ===== BRASILEÑA =====
   "Pagode", "Choro", "Tropicália", "Maracatu", "Baião", "Carimbó", "Lambada",
   "Música Caipira", "Samba-Reggae", "Funk Carioca",
 
-  // 20. Música asiática
+  // ===== ASIÁTICA =====
   "K-Rock", "K-Hip-Hop", "J-Rock", "J-Hip-Hop", "City Pop", "Enka", "Shibuya-kei",
   "Mandopop", "Cantopop", "Bollywood", "Bhangra", "Qawwali", "Ghazal", "Carnatic",
   "Hindustani Classical", "Raga", "Dhrupad", "Gamelan", "Dangdut", "Thai Pop", "V-Pop",
   "Pinoy Pop", "Persian Pop", "Arabic Pop", "Turkish Pop",
 
-  // 21. Música árabe y de Medio Oriente
+  // ===== ÁRABE / MEDIO ORIENTE =====
   "Arabic Music", "Shaabi", "Dabke", "Khaleeji", "Egyptian Pop", "Lebanese Pop",
   "Iraqi Music", "Persian Music", "Turkish Music", "Kurdish Music", "Armenian Music",
   "Israeli Music", "Mizrahi", "Andalusian Music", "Oud Music", "Traditional Middle Eastern",
 
-  // 22. Música oceánica
+  // ===== OCEÁNICA =====
   "Hawaiian", "Hawaiian Pop", "Polynesian", "Samoan", "Tahitian", "Tongan", "Maori",
   "Aboriginal Australian", "Melanesian", "Micronesian", "Pacific Island Music",
   "New Zealand Folk",
 
-  // 23. Experimental / alternativa
+  // ===== EXPERIMENTAL =====
   "Experimental", "Avant-Garde", "Noise", "Drone", "Musique Concrète",
   "Electroacoustic", "Minimalism", "Sound Art", "Free Improvisation",
   "Experimental Electronic",
 
-  // 24. Cine, TV y videojuegos
+  // ===== CINE / TV / VIDEOJUEGOS =====
   "Film Score", "Soundtrack", "Movie Soundtrack", "Television Score", "Video Game Music",
   "Anime Music", "Orchestral Score", "Cinematic", "Trailer Music", "Ambient Score",
   "Musical Theatre", "Broadway", "Stage & Screen",
 
-  // 25. Música vocal
+  // ===== VOCAL =====
   "A Cappella", "Vocal Pop", "Choral", "Choir", "Barbershop", "Doo-Wop", "Beatboxing",
   "Gregorian Chant", "Operatic", "Vocal Classical",
 
-  // 26. Infantil y humor
+  // ===== INFANTIL / HUMOR =====
   "Children's Music", "Nursery Rhymes", "Educational Music", "Comedy Music", "Novelty",
   "Parody", "Comedy Rock", "Comedy Rap", "Comedy Pop",
 
-  // 27. Baile y club
+  // ===== BAILE / CLUB =====
   "Dance", "Dance-Pop", "Eurodance", "Eurobeat", "Disco", "Nu-Disco", "Garage",
-  "Jersey Club", "Baltimore Club", "Footwork", "Juke"
+  "Jersey Club", "Baltimore Club", "Footwork", "Juke",
+
+  // ===== ACÚSTICA =====
+  "Acústica", "Acústica Pop", "Rock Acústico", "Folk Acústico", "Latino Acústico",
+  "Indie Acústico", "Regional Mexicano Acústico", "Acústica Instrumental",
+  "Unplugged", "Balada Acústica", "Bolero Acústico"
 ];
 
 // Limpiar duplicados y ordenar alfabéticamente (ignorando acentos)
 const GENEROS = [...new Set(GENEROS_RAW.map(g => g.trim()).filter(Boolean))]
   .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
 
+// ================================================================
+// SUBGÉNEROS DE "REGIONAL MEXICANO"
+// ================================================================
+const SUBGENEROS_RAW = [
+  "Corridos",
+  "Corridos Tumbados",
+  "Corridos Bélicos",
+  "Corridos Tradicionales",
+  "Banda",
+  "Banda Sinaloense",
+  "Norteño",
+  "Norteño-Banda",
+  "Sierreño",
+  "Sad Sierreño",
+  "Grupero",
+  "Mariachi",
+  "Ranchera",
+  "Huapango",
+  "Duranguense",
+  "Tejano",
+  "Cumbia Norteña"
+];
+
+const SUBGENEROS = [...new Set(SUBGENEROS_RAW.map(g => g.trim()).filter(Boolean))]
+  .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+// ================================================================
+// ELEMENTOS DEL DOM — GÉNERO
+// ================================================================
 const generoHidden  = document.getElementById('genero');
 const genreSelect   = document.getElementById('genreSelect');
 const genreToggle   = document.getElementById('genreToggle');
@@ -917,11 +980,26 @@ const genreSearch   = document.getElementById('genreSearch');
 const genreValue    = document.getElementById('genreValue');
 const genreEmpty    = document.getElementById('genreEmpty');
 
+// Elementos del DOM — SUBGÉNERO
+const subgenreGroup  = document.getElementById('subgenreGroup');
+const subgeneroHidden = document.getElementById('subgenero');
+const subgenreSelect = document.getElementById('subgenreSelect');
+const subgenreToggle = document.getElementById('subgenreToggle');
+const subgenrePanel  = document.getElementById('subgenrePanel');
+const subgenreList   = document.getElementById('subgenreList');
+const subgenreSearch = document.getElementById('subgenreSearch');
+const subgenreValue  = document.getElementById('subgenreValue');
+const subgenreEmpty  = document.getElementById('subgenreEmpty');
+
 let generoSeleccionado = '';
+let subgeneroSeleccionado = '';
 
 const normalizarTexto = (s = '') =>
   String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
+// ================================================================
+// RENDERIZADO DE GÉNEROS
+// ================================================================
 function pintarGeneros(filtro = '') {
   const q = normalizarTexto(filtro);
   const lista = q ? GENEROS.filter(g => normalizarTexto(g).includes(q)) : GENEROS;
@@ -964,16 +1042,82 @@ function seleccionarGenero(valor) {
   genreValue.textContent = generoSeleccionado || 'Selecciona un género';
   genreValue.classList.toggle('placeholder', !generoSeleccionado);
   cerrarGeneros();
+
+  // 👇 Mostrar/ocultar subgénero según la elección
+  if (generoSeleccionado === 'Regional Mexicano') {
+    if (subgenreGroup) subgenreGroup.classList.remove('hidden');
+  } else {
+    if (subgenreGroup) subgenreGroup.classList.add('hidden');
+    // Limpiar subgénero al cambiar de género
+    subgeneroSeleccionado = '';
+    if (subgeneroHidden) subgeneroHidden.value = '';
+    if (subgenreValue) {
+      subgenreValue.textContent = 'Selecciona un subgénero';
+      subgenreValue.classList.add('placeholder');
+    }
+    if (typeof cerrarSubgeneros === 'function') cerrarSubgeneros();
+  }
 }
 
-// Abrir / cerrar
+// ================================================================
+// RENDERIZADO DE SUBGÉNEROS
+// ================================================================
+function pintarSubgeneros(filtro = '') {
+  const q = normalizarTexto(filtro);
+  const lista = q ? SUBGENEROS.filter(g => normalizarTexto(g).includes(q)) : SUBGENEROS;
+
+  if (!lista.length) {
+    subgenreList.innerHTML = '';
+    subgenreEmpty.classList.remove('hidden');
+    return;
+  }
+
+  subgenreEmpty.classList.add('hidden');
+
+  subgenreList.innerHTML = lista.map(g => {
+    const sel = g === subgeneroSeleccionado;
+    return `<button type="button" class="genre-item${sel ? ' selected' : ''}"
+              role="option" aria-selected="${sel}"
+              data-subgenero="${escapeHtml(g)}">
+              <span>${escapeHtml(g)}</span>
+              <span class="check">✓</span>
+            </button>`;
+  }).join('');
+}
+
+function abrirSubgeneros() {
+  subgenrePanel.classList.remove('hidden');
+  subgenreToggle.setAttribute('aria-expanded', 'true');
+  subgenreSearch.value = '';
+  pintarSubgeneros('');
+  setTimeout(() => { try { subgenreSearch.focus(); } catch (e) {} }, 30);
+}
+
+function cerrarSubgeneros() {
+  if (!subgenrePanel) return;
+  subgenrePanel.classList.add('hidden');
+  if (subgenreToggle) subgenreToggle.setAttribute('aria-expanded', 'false');
+}
+
+function seleccionarSubgenero(valor) {
+  subgeneroSeleccionado = valor || '';
+  if (subgeneroHidden) subgeneroHidden.value = subgeneroSeleccionado;
+  if (subgenreValue) {
+    subgenreValue.textContent = subgeneroSeleccionado || 'Selecciona un subgénero';
+    subgenreValue.classList.toggle('placeholder', !subgeneroSeleccionado);
+  }
+  cerrarSubgeneros();
+}
+
+// ================================================================
+// EVENTOS — GÉNERO
+// ================================================================
 genreToggle.addEventListener('click', (e) => {
   e.stopPropagation();
   if (genrePanel.classList.contains('hidden')) abrirGeneros();
   else cerrarGeneros();
 });
 
-// Buscador
 genreSearch.addEventListener('input', () => pintarGeneros(genreSearch.value));
 
 genreSearch.addEventListener('keydown', (e) => {
@@ -985,32 +1129,78 @@ genreSearch.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') cerrarGeneros();
 });
 
-// Seleccionar género
 genreList.addEventListener('click', (e) => {
   const btn = e.target.closest('.genre-item');
   if (!btn) return;
   seleccionarGenero(btn.dataset.genero);
 });
 
-// Cerrar al hacer clic fuera
 document.addEventListener('click', (e) => {
   if (genrePanel.classList.contains('hidden')) return;
   if (genreSelect && !genreSelect.contains(e.target)) cerrarGeneros();
 });
 
-// Cerrar con ESC
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !genrePanel.classList.contains('hidden')) cerrarGeneros();
 });
 
-// Reset del formulario
+// ================================================================
+// EVENTOS — SUBGÉNERO
+// ================================================================
+subgenreToggle.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (subgenrePanel.classList.contains('hidden')) abrirSubgeneros();
+  else cerrarSubgeneros();
+});
+
+subgenreSearch.addEventListener('input', () => pintarSubgeneros(subgenreSearch.value));
+
+subgenreSearch.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const primero = subgenreList.querySelector('.genre-item');
+    if (primero) seleccionarSubgenero(primero.dataset.subgenero);
+  }
+  if (e.key === 'Escape') cerrarSubgeneros();
+});
+
+subgenreList.addEventListener('click', (e) => {
+  const btn = e.target.closest('.genre-item');
+  if (!btn) return;
+  seleccionarSubgenero(btn.dataset.subgenero);
+});
+
+document.addEventListener('click', (e) => {
+  if (subgenrePanel.classList.contains('hidden')) return;
+  if (subgenreSelect && !subgenreSelect.contains(e.target)) cerrarSubgeneros();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !subgenrePanel.classList.contains('hidden')) cerrarSubgeneros();
+});
+
+// ================================================================
+// RESET DEL FORMULARIO
+// ================================================================
 document.getElementById('formCancion').addEventListener('reset', () => {
   generoSeleccionado = '';
   generoHidden.value = '';
   genreValue.textContent = 'Selecciona un género';
   genreValue.classList.add('placeholder');
   cerrarGeneros();
+
+  subgeneroSeleccionado = '';
+  if (subgeneroHidden) subgeneroHidden.value = '';
+  if (subgenreValue) {
+    subgenreValue.textContent = 'Selecciona un subgénero';
+    subgenreValue.classList.add('placeholder');
+  }
+  if (subgenreGroup) subgenreGroup.classList.add('hidden');
+  cerrarSubgeneros();
 });
 
-// Pintar lista inicial
+// ================================================================
+// INICIALIZAR
+// ================================================================
 pintarGeneros('');
+pintarSubgeneros('');
