@@ -18,7 +18,8 @@ import {
   onSnapshot,
   deleteDoc,
   doc,
-  updateDoc
+  updateDoc,
+  increment
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ============================================
@@ -105,6 +106,7 @@ const menuWrap     = document.getElementById('menuWrap');
 const menuBtn      = document.getElementById('menuBtn');
 const menuDropdown = document.getElementById('menuDropdown');
 const logoutBtn    = document.getElementById('logoutBtn');
+const statsBtn     = document.getElementById('statsBtn');   // ← NUEVO
 
 // Modal reproductor
 const playerModal    = document.getElementById('playerModal');
@@ -130,12 +132,24 @@ const editAudio    = document.getElementById('editAudio');
 const editImagen   = document.getElementById('editImagen');
 const editSubmitBtn = document.getElementById('editSubmitBtn');
 
+// Modal estadísticas (NUEVO)
+const statsModal          = document.getElementById('statsModal');
+const statsList           = document.getElementById('statsList');
+const statsEmpty          = document.getElementById('statsEmpty');
+const statsTotalPlays     = document.getElementById('statsTotalPlays');
+const statsTotalListeners = document.getElementById('statsTotalListeners');
+const statsTotalEarnings  = document.getElementById('statsTotalEarnings');
+
 let usuarioActual = null;
 let unsubscribeHistorial = null;
 let cancionesActuales = [];
 let editandoId = null;
+let statsAbierto = false;   // ← NUEVO
 
 const PLACEHOLDER = 'https://via.placeholder.com/64/333/666?text=%E2%99%AB';
+
+// 💵 TARIFA POR REPRODUCCIÓN
+const PAGO_POR_REPRODUCCION = 0.10; // MXN
 
 // ===================
 // Utilidades
@@ -168,6 +182,21 @@ function escapeHtml(str = '') {
     '"': '&quot;',
     "'": '&#39;'
   }[c]));
+}
+
+// Formatear número con separadores de miles
+function fmtNumero(n) {
+  const v = Number(n) || 0;
+  return v.toLocaleString('es-MX');
+}
+
+// Formatear dinero MXN
+function fmtDinero(n) {
+  const v = Number(n) || 0;
+  return '$' + v.toLocaleString('es-MX', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }) + ' MXN';
 }
 
 // ===================
@@ -240,6 +269,7 @@ onAuthStateChanged(auth, (user) => {
     cancionesActuales = [];
     cerrarPlayer();
     cerrarEditModal();
+    cerrarStatsModal();   // ← NUEVO
   }
 });
 
@@ -299,6 +329,9 @@ function escucharHistorial(uid) {
     });
 
     renderHistorial(canciones);
+
+    // Si el modal de stats está abierto, refrescar en vivo también
+    if (statsAbierto) renderStats(canciones);
   }, (err) => {
     console.error('Error historial:', err);
     historyList.innerHTML = '';
@@ -441,12 +474,15 @@ form.addEventListener('submit', async (e) => {
       titulo:    titulo,
       album:     album,
       genero:    genero,
-      subgenero: subgenero,   // ← NUEVO
+      subgenero: subgenero,
       audioUrl:  audioUrl,
       imagenUrl: imagenUrl,
       origen:    'dropbox',
       uid:       uid,
       email:     usuarioActual.email,
+      // Stats iniciales (NUEVO)
+      reproducciones: 0,
+      oyentes: 0,
       fecha:     serverTimestamp()
     });
 
@@ -468,6 +504,41 @@ form.addEventListener('submit', async (e) => {
     submitBtn.textContent = 'Subir canción';
   }
 });
+
+// ================================================================
+// TRACKING: registrar reproducción y oyente (NUEVO)
+// ================================================================
+async function registrarReproduccion(cancion) {
+  if (!usuarioActual || !cancion || !cancion.id) return;
+
+  try {
+    const ref = doc(db, 'historial_usuarios', usuarioActual.uid, 'canciones', cancion.id);
+
+    const update = {
+      reproducciones: increment(1)
+    };
+
+    // Oyente único por navegador/dispositivo
+    const playsKey = `kerim_played_${cancion.id}`;
+    const yaEscuchado = localStorage.getItem(playsKey);
+    if (!yaEscuchado) {
+      update.oyentes = increment(1);
+      localStorage.setItem(playsKey, '1');
+    }
+
+    await updateDoc(ref, update);
+
+    // Actualizar copia local para que el modal se sienta instantáneo
+    const local = cancionesActuales.find(c => c.id === cancion.id);
+    if (local) {
+      local.reproducciones = (local.reproducciones || 0) + 1;
+      if (!yaEscuchado) local.oyentes = (local.oyentes || 0) + 1;
+    }
+
+  } catch (err) {
+    console.warn('No se pudo registrar reproducción:', err);
+  }
+}
 
 // ================================================================
 // MODAL REPRODUCTOR
@@ -503,6 +574,9 @@ function abrirPlayer(cancion) {
   playerModal.classList.remove('hidden');
   playerModal.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
+
+  // 👇 NUEVO: registrar la reproducción
+  registrarReproduccion(cancion);
 }
 
 function cerrarPlayer() {
@@ -694,6 +768,104 @@ editImagen.addEventListener('input', () => {
 });
 
 // ================================================================
+// MODAL ESTADÍSTICAS — MIS CANCIONES SUBIDAS (NUEVO)
+// ================================================================
+function renderStats(canciones) {
+  const lista = canciones || cancionesActuales || [];
+
+  if (!lista.length) {
+    statsList.innerHTML = '';
+    statsEmpty.classList.remove('hidden');
+    statsTotalPlays.textContent     = '0';
+    statsTotalListeners.textContent = '0';
+    statsTotalEarnings.textContent  = fmtDinero(0);
+    return;
+  }
+
+  statsEmpty.classList.add('hidden');
+
+  let totalReproducciones = 0;
+  let totalOyentes        = 0;
+
+  statsList.innerHTML = lista.map(c => {
+    const img     = c.imagenUrl ? escapeHtml(c.imagenUrl) : PLACEHOLDER;
+    const titulo  = escapeHtml(c.titulo  || 'Sin título');
+    const artista = escapeHtml(c.artista || 'Desconocido');
+
+    const plays     = Number(c.reproducciones) || 0;
+    const listeners = Number(c.oyentes)        || 0;
+    const ganancia  = plays * PAGO_POR_REPRODUCCION;
+
+    totalReproducciones += plays;
+    totalOyentes        += listeners;
+
+    return `
+      <div class="stats-item">
+        <img src="${img}" alt="" loading="lazy"
+             onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
+        <div class="stats-item-info">
+          <span class="stats-item-title" title="${titulo}">${titulo}</span>
+          <span class="stats-item-artist" title="${artista}">${artista}</span>
+        </div>
+        <div class="stats-item-grid">
+          <div class="stats-cell">
+            <span class="stats-cell-label">👥 Oyentes</span>
+            <span class="stats-cell-value">${fmtNumero(listeners)}</span>
+          </div>
+          <div class="stats-cell">
+            <span class="stats-cell-label">▶️ Repros</span>
+            <span class="stats-cell-value">${fmtNumero(plays)}</span>
+          </div>
+          <div class="stats-cell earn">
+            <span class="stats-cell-label">💰 Ganancias</span>
+            <span class="stats-cell-value">${fmtDinero(ganancia)}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const totalGanancias = totalReproducciones * PAGO_POR_REPRODUCCION;
+
+  statsTotalPlays.textContent     = fmtNumero(totalReproducciones);
+  statsTotalListeners.textContent = fmtNumero(totalOyentes);
+  statsTotalEarnings.textContent  = fmtDinero(totalGanancias);
+}
+
+function abrirStatsModal() {
+  statsAbierto = true;
+  renderStats(cancionesActuales);
+  statsModal.classList.remove('hidden');
+  statsModal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarStatsModal() {
+  statsAbierto = false;
+  if (!statsModal) return;
+  statsModal.classList.add('hidden');
+  statsModal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+// Eventos del modal de estadísticas
+statsModal.addEventListener('click', (e) => {
+  if (e.target.dataset.close === '1') cerrarStatsModal();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !statsModal.classList.contains('hidden')) {
+    cerrarStatsModal();
+  }
+});
+
+// Abrir stats desde el menú hamburguesa
+statsBtn.addEventListener('click', () => {
+  cerrarMenu();
+  setTimeout(abrirStatsModal, 120);
+});
+
+// ================================================================
 // MENÚ HAMBURGUESA + CERRAR SESIÓN
 // ================================================================
 function abrirMenu() {
@@ -751,7 +923,7 @@ logoutBtn.addEventListener('click', async () => {
 // SELECTOR DE GÉNERO MUSICAL CON BUSCADOR
 // ================================================================
 const GENEROS_RAW = [
-  // ===== CATEGORÍAS PRINCIPALES (NUEVO) =====
+  // ===== CATEGORÍAS PRINCIPALES =====
   "Regional Mexicano",
   "Reggaetón",
   "Pop",
@@ -852,7 +1024,7 @@ const GENEROS_RAW = [
   "Tango", "Milonga", "Bossa Nova", "Samba", "MPB", "Forró", "Axé",
   "Frevo", "Sertanejo",
 
-  // ===== REGIONAL MEXICANO (subgéneros también) =====
+  // ===== REGIONAL MEXICANO =====
   "Mariachi", "Ranchera", "Norteño", "Norteño-Banda", "Banda", "Banda Sinaloense",
   "Corridos", "Corrido Tradicional", "Corrido Tumbado", "Corrido Bélico",
   "Corridos Alterados", "Tejano", "Grupero", "Duranguense", "Sierreño", "Huapango",
@@ -938,7 +1110,6 @@ const GENEROS_RAW = [
   "Unplugged", "Balada Acústica", "Bolero Acústico"
 ];
 
-// Limpiar duplicados y ordenar alfabéticamente (ignorando acentos)
 const GENEROS = [...new Set(GENEROS_RAW.map(g => g.trim()).filter(Boolean))]
   .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
 
@@ -1043,12 +1214,10 @@ function seleccionarGenero(valor) {
   genreValue.classList.toggle('placeholder', !generoSeleccionado);
   cerrarGeneros();
 
-  // 👇 Mostrar/ocultar subgénero según la elección
   if (generoSeleccionado === 'Regional Mexicano') {
     if (subgenreGroup) subgenreGroup.classList.remove('hidden');
   } else {
     if (subgenreGroup) subgenreGroup.classList.add('hidden');
-    // Limpiar subgénero al cambiar de género
     subgeneroSeleccionado = '';
     if (subgeneroHidden) subgeneroHidden.value = '';
     if (subgenreValue) {
