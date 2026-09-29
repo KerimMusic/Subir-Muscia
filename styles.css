@@ -1250,3 +1250,288 @@ button:disabled {
   .genre-toggle { padding: 13px 14px; font-size: 14px; }
   .genre-list   { max-height: 210px; }
 }
+/* ============================================
+   MODAL ESTADÍSTICAS — MIS CANCIONES SUBIDAS (NUEVO)
+   ============================================ */
+.stats-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.2s ease;
+}
+
+.stats-modal.hidden { display: none !important; }
+
+.stats-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+}
+
+.stats-card {
+  position: relative;
+  width: 100%;
+  max-width: 720px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 20px;
+  padding: 32px 28px 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  animation: playerIn 0.25s ease;
+}
+
+.stats-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  margin: 0;
+  border-radius: 50%;
+  background: #f5f5f5;
+  border: 1.5px solid #e0e0e0;
+  color: #000000;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  z-index: 2;
+}
+
+.stats-close:hover {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
+  transform: rotate(90deg);
+}
+
+.stats-heading {
+  font-size: 22px;
+  font-weight: 700;
+  color: #000000;
+  text-align: center;
+  margin-bottom: 22px;
+  letter-spacing: 0.3px;
+  padding-right: 40px;
+}
+
+.stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 46vh;
+  overflow-y: auto;
+  padding-right: 4px;
+  margin-bottom: 20px;
+}
+
+.stats-list::-webkit-scrollbar { width: 5px; }
+.stats-list::-webkit-scrollbar-track { background: transparent; }
+.stats-list::-webkit-scrollbar-thumb { background: #d0d0d0; border-radius: 999px; }
+.stats-list::-webkit-scrollbar-thumb:hover { background: #999999; }
+
+.stats-item {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 12px;
+  align-items: center;
+  background: #fafafa;
+  border: 1.5px solid #e8e8e8;
+  border-radius: 12px;
+  padding: 12px 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stats-item:hover {
+  border-color: #000000;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.stats-item img {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #f0f0f0;
+  border: 1px solid #e0e0e0;
+  grid-row: span 2;
+}
+
+.stats-item-info {
+  min-width: 0;
+}
+
+.stats-item-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stats-item-artist {
+  display: block;
+  font-size: 11px;
+  color: #666666;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.stats-item-grid {
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.stats-cell {
+  background: #ffffff;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 7px 8px;
+  text-align: center;
+}
+
+.stats-cell-label {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  color: #777777;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 3px;
+}
+
+.stats-cell-value {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stats-cell.earn .stats-cell-value { color: #0a7d3a; }
+
+.stats-empty {
+  font-size: 13px;
+  color: #777777;
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* Resumen general */
+.stats-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  background: #000000;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.stats-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+  min-width: 0;
+}
+
+.stats-summary-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #cccccc;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.stats-summary-value {
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stats-summary-earnings .stats-summary-value {
+  color: #4ade80;
+}
+
+.stats-hint {
+  font-size: 11px;
+  color: #888888;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .stats-card {
+    padding: 26px 18px 20px;
+    border-radius: 16px;
+    max-height: 92vh;
+  }
+
+  .stats-heading { font-size: 18px; margin-bottom: 16px; }
+
+  .stats-list { max-height: 42vh; gap: 10px; }
+
+  .stats-item {
+    grid-template-columns: 48px 1fr;
+    padding: 10px 10px;
+  }
+
+  .stats-item img { width: 48px; height: 48px; }
+
+  .stats-item-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+  }
+
+  .stats-cell { padding: 6px 4px; }
+  .stats-cell-label { font-size: 8px; }
+  .stats-cell-value { font-size: 11px; }
+
+  .stats-summary {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .stats-summary-item {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .stats-summary-value { font-size: 15px; }
+}
+
+@media (max-width: 380px) {
+  .stats-cell-label { display: none; }
+  .stats-cell-value { font-size: 12px; }
+}
