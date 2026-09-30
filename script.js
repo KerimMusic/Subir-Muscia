@@ -497,6 +497,97 @@ async function asegurarRegistroOyentes(titulo) {
   }
 }
 
+// ==========================================================
+// 🆕 SINCRONIZAR OYENTES AL EDITAR UNA CANCIÓN
+//
+// Casos:
+//   1) El título NO cambió → solo asegurar que exista el registro.
+//   2) El título SÍ cambió  → mover el registro:
+//        a) Leer el contenido del doc antiguo (con sus oyentes intactos).
+//        b) Crear un nuevo doc con el nuevo título y el MISMO contenido.
+//        c) Borrar el doc antiguo.
+//
+// ⚠️ NUNCA se reinicia, reduce, aumenta ni modifica la cantidad de oyentes.
+// ==========================================================
+async function sincronizarOyentesAlEditar(tituloAntiguo, tituloNuevo) {
+  if (!tituloNuevo) return;
+
+  const keyAntiguo = normalizarTitulo(tituloAntiguo);
+  const keyNuevo   = normalizarTitulo(tituloNuevo);
+
+  // ── Caso 1: el título NO cambió ─────────────────────────
+  if (keyAntiguo === keyNuevo) {
+    await asegurarRegistroOyentes(tituloNuevo);
+    return;
+  }
+
+  // ── Caso 2: el título SÍ cambió → mover registro ────────
+  try {
+    // Identificar el docId real del registro antiguo
+    const statsAntiguas = statsOyentes[keyAntiguo];
+    const docIdAntiguo  = statsAntiguas?.docId || tituloAntiguo;
+
+    // 1) Leer el contenido COMPLETO del documento antiguo
+    let contenidoAntiguo = null;
+    if (docIdAntiguo) {
+      const snapAntiguo = await getDoc(doc(db, COLECCION_OYENTES, docIdAntiguo));
+      if (snapAntiguo.exists()) {
+        contenidoAntiguo = snapAntiguo.data();
+      }
+    }
+
+    // 2) Verificar si ya existe un documento con el nuevo título
+    const snapNuevo   = await getDoc(doc(db, COLECCION_OYENTES, tituloNuevo));
+    const existeNuevo = snapNuevo.exists();
+
+    // 3) Crear/actualizar el documento con el nuevo título
+    if (contenidoAntiguo) {
+      if (existeNuevo) {
+        // Ya existe uno con el nuevo título → combinamos oyentes
+        // (los oyentes nuevos ganan si hay colisión de UID)
+        const datosNuevos     = snapNuevo.data() || {};
+        const oyentesAntiguos = contenidoAntiguo.oyentes || {};
+        const oyentesNuevos   = datosNuevos.oyentes     || {};
+
+        let oyentesFinales;
+
+        const ambosSonMapas =
+          oyentesAntiguos && typeof oyentesAntiguos === 'object' && !Array.isArray(oyentesAntiguos) &&
+          oyentesNuevos   && typeof oyentesNuevos   === 'object' && !Array.isArray(oyentesNuevos);
+
+        if (ambosSonMapas) {
+          oyentesFinales = { ...oyentesAntiguos, ...oyentesNuevos };
+        } else if (Array.isArray(oyentesAntiguos) && Array.isArray(oyentesNuevos)) {
+          // Unión de arrays sin duplicados
+          oyentesFinales = Array.from(new Set([...oyentesAntiguos, ...oyentesNuevos]));
+        } else {
+          // Fallback: quedarse con el que tenga datos
+          oyentesFinales = oyentesNuevos || oyentesAntiguos || {};
+        }
+
+        await setDoc(doc(db, COLECCION_OYENTES, tituloNuevo), {
+          ...datosNuevos,
+          oyentes: oyentesFinales
+        });
+      } else {
+        // No existe → crear el nuevo con el MISMO contenido del antiguo
+        await setDoc(doc(db, COLECCION_OYENTES, tituloNuevo), contenidoAntiguo);
+      }
+    } else if (!existeNuevo) {
+      // No había registro antiguo ni nuevo → crear vacío
+      await setDoc(doc(db, COLECCION_OYENTES, tituloNuevo), { oyentes: {} });
+    }
+
+    // 4) Borrar el registro antiguo (solo si es distinto del nuevo)
+    if (docIdAntiguo && docIdAntiguo !== tituloNuevo) {
+      await deleteDoc(doc(db, COLECCION_OYENTES, docIdAntiguo));
+    }
+
+  } catch (e) {
+    console.warn('No se pudo sincronizar oyentes_canciones al editar:', e);
+  }
+}
+
 // Elimina el registro de oyentes_canciones asociado a una canción
 async function eliminarRegistroOyentes(cancion) {
   if (!cancion || !cancion.titulo) return;
@@ -880,6 +971,12 @@ editForm.addEventListener('submit', async (e) => {
 
   try {
     const uid = usuarioActual.uid;
+
+    // 📌 Guardar el TÍTULO ANTIGUO antes de actualizar (para saber si cambió)
+    const cancionAntigua = cancionesActuales.find(c => c.id === editandoId);
+    const tituloAntiguo  = cancionAntigua?.titulo || '';
+
+    // 1) Actualizar el historial del usuario
     const docRef = doc(db, 'historial_usuarios', uid, 'canciones', editandoId);
 
     await updateDoc(docRef, {
@@ -891,7 +988,10 @@ editForm.addEventListener('submit', async (e) => {
       fechaEdicion: serverTimestamp()
     });
 
-    await asegurarRegistroOyentes(titulo);
+    // 2) 🔄 Sincronizar oyentes_canciones:
+    //      - Si el título NO cambió → asegurar que exista.
+    //      - Si el título SÍ cambió  → mover el registro con los oyentes intactos.
+    await sincronizarOyentesAlEditar(tituloAntiguo, titulo);
 
     mostrarStatus('✅ Canción actualizada correctamente', 'ok');
     cerrarEditModal();
