@@ -202,10 +202,15 @@ function normalizarTitulo(t) {
 }
 
 // ==========================================================
-// 🔧 EXTRAER OYENTES: acepta múltiples nombres de campo
+// 🔧 EXTRAER OYENTES
+// Soporta dos formatos:
+//   1) Número directo:  data.oyentes = 42
+//   2) Mapa/objeto:     data.oyentes = { uid1: fecha1, uid2: fecha2, ... }
+//      → en este caso se cuenta cuántas claves tiene (oyentes únicos)
 // ==========================================================
 function extraerOyentes(data) {
   if (!data) return 0;
+
   const posibles = [
     data.oyentes,
     data.Oyentes,
@@ -219,11 +224,25 @@ function extraerOyentes(data) {
     data.listenerCount,
     data.listener_count
   ];
+
   for (const v of posibles) {
     if (v === undefined || v === null || v === '') continue;
+
+    // Si es un objeto/mapa → contar claves (oyentes únicos)
+    if (typeof v === 'object' && !Array.isArray(v)) {
+      return Object.keys(v).length;
+    }
+
+    // Si es array → contar elementos
+    if (Array.isArray(v)) {
+      return v.length;
+    }
+
+    // Si es número o string numérico → convertirlo
     const n = Number(v);
     if (!isNaN(n)) return n;
   }
+
   return 0;
 }
 
