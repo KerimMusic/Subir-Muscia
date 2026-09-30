@@ -1400,7 +1400,7 @@ button:disabled {
 .stats-item-grid {
   grid-column: 2;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr;
   gap: 8px;
   margin-top: 6px;
 }
@@ -1433,8 +1433,6 @@ button:disabled {
   text-overflow: ellipsis;
 }
 
-.stats-cell.earn .stats-cell-value { color: #0a7d3a; }
-
 .stats-empty {
   font-size: 13px;
   color: #777777;
@@ -1445,7 +1443,7 @@ button:disabled {
 /* Resumen general */
 .stats-summary {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr;
   gap: 10px;
   background: #000000;
   border-radius: 14px;
@@ -1478,10 +1476,6 @@ button:disabled {
   text-overflow: ellipsis;
 }
 
-.stats-summary-earnings .stats-summary-value {
-  color: #4ade80;
-}
-
 .stats-hint {
   font-size: 11px;
   color: #888888;
@@ -1509,7 +1503,7 @@ button:disabled {
   .stats-item img { width: 48px; height: 48px; }
 
   .stats-item-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: 1fr;
     gap: 5px;
   }
 
