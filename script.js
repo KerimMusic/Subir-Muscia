@@ -1,1616 +1,1661 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
-  onAuthStateChanged,
-  signOut,
-  setPersistence,
-  browserLocalPersistence
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  serverTimestamp,
-  onSnapshot,
-  deleteDoc,
-  doc,
-  updateDoc,
-  getDoc,
-  setDoc
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-// ============================================
-// ✅ TU CONFIGURACIÓN REAL DE FIREBASE
-// ============================================
-const firebaseConfig = {
-  apiKey: "AIzaSyDMabE70hIApcNU5RY3_WEEIF-BWUzO0K4",
-  authDomain: "kerim-music-a9c46.firebaseapp.com",
-  projectId: "kerim-music-a9c46",
-  storageBucket: "kerim-music-a9c46.firebasestorage.app",
-  messagingSenderId: "470731440209",
-  appId: "1:470731440209:web:f6eba4784027a5d8c57870",
-  measurementId: "G-LBHTKL8KDK"
-};
-// ============================================
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const provider = new GoogleAuthProvider();
-
-// ============================================================
-// ✅ COMPATIBILIDAD CON WEBVIEW
-// ============================================================
-setPersistence(auth, browserLocalPersistence).catch(err => {
-  console.warn('[WebView] No se pudo establecer persistencia:', err);
-});
-
-function esWebView() {
-  const ua = (navigator.userAgent || '').toLowerCase();
-  const esAndroidWV = /android/.test(ua) && /(wv|version\/[\d.]+)/.test(ua);
-  const esIOSWV = /iphone|ipad|ipod/.test(ua) && !/safari|crios|fxios|edgios/.test(ua);
-  const tieneBridge = !!(window.Android || window.ReactNativeWebView || (window.webkit && window.webkit.messageHandlers));
-  return esAndroidWV || esIOSWV || tieneBridge;
+/* ============================================
+   RESET Y BASE
+   ============================================ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-const LOGIN_BTN_HTML = `
-  <svg width="18" height="18" viewBox="0 0 24 24">
-    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-  </svg>
-  Iniciar sesión con Google
-`;
-
-getRedirectResult(auth)
-  .then(result => {
-    if (result && result.user) {
-      mostrarStatus('✅ Sesión iniciada correctamente', 'ok');
-    }
-  })
-  .catch(err => {
-    if (err && err.code && err.code !== 'auth/no-auth-event') {
-      console.error('[Auth] getRedirectResult:', err);
-      mostrarStatus('Error al iniciar sesión: ' + err.message, 'error');
-    }
-  });
-
-// ============================================================
-// FIN BLOQUE WEBVIEW
-// ============================================================
-
-// Elementos del DOM
-const loginBtn   = document.getElementById('loginBtn');
-const form       = document.getElementById('formCancion');
-const userBox    = document.getElementById('userBox');
-const userEmail  = document.getElementById('userEmail');
-const status     = document.getElementById('status');
-const submitBtn  = document.getElementById('submitBtn');
-const preview    = document.getElementById('preview');
-const previewImg = document.getElementById('previewImg');
-const previewTitulo  = document.getElementById('previewTitulo');
-const previewArtista = document.getElementById('previewArtista');
-
-// Historial
-const historySection = document.getElementById('historySection');
-const historyList    = document.getElementById('historyList');
-const historyCount   = document.getElementById('historyCount');
-const historyEmpty   = document.getElementById('historyEmpty');
-
-// Menú hamburguesa
-const menuWrap     = document.getElementById('menuWrap');
-const menuBtn      = document.getElementById('menuBtn');
-const menuDropdown = document.getElementById('menuDropdown');
-const logoutBtn    = document.getElementById('logoutBtn');
-const statsBtn     = document.getElementById('statsBtn');
-
-// Modal reproductor
-const playerModal    = document.getElementById('playerModal');
-const playerImg      = document.getElementById('playerImg');
-const playerTitle    = document.getElementById('playerTitle');
-const playerArtist   = document.getElementById('playerArtist');
-const playerPlay     = document.getElementById('playerPlay');
-const playerRewind   = document.getElementById('playerRewind');
-const playerForward  = document.getElementById('playerForward');
-const playerSeek     = document.getElementById('playerSeek');
-const playerVol      = document.getElementById('playerVol');
-const playerCurrent  = document.getElementById('playerCurrent');
-const playerDuration = document.getElementById('playerDuration');
-
-// Modal editar
-const editModal    = document.getElementById('editModal');
-const editForm     = document.getElementById('editForm');
-const editImg      = document.getElementById('editImg');
-const editArtista  = document.getElementById('editArtista');
-const editTitulo   = document.getElementById('editTitulo');
-const editAlbum    = document.getElementById('editAlbum');
-const editAudio    = document.getElementById('editAudio');
-const editImagen   = document.getElementById('editImagen');
-const editSubmitBtn = document.getElementById('editSubmitBtn');
-
-// Modal estadísticas
-const statsModal          = document.getElementById('statsModal');
-const statsList           = document.getElementById('statsList');
-const statsEmpty          = document.getElementById('statsEmpty');
-const statsTotalListeners = document.getElementById('statsTotalListeners');
-const statsTotalEarnings  = document.getElementById('statsTotalEarnings');
-
-let usuarioActual = null;
-let unsubscribeHistorial = null;
-let unsubscribeOyentes   = null;
-let cancionesActuales = [];
-let editandoId = null;
-let statsAbierto = false;
-
-// Mapa de estadísticas: { tituloNormalizado: { docId, oyentes } }
-let statsOyentes = {};
-
-const PLACEHOLDER = 'https://via.placeholder.com/64/333/666?text=%E2%99%AB';
-
-const COLECCION_OYENTES = 'oyentes_canciones';
-
-// 💵 Tarifa por oyente
-const PAGO_POR_OYENTE = 0.20; // MXN
-
-// ===================
-// Utilidades
-// ===================
-function mostrarStatus(msg, tipo = 'ok') {
-  status.textContent = msg;
-  status.className = 'status ' + tipo;
-  if (tipo === 'ok') {
-    setTimeout(() => { status.className = 'status'; }, 4000);
-  }
+body {
+  background: #ffffff;
+  color: #000000;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  line-height: 1.5;
 }
 
-function dropboxDirecto(url) {
-  if (!url) return '';
-  url = url.trim();
-  return url
-    .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
-    .replace('?dl=0', '')
-    .replace('?dl=1', '')
-    .replace('&dl=0', '')
-    .replace('&dl=1', '')
-    .replace('?raw=1', '');
+.container {
+  width: 100%;
+  max-width: 580px;
+  padding: 20px 0;
 }
 
-function escapeHtml(str = '') {
-  return String(str).replace(/[&<>"']/g, c => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  }[c]));
+/* ============================================
+   HEADER
+   ============================================ */
+.header {
+  text-align: center;
+  margin-bottom: 32px;
 }
 
-function fmtNumero(n) {
-  const v = Number(n) || 0;
-  return v.toLocaleString('es-MX');
+.header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 4px;
+  letter-spacing: -0.5px;
 }
 
-function fmtDinero(n) {
-  const v = Number(n) || 0;
-  return '$' + v.toLocaleString('es-MX', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }) + ' MXN';
+.header p {
+  font-size: 13px;
+  color: #555555;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
 
-// Normaliza un título para comparar de forma robusta
-function normalizarTitulo(t) {
-  return String(t || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
+/* ============================================
+   USER BOX
+   ============================================ */
+.user-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 24px;
+  font-size: 13px;
+  color: #000000;
+  overflow: hidden;
 }
 
-// ==========================================================
-// 🔧 EXTRAER OYENTES
-// Soporta dos formatos:
-//   1) Número directo:  data.oyentes = 42
-//   2) Mapa/objeto:     data.oyentes = { uid1: fecha1, uid2: fecha2, ... }
-//      → en este caso se cuenta cuántas claves tiene (oyentes únicos)
-// ==========================================================
-function extraerOyentes(data) {
-  if (!data) return 0;
-
-  const posibles = [
-    data.oyentes,
-    data.Oyentes,
-    data.oyente,
-    data.listeners,
-    data.Listeners,
-    data.listener,
-    data.oyentes_totales,
-    data.totalOyentes,
-    data.total_oyentes,
-    data.listenerCount,
-    data.listener_count
-  ];
-
-  for (const v of posibles) {
-    if (v === undefined || v === null || v === '') continue;
-
-    // Si es un objeto/mapa → contar claves (oyentes únicos)
-    if (typeof v === 'object' && !Array.isArray(v)) {
-      return Object.keys(v).length;
-    }
-
-    // Si es array → contar elementos
-    if (Array.isArray(v)) {
-      return v.length;
-    }
-
-    // Si es número o string numérico → convertirlo
-    const n = Number(v);
-    if (!isNaN(n)) return n;
-  }
-
-  return 0;
+.user-box #userEmail {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-// ==========================================================
-// 🔧 OBTENER STATS: busca por varios campos de la canción
-// ==========================================================
-function obtenerStatsDeCancion(cancion) {
-  if (!cancion) return { oyentes: 0, docId: null };
-
-  const candidatos = [
-    cancion.titulo,
-    cancion.title,
-    cancion.nombre,
-    cancion.id
-  ];
-
-  for (const c of candidatos) {
-    if (!c) continue;
-    const key = normalizarTitulo(c);
-    const s = statsOyentes[key];
-    if (s) return s;
-  }
-
-  return { oyentes: 0, docId: null };
+.user-box .dot {
+  width: 8px;
+  height: 8px;
+  background: #000000;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: pulse 1.8s ease-in-out infinite;
 }
 
-// ===================
-// Autenticación
-// ===================
-loginBtn.addEventListener('click', async () => {
-  try {
-    loginBtn.disabled = true;
-    loginBtn.innerHTML = '<span class="loader"></span>Iniciando sesión...';
-
-    if (esWebView()) {
-      await signInWithRedirect(auth, provider);
-      return;
-    }
-
-    await signInWithPopup(auth, provider);
-
-  } catch (e) {
-    console.error('[Auth] Error login:', e);
-    const necesitaFallback =
-      e.code === 'auth/popup-blocked' ||
-      e.code === 'auth/operation-not-supported-in-this-environment' ||
-      e.code === 'auth/web-storage-unsupported';
-
-    if (necesitaFallback) {
-      try {
-        await signInWithRedirect(auth, provider);
-        return;
-      } catch (e2) {
-        console.error('[Auth] Fallback redirect falló:', e2);
-        mostrarStatus('Error al iniciar sesión: ' + e2.message, 'error');
-      }
-    } else {
-      mostrarStatus('Error al iniciar sesión: ' + e.message, 'error');
-    }
-
-    loginBtn.disabled = false;
-    loginBtn.innerHTML = LOGIN_BTN_HTML;
-  }
-});
-
-onAuthStateChanged(auth, (user) => {
-  usuarioActual = user;
-
-  if (user) {
-    loginBtn.classList.add('hidden');
-    userBox.classList.remove('hidden');
-    form.classList.remove('hidden');
-    historySection.classList.remove('hidden');
-    userEmail.textContent = user.email;
-    menuWrap.classList.remove('hidden');
-    escucharHistorial(user.uid);
-    escucharOyentesCanciones();
-  } else {
-    loginBtn.classList.remove('hidden');
-    loginBtn.disabled = false;
-    loginBtn.innerHTML = LOGIN_BTN_HTML;
-    userBox.classList.add('hidden');
-    form.classList.add('hidden');
-    historySection.classList.add('hidden');
-    menuWrap.classList.add('hidden');
-    cerrarMenu();
-
-    if (unsubscribeHistorial) {
-      unsubscribeHistorial();
-      unsubscribeHistorial = null;
-    }
-    if (unsubscribeOyentes) {
-      unsubscribeOyentes();
-      unsubscribeOyentes = null;
-    }
-
-    historyList.innerHTML = '';
-    historyCount.textContent = '0';
-    historyEmpty.classList.add('hidden');
-    cancionesActuales = [];
-    statsOyentes = {};
-    cerrarPlayer();
-    cerrarEditModal();
-    cerrarStatsModal();
-  }
-});
-
-// ===================
-// Vista previa dinámica (formulario)
-// ===================
-['artista', 'titulo', 'imagen', 'album'].forEach(id => {
-  document.getElementById(id).addEventListener('input', actualizarPreview);
-});
-
-function actualizarPreview() {
-  const artista = document.getElementById('artista').value.trim();
-  const titulo  = document.getElementById('titulo').value.trim();
-  const imagen  = document.getElementById('imagen').value.trim();
-  const album   = document.getElementById('album').value.trim();
-
-  if (!artista && !titulo && !imagen && !album) {
-    preview.classList.remove('show');
-    return;
-  }
-
-  preview.classList.add('show');
-  previewTitulo.textContent  = titulo || '—';
-  previewArtista.textContent = artista || '—';
-
-  const albumSpan = document.querySelector('.preview-info .Album');
-  if (albumSpan) {
-    albumSpan.textContent = album || 'Reggeton 1';
-  }
-
-  if (imagen) {
-    previewImg.src = dropboxDirecto(imagen);
-    previewImg.onerror = () => { previewImg.src = PLACEHOLDER; };
-  } else {
-    previewImg.src = PLACEHOLDER;
-  }
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.5; transform: scale(0.9); }
 }
 
-// ===================
-// HISTORIAL
-// ===================
-function escucharHistorial(uid) {
-  if (unsubscribeHistorial) unsubscribeHistorial();
-
-  historyList.innerHTML = '<p class="history-empty">Cargando canciones...</p>';
-  historyEmpty.classList.add('hidden');
-
-  const ref = collection(db, 'historial_usuarios', uid, 'canciones');
-
-  unsubscribeHistorial = onSnapshot(ref, (snap) => {
-    const canciones = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    canciones.sort((a, b) => {
-      const fa = a.fecha?.seconds || 0;
-      const fb = b.fecha?.seconds || 0;
-      return fb - fa;
-    });
-
-    renderHistorial(canciones);
-
-    if (statsAbierto) renderStats(canciones);
-  }, (err) => {
-    console.error('Error historial:', err);
-    historyList.innerHTML = '';
-    mostrarStatus('Error al cargar el historial: ' + err.message, 'error');
-  });
+/* ============================================
+   FORMULARIO
+   ============================================ */
+.form-group {
+  margin-bottom: 20px;
 }
 
-// ===================
-// OYENTES_CANCIONES (SOLO LECTURA)
-// Se indexa el mismo documento bajo múltiples claves para
-// garantizar que siempre se encuentre la canción.
-// ===================
-function escucharOyentesCanciones() {
-  if (unsubscribeOyentes) unsubscribeOyentes();
-
-  const ref = collection(db, COLECCION_OYENTES);
-
-  unsubscribeOyentes = onSnapshot(ref, (snap) => {
-    const mapa = {};
-
-    snap.docs.forEach(d => {
-      const data = d.data() || {};
-      const oyentes = extraerOyentes(data);
-
-      const stats = { docId: d.id, oyentes };
-
-      // Indexamos bajo TODAS las posibles claves:
-      const candidatos = [
-        d.id,
-        data.titulo,
-        data.title,
-        data.nombre,
-        data.cancion,
-        data.song
-      ];
-
-      candidatos.forEach(c => {
-        if (!c) return;
-        const key = normalizarTitulo(c);
-        if (key && !mapa[key]) mapa[key] = stats;
-      });
-    });
-
-    statsOyentes = mapa;
-
-    if (statsAbierto) renderStats(cancionesActuales);
-  }, (err) => {
-    console.error('Error al escuchar oyentes_canciones:', err);
-  });
+label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
 }
 
-// Asegura que exista el registro en oyentes_canciones (solo si NO existe)
-// ⚠️ NO modifica el valor de "oyentes" si el documento ya existe.
-async function asegurarRegistroOyentes(titulo) {
-  if (!titulo) return;
-
-  const key = normalizarTitulo(titulo);
-
-  // Si ya está en el mapa cargado, no hacemos nada
-  if (statsOyentes[key]) return;
-
-  try {
-    const docRef = doc(db, COLECCION_OYENTES, titulo);
-    const snap = await getDoc(docRef);
-
-    if (snap.exists()) return; // Ya existe → no crear duplicado
-
-    // Creamos SOLO con el contador de oyentes en 0
-    await setDoc(docRef, {
-      oyentes: 0
-    });
-
-  } catch (e) {
-    console.warn('No se pudo asegurar registro en oyentes_canciones:', e);
-  }
+input {
+  width: 100%;
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1.5px solid #d0d0d0;
+  border-radius: 10px;
+  color: #000000;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-// ==========================================================
-// 🆕 SINCRONIZAR OYENTES AL EDITAR UNA CANCIÓN
-//
-// Casos:
-//   1) El título NO cambió → solo asegurar que exista el registro.
-//   2) El título SÍ cambió  → mover el registro:
-//        a) Leer el contenido del doc antiguo (con sus oyentes intactos).
-//        b) Crear un nuevo doc con el nuevo título y el MISMO contenido.
-//        c) Borrar el doc antiguo.
-//
-// ⚠️ NUNCA se reinicia, reduce, aumenta ni modifica la cantidad de oyentes.
-// ==========================================================
-async function sincronizarOyentesAlEditar(tituloAntiguo, tituloNuevo) {
-  if (!tituloNuevo) return;
-
-  const keyAntiguo = normalizarTitulo(tituloAntiguo);
-  const keyNuevo   = normalizarTitulo(tituloNuevo);
-
-  // ── Caso 1: el título NO cambió ─────────────────────────
-  if (keyAntiguo === keyNuevo) {
-    await asegurarRegistroOyentes(tituloNuevo);
-    return;
-  }
-
-  // ── Caso 2: el título SÍ cambió → mover registro ────────
-  try {
-    // Identificar el docId real del registro antiguo
-    const statsAntiguas = statsOyentes[keyAntiguo];
-    const docIdAntiguo  = statsAntiguas?.docId || tituloAntiguo;
-
-    // 1) Leer el contenido COMPLETO del documento antiguo
-    let contenidoAntiguo = null;
-    if (docIdAntiguo) {
-      const snapAntiguo = await getDoc(doc(db, COLECCION_OYENTES, docIdAntiguo));
-      if (snapAntiguo.exists()) {
-        contenidoAntiguo = snapAntiguo.data();
-      }
-    }
-
-    // 2) Verificar si ya existe un documento con el nuevo título
-    const snapNuevo   = await getDoc(doc(db, COLECCION_OYENTES, tituloNuevo));
-    const existeNuevo = snapNuevo.exists();
-
-    // 3) Crear/actualizar el documento con el nuevo título
-    if (contenidoAntiguo) {
-      if (existeNuevo) {
-        // Ya existe uno con el nuevo título → combinamos oyentes
-        // (los oyentes nuevos ganan si hay colisión de UID)
-        const datosNuevos     = snapNuevo.data() || {};
-        const oyentesAntiguos = contenidoAntiguo.oyentes || {};
-        const oyentesNuevos   = datosNuevos.oyentes     || {};
-
-        let oyentesFinales;
-
-        const ambosSonMapas =
-          oyentesAntiguos && typeof oyentesAntiguos === 'object' && !Array.isArray(oyentesAntiguos) &&
-          oyentesNuevos   && typeof oyentesNuevos   === 'object' && !Array.isArray(oyentesNuevos);
-
-        if (ambosSonMapas) {
-          oyentesFinales = { ...oyentesAntiguos, ...oyentesNuevos };
-        } else if (Array.isArray(oyentesAntiguos) && Array.isArray(oyentesNuevos)) {
-          // Unión de arrays sin duplicados
-          oyentesFinales = Array.from(new Set([...oyentesAntiguos, ...oyentesNuevos]));
-        } else {
-          // Fallback: quedarse con el que tenga datos
-          oyentesFinales = oyentesNuevos || oyentesAntiguos || {};
-        }
-
-        await setDoc(doc(db, COLECCION_OYENTES, tituloNuevo), {
-          ...datosNuevos,
-          oyentes: oyentesFinales
-        });
-      } else {
-        // No existe → crear el nuevo con el MISMO contenido del antiguo
-        await setDoc(doc(db, COLECCION_OYENTES, tituloNuevo), contenidoAntiguo);
-      }
-    } else if (!existeNuevo) {
-      // No había registro antiguo ni nuevo → crear vacío
-      await setDoc(doc(db, COLECCION_OYENTES, tituloNuevo), { oyentes: {} });
-    }
-
-    // 4) Borrar el registro antiguo (solo si es distinto del nuevo)
-    if (docIdAntiguo && docIdAntiguo !== tituloNuevo) {
-      await deleteDoc(doc(db, COLECCION_OYENTES, docIdAntiguo));
-    }
-
-  } catch (e) {
-    console.warn('No se pudo sincronizar oyentes_canciones al editar:', e);
-  }
+input:focus {
+  border-color: #000000;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
 }
 
-// Elimina el registro de oyentes_canciones asociado a una canción
-async function eliminarRegistroOyentes(cancion) {
-  if (!cancion || !cancion.titulo) return;
-
-  const stats = obtenerStatsDeCancion(cancion);
-  const docId = stats.docId || cancion.titulo;
-
-  try {
-    await deleteDoc(doc(db, COLECCION_OYENTES, docId));
-  } catch (e) {
-    console.warn('No se pudo eliminar de oyentes_canciones:', e);
-  }
+input::placeholder {
+  color: #999999;
 }
 
-function renderHistorial(canciones) {
-  cancionesActuales = canciones;
-  historyCount.textContent = canciones.length;
-
-  if (!canciones.length) {
-    historyList.innerHTML = '';
-    historyEmpty.classList.remove('hidden');
-    return;
-  }
-
-  historyEmpty.classList.add('hidden');
-
-  historyList.innerHTML = canciones.map(c => {
-    const img = c.imagenUrl ? escapeHtml(c.imagenUrl) : PLACEHOLDER;
-    const titulo  = escapeHtml(c.titulo  || 'Sin título');
-    const artista = escapeHtml(c.artista || 'Desconocido');
-
-    return `
-      <div class="history-item" data-id="${escapeHtml(c.id)}">
-        <img src="${img}" alt="" loading="lazy"
-             onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
-        <div class="history-info">
-          <strong title="${titulo}">${titulo}</strong>
-          <small title="${artista}">${artista}</small>
-        </div>
-        <button type="button" class="btn-edit" data-id="${escapeHtml(c.id)}" title="Editar canción">
-          ✏️
-        </button>
-        <button type="button" class="btn-delete" data-id="${escapeHtml(c.id)}" title="Eliminar canción">
-          🗑️
-        </button>
-      </div>
-    `;
-  }).join('');
+.hint {
+  font-size: 11px;
+  color: #777777;
+  margin-top: 6px;
+  line-height: 1.4;
 }
 
-historyList.addEventListener('click', (e) => {
-  const deleteBtn = e.target.closest('.btn-delete');
-  if (deleteBtn) {
-    const id = deleteBtn.dataset.id;
-    const item = deleteBtn.closest('.history-item');
-    const titulo = item?.querySelector('.history-info strong')?.textContent || 'esta canción';
-    const cancion = cancionesActuales.find(c => c.id === id);
-    eliminarCancion(id, deleteBtn, titulo, cancion);
-    return;
-  }
-
-  const editBtn = e.target.closest('.btn-edit');
-  if (editBtn) {
-    const id = editBtn.dataset.id;
-    const cancion = cancionesActuales.find(c => c.id === id);
-    if (cancion) abrirEditModal(cancion);
-    return;
-  }
-
-  const item = e.target.closest('.history-item');
-  if (!item) return;
-
-  const id = item.dataset.id;
-  const cancion = cancionesActuales.find(c => c.id === id);
-  if (cancion) abrirPlayer(cancion);
-});
-
-async function eliminarCancion(id, boton, titulo, cancion) {
-  if (!usuarioActual) {
-    mostrarStatus('Debes iniciar sesión primero', 'error');
-    return;
-  }
-
-  const confirmado = confirm(`¿Seguro que quieres eliminar "${titulo}"?\nEsta acción no se puede deshacer.`);
-  if (!confirmado) return;
-
-  try {
-    boton.disabled = true;
-    boton.textContent = '⏳';
-
-    await deleteDoc(doc(db, 'historial_usuarios', usuarioActual.uid, 'canciones', id));
-
-    if (cancion) {
-      await eliminarRegistroOyentes(cancion);
-    } else {
-      try {
-        await deleteDoc(doc(db, COLECCION_OYENTES, titulo));
-      } catch (e) {
-        console.warn('Fallback eliminar oyentes_canciones:', e);
-      }
-    }
-
-    mostrarStatus('🗑️ Canción eliminada correctamente', 'ok');
-
-  } catch (err) {
-    console.error('Error al eliminar:', err);
-    mostrarStatus('Error al eliminar: ' + err.message, 'error');
-    boton.disabled = false;
-    boton.textContent = '🗑️';
-  }
+/* ============================================
+   BOTONES
+   ============================================ */
+button {
+  width: 100%;
+  padding: 15px;
+  margin-top: 10px;
+  background: #000000;
+  border: none;
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  letter-spacing: 0.3px;
 }
 
-// ===================
-// Guardar canción
-// ===================
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  if (!usuarioActual) {
-    mostrarStatus('Debes iniciar sesión primero', 'error');
-    return;
-  }
-
-  const artista   = document.getElementById('artista').value.trim();
-  const titulo    = document.getElementById('titulo').value.trim();
-  const album     = document.getElementById('album').value.trim();
-  const genero    = (document.getElementById('genero')?.value || '').trim();
-  const subgenero = (document.getElementById('subgenero')?.value || '').trim();
-  const audioRaw  = document.getElementById('audio').value.trim();
-  const imagenRaw = document.getElementById('imagen').value.trim();
-
-  if (!artista || !titulo || !audioRaw) {
-    mostrarStatus('Completa artista, título y audio', 'error');
-    return;
-  }
-
-  const audioUrl  = dropboxDirecto(audioRaw);
-  const imagenUrl = imagenRaw ? dropboxDirecto(imagenRaw) : '';
-
-  submitBtn.disabled = true;
-  submitBtn.innerHTML = '<span class="loader"></span>Verificando audio...';
-  mostrarStatus('Verificando que el audio de Dropbox sea accesible...', 'loading');
-
-  try {
-    const res = await fetch(audioUrl, { method: 'HEAD' });
-    if (!res.ok) throw new Error('El link de audio no responde correctamente');
-  } catch (err) {
-    console.warn('Validación de audio:', err);
-  }
-
-  try {
-    submitBtn.innerHTML = '<span class="loader"></span>Guardando...';
-    mostrarStatus('Guardando en la base de datos...', 'loading');
-
-    const uid = usuarioActual.uid;
-
-    await addDoc(collection(db, 'historial_usuarios', uid, 'canciones'), {
-      artista:   artista,
-      titulo:    titulo,
-      album:     album,
-      genero:    genero,
-      subgenero: subgenero,
-      audioUrl:  audioUrl,
-      imagenUrl: imagenUrl,
-      origen:    'dropbox',
-      uid:       uid,
-      email:     usuarioActual.email,
-      fecha:     serverTimestamp()
-    });
-
-    // 🔄 Crear registro en oyentes_canciones solo si NO existe
-    await asegurarRegistroOyentes(titulo);
-
-    mostrarStatus('✅ Canción subida correctamente', 'ok');
-
-    form.reset();
-    preview.classList.remove('show');
-
-    const albumSpan = document.querySelector('.preview-info .Album');
-    if (albumSpan) albumSpan.textContent = 'Reggeton 1';
-
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Subir canción';
-
-  } catch (err) {
-    console.error(err);
-    mostrarStatus('Error al guardar: ' + err.message, 'error');
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Subir canción';
-  }
-});
-
-// ================================================================
-// MODAL REPRODUCTOR
-// ================================================================
-const previewAudio = new Audio();
-previewAudio.preload = 'metadata';
-
-function fmtTiempo(seg) {
-  if (!isFinite(seg) || seg < 0) return '0:00';
-  const m = Math.floor(seg / 60);
-  const s = Math.floor(seg % 60);
-  return m + ':' + String(s).padStart(2, '0');
+button:hover:not(:disabled) {
+  background: #222222;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
-function abrirPlayer(cancion) {
-  if (!cancion) return;
-
-  playerImg.src = cancion.imagenUrl || PLACEHOLDER;
-  playerImg.onerror = () => { playerImg.onerror = null; playerImg.src = PLACEHOLDER; };
-
-  playerTitle.textContent  = cancion.titulo  || 'Sin título';
-  playerArtist.textContent = cancion.artista || 'Desconocido';
-
-  playerSeek.value = 0;
-  playerCurrent.textContent = '0:00';
-  playerDuration.textContent = '0:00';
-  playerPlay.textContent = '▶';
-
-  previewAudio.pause();
-  previewAudio.src = cancion.audioUrl || '';
-  previewAudio.currentTime = 0;
-
-  playerModal.classList.remove('hidden');
-  playerModal.setAttribute('aria-hidden', 'false');
-  document.body.style.overflow = 'hidden';
+button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
-function cerrarPlayer() {
-  previewAudio.pause();
-  previewAudio.currentTime = 0;
-  previewAudio.src = '';
-  if (playerModal) {
-    playerModal.classList.add('hidden');
-    playerModal.setAttribute('aria-hidden', 'true');
-  }
-  document.body.style.overflow = '';
-  if (playerPlay) playerPlay.textContent = '▶';
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
-playerModal.addEventListener('click', (e) => {
-  if (e.target.dataset.close === '1') cerrarPlayer();
-});
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !playerModal.classList.contains('hidden')) {
-    cerrarPlayer();
-  }
-});
-
-playerPlay.addEventListener('click', async () => {
-  if (!previewAudio.src) return;
-  try {
-    if (previewAudio.paused) {
-      await previewAudio.play();
-      playerPlay.textContent = '⏸';
-    } else {
-      previewAudio.pause();
-      playerPlay.textContent = '▶';
-    }
-  } catch (err) {
-    console.warn('No se pudo reproducir:', err);
-  }
-});
-
-playerRewind.addEventListener('click', () => {
-  previewAudio.currentTime = Math.max(0, previewAudio.currentTime - 10);
-});
-playerForward.addEventListener('click', () => {
-  previewAudio.currentTime = Math.min(
-    previewAudio.duration || 0,
-    previewAudio.currentTime + 10
-  );
-});
-
-previewAudio.addEventListener('loadedmetadata', () => {
-  playerDuration.textContent = fmtTiempo(previewAudio.duration);
-});
-
-previewAudio.addEventListener('timeupdate', () => {
-  if (!previewAudio.duration) return;
-  const pct = (previewAudio.currentTime / previewAudio.duration) * 1000;
-  playerSeek.value = pct;
-  playerCurrent.textContent = fmtTiempo(previewAudio.currentTime);
-});
-
-playerSeek.addEventListener('input', () => {
-  if (!previewAudio.duration) return;
-  previewAudio.currentTime = (playerSeek.value / 1000) * previewAudio.duration;
-});
-
-previewAudio.addEventListener('ended', () => {
-  playerPlay.textContent = '▶';
-  previewAudio.currentTime = 0;
-  playerSeek.value = 0;
-  playerCurrent.textContent = '0:00';
-});
-
-playerVol.addEventListener('input', () => {
-  previewAudio.volume = parseFloat(playerVol.value);
-});
-previewAudio.volume = parseFloat(playerVol.value);
-
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden && !previewAudio.paused) {
-    previewAudio.pause();
-    playerPlay.textContent = '▶';
-  }
-});
-
-// ================================================================
-// MODAL EDITAR
-// ================================================================
-function abrirEditModal(cancion) {
-  if (!cancion) return;
-
-  editandoId = cancion.id;
-
-  editArtista.value = cancion.artista || '';
-  editTitulo.value  = cancion.titulo  || '';
-  editAlbum.value   = cancion.album   || '';
-
-  const revertirDropbox = (url) => {
-    if (!url) return '';
-    return url.replace('dl.dropboxusercontent.com', 'www.dropbox.com');
-  };
-
-  editAudio.value   = revertirDropbox(cancion.audioUrl || '');
-  editImagen.value  = revertirDropbox(cancion.imagenUrl || '');
-
-  editImg.src = cancion.imagenUrl || PLACEHOLDER;
-  editImg.onerror = () => { editImg.onerror = null; editImg.src = PLACEHOLDER; };
-
-  editModal.classList.remove('hidden');
-  editModal.setAttribute('aria-hidden', 'false');
-  document.body.style.overflow = 'hidden';
+.btn-google {
+  background: #ffffff;
+  color: #000000;
+  border: 1.5px solid #d0d0d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: none;
 }
 
-function cerrarEditModal() {
-  editModal.classList.add('hidden');
-  editModal.setAttribute('aria-hidden', 'true');
-  document.body.style.overflow = '';
-  editandoId = null;
-  editForm.reset();
+.btn-google:hover:not(:disabled) {
+  background: #fafafa;
+  border-color: #000000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-editModal.addEventListener('click', (e) => {
-  if (e.target.dataset.close === '1') cerrarEditModal();
-});
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !editModal.classList.contains('hidden')) {
-    cerrarEditModal();
-  }
-});
-
-editForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  if (!usuarioActual || !editandoId) {
-    mostrarStatus('Error: No hay sesión o canción seleccionada', 'error');
-    return;
-  }
-
-  const artista   = editArtista.value.trim();
-  const titulo    = editTitulo.value.trim();
-  const album     = editAlbum.value.trim();
-  const audioRaw  = editAudio.value.trim();
-  const imagenRaw = editImagen.value.trim();
-
-  if (!artista || !titulo || !audioRaw) {
-    mostrarStatus('Completa artista, título y audio', 'error');
-    return;
-  }
-
-  const audioUrl  = dropboxDirecto(audioRaw);
-  const imagenUrl = imagenRaw ? dropboxDirecto(imagenRaw) : '';
-
-  editSubmitBtn.disabled = true;
-  editSubmitBtn.innerHTML = '<span class="loader"></span>Guardando cambios...';
-
-  try {
-    const uid = usuarioActual.uid;
-
-    // 📌 Guardar el TÍTULO ANTIGUO antes de actualizar (para saber si cambió)
-    const cancionAntigua = cancionesActuales.find(c => c.id === editandoId);
-    const tituloAntiguo  = cancionAntigua?.titulo || '';
-
-    // 1) Actualizar el historial del usuario
-    const docRef = doc(db, 'historial_usuarios', uid, 'canciones', editandoId);
-
-    await updateDoc(docRef, {
-      artista:   artista,
-      titulo:    titulo,
-      album:     album,
-      audioUrl:  audioUrl,
-      imagenUrl: imagenUrl,
-      fechaEdicion: serverTimestamp()
-    });
-
-    // 2) 🔄 Sincronizar oyentes_canciones:
-    //      - Si el título NO cambió → asegurar que exista.
-    //      - Si el título SÍ cambió  → mover el registro con los oyentes intactos.
-    await sincronizarOyentesAlEditar(tituloAntiguo, titulo);
-
-    mostrarStatus('✅ Canción actualizada correctamente', 'ok');
-    cerrarEditModal();
-
-  } catch (err) {
-    console.error('Error al editar:', err);
-    mostrarStatus('Error al guardar cambios: ' + err.message, 'error');
-  } finally {
-    editSubmitBtn.disabled = false;
-    editSubmitBtn.textContent = 'TEREMINAR';
-  }
-});
-
-editImagen.addEventListener('input', () => {
-  const url = editImagen.value.trim();
-  if (url) {
-    editImg.src = dropboxDirecto(url);
-    editImg.onerror = () => { editImg.src = PLACEHOLDER; };
-  } else {
-    editImg.src = PLACEHOLDER;
-  }
-});
-
-// ================================================================
-// MODAL ESTADÍSTICAS — Oyentes + Ganancias ($0.20 MXN por oyente)
-// ================================================================
-function renderStats(canciones) {
-  const lista = canciones || cancionesActuales || [];
-
-  if (!lista.length) {
-    statsList.innerHTML = '';
-    statsEmpty.classList.remove('hidden');
-    statsTotalListeners.textContent = '0';
-    statsTotalEarnings.textContent  = fmtDinero(0);
-    return;
-  }
-
-  statsEmpty.classList.add('hidden');
-
-  let totalOyentes = 0;
-
-  statsList.innerHTML = lista.map(c => {
-    const img     = c.imagenUrl ? escapeHtml(c.imagenUrl) : PLACEHOLDER;
-    const titulo  = escapeHtml(c.titulo  || 'Sin título');
-    const artista = escapeHtml(c.artista || 'Desconocido');
-
-    // 📊 Único dato real: oyentes desde oyentes_canciones
-    const stats     = obtenerStatsDeCancion(c);
-    const listeners = stats.oyentes || 0;
-
-    // 💰 Ganancias = oyentes × $0.20 MXN
-    const ganancia  = listeners * PAGO_POR_OYENTE;
-
-    totalOyentes += listeners;
-
-    return `
-      <div class="stats-item">
-        <img src="${img}" alt="" loading="lazy"
-             onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
-        <div class="stats-item-info">
-          <span class="stats-item-title" title="${titulo}">${titulo}</span>
-          <span class="stats-item-artist" title="${artista}">${artista}</span>
-        </div>
-        <div class="stats-item-grid">
-          <div class="stats-cell">
-            <span class="stats-cell-label">👥 Oyentes</span>
-            <span class="stats-cell-value">${fmtNumero(listeners)}</span>
-          </div>
-          <div class="stats-cell earn">
-            <span class="stats-cell-label">💰 Ganancias</span>
-            <span class="stats-cell-value">${fmtDinero(ganancia)}</span>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  const totalGanancias = totalOyentes * PAGO_POR_OYENTE;
-
-  statsTotalListeners.textContent = fmtNumero(totalOyentes);
-  statsTotalEarnings.textContent  = fmtDinero(totalGanancias);
+/* ============================================
+   STATUS
+   ============================================ */
+.status {
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  text-align: center;
+  display: none;
+  line-height: 1.4;
+  border: 1.5px solid transparent;
 }
 
-function abrirStatsModal() {
-  statsAbierto = true;
-  renderStats(cancionesActuales);
-  statsModal.classList.remove('hidden');
-  statsModal.setAttribute('aria-hidden', 'false');
-  document.body.style.overflow = 'hidden';
+.status.ok {
+  display: block;
+  background: #f0f0f0;
+  border-color: #000000;
+  color: #000000;
 }
 
-function cerrarStatsModal() {
-  statsAbierto = false;
-  if (!statsModal) return;
-  statsModal.classList.add('hidden');
-  statsModal.setAttribute('aria-hidden', 'true');
-  document.body.style.overflow = '';
+.status.error {
+  display: block;
+  background: #fff0f0;
+  border-color: #cc0000;
+  color: #cc0000;
 }
 
-statsModal.addEventListener('click', (e) => {
-  if (e.target.dataset.close === '1') cerrarStatsModal();
-});
+.status.loading {
+  display: block;
+  background: #f5f5f5;
+  border-color: #999999;
+  color: #555555;
+}
 
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !statsModal.classList.contains('hidden')) {
-    cerrarStatsModal();
+.hidden {
+  display: none !important;
+}
+
+/* ============================================
+   PREVIEW
+   ============================================ */
+.preview {
+  margin-top: 20px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 10px;
+  border: 1.5px dashed #d0d0d0;
+  display: none;
+  align-items: center;
+  gap: 14px;
+}
+
+.preview.show {
+  display: flex;
+}
+
+.preview img {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #f0f0f0;
+  border: 1px solid #e0e0e0;
+}
+
+.preview-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.preview-info strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #000000;
+}
+
+.preview-info small {
+  color: #555555;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.preview-info .Album {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #000000;
+  background: #e8e8e8;
+  border: 1px solid #d0d0d0;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.loader {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   🆕 COLABORADORES
+   ============================================ */
+.collaborators {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.collaborator-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: fadeIn 0.2s ease;
+}
+
+.collaborator-input {
+  flex: 1;
+  width: auto;
+  padding: 12px 14px;
+  font-size: 15px;
+  background: #ffffff;
+  border: 1.5px solid #d0d0d0;
+  border-radius: 10px;
+  color: #000000;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  margin: 0;
+}
+
+.collaborator-input:focus {
+  border-color: #000000;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+}
+
+.collaborator-input::placeholder {
+  color: #999999;
+}
+
+.btn-remove-collab {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  padding: 0;
+  margin: 0;
+  border-radius: 10px;
+  background: #f5f5f5;
+  border: 1.5px solid #e0e0e0;
+  color: #000000;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.15s ease;
+  box-shadow: none;
+  flex-shrink: 0;
+}
+
+.btn-remove-collab:hover:not(:disabled) {
+  background: #cc0000;
+  border-color: #cc0000;
+  color: #ffffff;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(204, 0, 0, 0.2);
+}
+
+.btn-remove-collab:active:not(:disabled) {
+  transform: scale(0.94);
+  box-shadow: none;
+}
+
+.btn-add-collab {
+  width: 100%;
+  margin: 0;
+  padding: 12px 16px;
+  background: #ffffff;
+  border: 1.5px dashed #d0d0d0;
+  border-radius: 10px;
+  color: #000000;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: none;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-add-collab:hover:not(:disabled) {
+  background: #000000;
+  border-color: #000000;
+  border-style: solid;
+  color: #ffffff;
+  transform: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-add-collab:active:not(:disabled) {
+  transform: scale(0.99);
+  box-shadow: none;
+}
+
+.btn-add-collab .plus-icon {
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+/* En el modal de edición, inputs un poco más compactos */
+.edit-form .collaborator-input {
+  padding: 12px 14px;
+  font-size: 14px;
+}
+
+.edit-form .btn-add-collab {
+  padding: 11px 14px;
+  font-size: 13px;
+}
+
+/* Responsive */
+@media (max-width: 420px) {
+  .collaborator-input { padding: 11px 12px; font-size: 14px; }
+  .btn-remove-collab  { width: 38px; height: 38px; min-width: 38px; font-size: 13px; }
+  .btn-add-collab     { padding: 11px 12px; font-size: 13px; }
+}
+
+/* ============================================
+   HISTORIAL
+   ============================================ */
+.history {
+  margin-top: 36px;
+  padding-top: 24px;
+  border-top: 1.5px solid #e8e8e8;
+}
+
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.history-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #000000;
+  letter-spacing: 0.2px;
+}
+
+.badge {
+  background: #000000;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 12px;
+  border-radius: 999px;
+  min-width: 30px;
+  text-align: center;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.history-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.history-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.history-list::-webkit-scrollbar-thumb {
+  background: #d0d0d0;
+  border-radius: 999px;
+}
+
+.history-list::-webkit-scrollbar-thumb:hover {
+  background: #999999;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border: 1.5px solid #e8e8e8;
+  border-radius: 10px;
+  padding: 10px 12px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  animation: fadeIn 0.25s ease;
+  cursor: pointer;
+}
+
+.history-item:hover {
+  border-color: #000000;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.history-item img {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #f0f0f0;
+  flex-shrink: 0;
+  border: 1px solid #e0e0e0;
+}
+
+.history-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-info strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-info small {
+  display: block;
+  font-size: 11px;
+  color: #555555;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.btn-edit,
+.btn-delete {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: #f5f5f5;
+  border: 1.5px solid #e0e0e0;
+  color: #000000;
+  font-size: 15px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
+  box-shadow: none;
+}
+
+.btn-edit:hover:not(:disabled),
+.btn-delete:hover:not(:disabled) {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
+}
+
+.btn-edit:active:not(:disabled),
+.btn-delete:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.history-empty {
+  font-size: 13px;
+  color: #777777;
+  text-align: center;
+  padding: 18px 0;
+  line-height: 1.4;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================
+   MODAL REPRODUCTOR
+   ============================================ */
+.player-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.2s ease;
+}
+
+.player-modal.hidden {
+  display: none !important;
+}
+
+.player-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+}
+
+.player-card {
+  position: relative;
+  width: 100%;
+  max-width: 820px;
+  background: #ffffff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  grid-template-rows: auto auto auto auto auto;
+  grid-template-areas:
+    "cover meta"
+    "cover progress"
+    "cover controls"
+    "cover volume"
+    "cover hint";
+  gap: 14px 34px;
+  align-items: center;
+  animation: playerIn 0.25s ease;
+}
+
+@keyframes playerIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.player-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  margin: 0;
+  border-radius: 50%;
+  background: #f5f5f5;
+  border: 1.5px solid #e0e0e0;
+  color: #000000;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  z-index: 2;
+}
+
+.player-close:hover {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
+  transform: rotate(90deg);
+}
+
+.player-cover {
+  grid-area: cover;
+  width: 240px;
+  height: 240px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.player-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.player-meta {
+  grid-area: meta;
+  text-align: left;
+  width: 100%;
+  min-width: 0;
+  padding-right: 48px;
+}
+
+.player-meta strong {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  color: #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.3px;
+}
+
+.player-meta small {
+  display: block;
+  font-size: 12px;
+  color: #555555;
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.player-progress {
+  grid-area: progress;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  color: #555555;
+  font-variant-numeric: tabular-nums;
+}
+
+.player-progress span {
+  min-width: 40px;
+  text-align: center;
+}
+
+.player-progress input[type="range"],
+.player-volume input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  height: 4px;
+  padding: 0;
+  margin: 0;
+  border-radius: 999px;
+  background: #e0e0e0;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  width: auto;
+}
+
+.player-progress input[type="range"]:focus,
+.player-volume input[type="range"]:focus {
+  box-shadow: none;
+}
+
+.player-progress input[type="range"]::-webkit-slider-thumb,
+.player-volume input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #000000;
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease;
+}
+
+.player-progress input[type="range"]::-webkit-slider-thumb:hover,
+.player-volume input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.player-progress input[type="range"]::-moz-range-thumb,
+.player-volume input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #000000;
+  border: 2px solid #ffffff;
+  cursor: pointer;
+}
+
+.player-controls {
+  grid-area: controls;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  width: 100%;
+}
+
+.player-btn {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  padding: 0;
+  margin: 0;
+  border-radius: 50%;
+  background: #f5f5f5;
+  border: 1.5px solid #e0e0e0;
+  color: #000000;
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  box-shadow: none;
+}
+
+.player-btn:hover {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
+  transform: scale(1.06);
+}
+
+.player-btn-main {
+  width: 68px;
+  height: 68px;
+  min-width: 68px;
+  font-size: 24px;
+  background: #000000;
+  border: none;
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.player-btn-main:hover {
+  background: #222222;
+  transform: scale(1.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.player-volume {
+  grid-area: volume;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  font-size: 14px;
+  color: #555555;
+}
+
+.player-volume input[type="range"] {
+  height: 4px;
+}
+
+.player-hint {
+  grid-area: hint;
+  font-size: 11px;
+  color: #888888;
+  text-align: center;
+  margin-top: 0;
+}
+
+/* ============================================
+   RESPONSIVE GENERAL
+   ============================================ */
+@media (max-width: 700px) {
+  .player-card {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto auto auto;
+    grid-template-areas:
+      "cover"
+      "meta"
+      "progress"
+      "controls"
+      "volume"
+      "hint";
+    max-width: 400px;
+    padding: 28px 22px 22px;
+    gap: 16px;
   }
-});
 
-statsBtn.addEventListener('click', () => {
-  cerrarMenu();
-  setTimeout(abrirStatsModal, 120);
-});
-
-// ================================================================
-// MENÚ HAMBURGUESA + CERRAR SESIÓN
-// ================================================================
-function abrirMenu() {
-  if (!menuDropdown || !menuBtn) return;
-  menuDropdown.classList.remove('hidden');
-  menuBtn.classList.add('open');
-  menuBtn.setAttribute('aria-expanded', 'true');
-}
-
-function cerrarMenu() {
-  if (!menuDropdown || !menuBtn) return;
-  menuDropdown.classList.add('hidden');
-  menuBtn.classList.remove('open');
-  menuBtn.setAttribute('aria-expanded', 'false');
-}
-
-menuBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  if (menuDropdown.classList.contains('hidden')) {
-    abrirMenu();
-  } else {
-    cerrarMenu();
-  }
-});
-
-document.addEventListener('click', (e) => {
-  if (menuWrap.classList.contains('hidden')) return;
-  if (!menuWrap.contains(e.target)) cerrarMenu();
-});
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') cerrarMenu();
-});
-
-logoutBtn.addEventListener('click', async () => {
-  try {
-    logoutBtn.disabled = true;
-    logoutBtn.textContent = 'Cerrando sesión...';
-
-    await signOut(auth);
-
-    cerrarMenu();
-    mostrarStatus('👋 Sesión cerrada correctamente', 'ok');
-
-  } catch (err) {
-    console.error('Error al cerrar sesión:', err);
-    mostrarStatus('Error al cerrar sesión: ' + err.message, 'error');
-  } finally {
-    logoutBtn.disabled = false;
-    logoutBtn.innerHTML = '🚪 Cerrar sesión';
-  }
-});
-
-// ================================================================
-// SELECTOR DE GÉNERO MUSICAL CON BUSCADOR
-// ================================================================
-const GENEROS_RAW = [
-  // ===== CATEGORÍAS PRINCIPALES =====
-  "Regional Mexicano",
-  "Reggaetón",
-  "Pop",
-  "Rock",
-  "Hip-Hop / Rap",
-  "Música Latina",
-  "Cumbia",
-  "Electrónica",
-  "R&B / Soul",
-  "Indie / Alternativo",
-  "Metal",
-  "Punk",
-  "Reggae",
-  "Afrobeat",
-  "Country",
-  "Folk",
-  "Jazz",
-  "Blues",
-  "K-Pop",
-  "J-Pop",
-  "Cristiana / Gospel",
-  "Clásica",
-  "Flamenco",
-  "Acústica",
-  "Instrumental",
-  "Soundtrack",
-  "Otros",
-
-  // ===== POP =====
-  "Art Pop", "Dance Pop", "Electropop", "Synth-pop", "Indie Pop", "Dream Pop",
-  "Bedroom Pop", "Hyperpop", "Teen Pop", "Bubblegum Pop", "Power Pop",
-  "C-Pop", "Latin Pop", "Europop", "Britpop", "Sophisti-Pop", "Baroque Pop",
-  "Sunshine Pop", "Chamber Pop", "Experimental Pop",
-
-  // ===== ROCK =====
-  "Alternative Rock", "Indie Rock", "Hard Rock", "Soft Rock", "Classic Rock",
-  "Progressive Rock", "Psychedelic Rock", "Garage Rock", "Blues Rock", "Folk Rock",
-  "Southern Rock", "Surf Rock", "Glam Rock", "Art Rock", "Experimental Rock", "Post-Rock",
-  "Math Rock", "Noise Rock", "Space Rock", "Gothic Rock", "Industrial Rock",
-  "Christian Rock", "Grunge", "Brit Rock", "Emo", "Shoegaze", "Dream Rock",
-
-  // ===== METAL =====
-  "Heavy Metal", "Thrash Metal", "Death Metal", "Black Metal", "Doom Metal", "Power Metal",
-  "Speed Metal", "Progressive Metal", "Symphonic Metal", "Folk Metal", "Groove Metal",
-  "Nu Metal", "Alternative Metal", "Industrial Metal", "Gothic Metal", "Metalcore",
-  "Deathcore", "Grindcore", "Sludge Metal", "Stoner Metal", "Funeral Doom",
-  "Melodic Death Metal", "Technical Death Metal", "Viking Metal", "Pagan Metal",
-  "Post-Metal", "Djent",
-
-  // ===== PUNK =====
-  "Punk Rock", "Hardcore Punk", "Post-Punk", "Pop Punk", "Skate Punk", "Street Punk",
-  "Anarcho-Punk", "Crust Punk", "D-Beat", "Garage Punk", "Riot Grrrl", "Emo Punk",
-  "Ska Punk", "Celtic Punk", "Folk Punk", "Horror Punk", "Psychobilly",
-
-  // ===== HIP-HOP / RAP =====
-  "Hip-Hop", "Rap", "Trap", "Drill", "Gangsta Rap", "Boom Bap", "Conscious Hip-Hop",
-  "Underground Hip-Hop", "Alternative Hip-Hop", "Old School Hip-Hop", "West Coast Hip-Hop",
-  "East Coast Hip-Hop", "Southern Hip-Hop", "Crunk", "Dirty South", "G-Funk", "Cloud Rap",
-  "Emo Rap", "Jazz Rap", "Experimental Hip-Hop", "Hardcore Hip-Hop", "Latin Hip-Hop",
-  "Chicano Rap", "UK Hip-Hop", "UK Drill", "Grime", "Freestyle Rap", "Trap Latino",
-
-  // ===== R&B / SOUL =====
-  "R&B", "Contemporary R&B", "Alternative R&B", "Neo Soul", "Soul", "Classic Soul",
-  "Southern Soul", "Motown", "Funk", "P-Funk", "Quiet Storm", "New Jack Swing",
-  "Blue-Eyed Soul", "Psychedelic Soul", "Gospel Soul", "Soul Jazz",
-
-  // ===== BLUES =====
-  "Blues", "Delta Blues", "Chicago Blues", "Texas Blues", "Electric Blues",
-  "Acoustic Blues", "Country Blues", "Piedmont Blues", "British Blues", "Jump Blues",
-  "Swamp Blues", "Gospel Blues", "Soul Blues",
-
-  // ===== JAZZ =====
-  "Jazz", "Bebop", "Hard Bop", "Cool Jazz", "Free Jazz", "Fusion", "Jazz Fusion",
-  "Smooth Jazz", "Acid Jazz", "Latin Jazz", "Afro-Cuban Jazz", "Gypsy Jazz", "Swing",
-  "Big Band", "Dixieland", "Ragtime", "Modal Jazz", "Avant-Garde Jazz", "Jazz Funk",
-  "Nu Jazz", "Vocal Jazz", "Contemporary Jazz",
-
-  // ===== ELECTRÓNICA =====
-  "Electronic", "EDM", "House", "Deep House", "Tech House", "Progressive House",
-  "Electro House", "Future House", "Tropical House", "Bass House", "Acid House",
-  "Chicago House", "French House", "Minimal House", "Techno", "Detroit Techno",
-  "Minimal Techno", "Industrial Techno", "Hard Techno", "Acid Techno", "Trance",
-  "Progressive Trance", "Psytrance", "Goa Trance", "Uplifting Trance", "Hard Trance",
-  "Electro", "Ambient", "Dark Ambient", "Chillout", "Downtempo", "IDM", "Breakbeat",
-  "Drum & Bass", "Jungle", "Liquid Drum & Bass", "Dubstep", "Brostep", "UK Garage",
-  "Future Bass", "Synthwave", "Vaporwave", "Retrowave", "Lo-Fi", "Chillwave", "Glitch",
-  "Industrial", "EBM", "Hardcore", "Gabber", "Hardstyle", "Future Rave",
-
-  // ===== REGGAE =====
-  "Reggae", "Roots Reggae", "Dancehall", "Dub", "Rocksteady", "Ska", "Lovers Rock",
-  "Ragga", "Reggae Fusion", "Digital Reggae", "Dub Poetry",
-
-  // ===== MÚSICA LATINA =====
-  "Música Latina", "Latin Urban", "Salsa", "Salsa Romántica", "Salsa Dura",
-  "Son Cubano", "Bachata", "Merengue", "Cumbia", "Cumbia Mexicana", "Cumbia Colombiana",
-  "Cumbia Villera", "Cumbia Peruana", "Cumbia Andina", "Vallenato", "Bolero", "Mambo",
-  "Cha-cha-chá", "Rumba", "Guaracha", "Danzón", "Timba", "Latin Rock", "Latin Soul",
-  "Tango", "Milonga", "Bossa Nova", "Samba", "MPB", "Forró", "Axé",
-  "Frevo", "Sertanejo",
-
-  // ===== REGIONAL MEXICANO =====
-  "Mariachi", "Ranchera", "Norteño", "Norteño-Banda", "Banda", "Banda Sinaloense",
-  "Corridos", "Corrido Tradicional", "Corrido Tumbado", "Corrido Bélico",
-  "Corridos Alterados", "Tejano", "Grupero", "Duranguense", "Sierreño", "Huapango",
-  "Son Jarocho", "Son Huasteco", "Música de Tierra Caliente", "Música Norteña",
-  "Cumbia Norteña", "Bolero Ranchero", "Mariachi Moderno",
-
-  // ===== COUNTRY =====
-  "Country", "Country Pop", "Country Rock", "Traditional Country", "Outlaw Country",
-  "Alternative Country", "Bluegrass", "Americana", "Honky Tonk", "Country Blues",
-  "Western Swing", "Nashville Sound", "Red Dirt", "Contemporary Country", "Country Folk",
-
-  // ===== FOLK =====
-  "Folk", "Contemporary Folk", "Traditional Folk", "Celtic Folk", "Irish Folk",
-  "Scottish Folk", "English Folk", "American Folk", "Appalachian", "Nordic Folk",
-  "Balkan Folk", "Slavic Folk", "Gypsy / Romani", "Klezmer", "Neofolk", "World Folk",
-  "Folk Fusion",
-
-  // ===== CLÁSICA =====
-  "Música Clásica", "Medieval", "Renacimiento", "Barroco", "Clasicismo", "Romanticismo",
-  "Impresionismo", "Modernismo", "Música Contemporánea", "Música de Cámara", "Sinfónica",
-  "Coral", "Ópera", "Opereta", "Oratorio", "Cantata", "Concierto", "Sonata", "Sinfonía",
-  "Música Minimalista", "Música Experimental",
-
-  // ===== CRISTIANA / GOSPEL =====
-  "Gospel", "Christian", "Christian Pop", "Christian Hip-Hop", "Christian Metal",
-  "Worship", "Contemporary Christian", "Spiritual", "Hymns", "Islamic Music", "Nasheed",
-  "Jewish Music", "Buddhist Music", "Hindu Devotional", "Mantra",
-
-  // ===== AFRO =====
-  "Afrobeat", "Afrobeats", "Afro-Pop", "Amapiano", "Highlife", "Hiplife", "Kizomba",
-  "Kuduro", "Kwaito", "Gqom", "Mbalax", "Juju", "Fuji", "Makossa", "Soukous",
-  "Congolese Rumba", "Benga", "Bikutsi", "Chimurenga", "Jit", "Marrabenta", "Mbube",
-  "Marabi", "Township Jazz", "Rai", "Gnawa", "Desert Blues", "Maloya", "Sega", "Cape Jazz",
-
-  // ===== CARIBEÑA =====
-  "Calypso", "Soca", "Zouk", "Kompa", "Son", "Mento", "Steelpan", "Bouyon", "Punta",
-
-  // ===== BRASILEÑA =====
-  "Pagode", "Choro", "Tropicália", "Maracatu", "Baião", "Carimbó", "Lambada",
-  "Música Caipira", "Samba-Reggae", "Funk Carioca",
-
-  // ===== ASIÁTICA =====
-  "K-Rock", "K-Hip-Hop", "J-Rock", "J-Hip-Hop", "City Pop", "Enka", "Shibuya-kei",
-  "Mandopop", "Cantopop", "Bollywood", "Bhangra", "Qawwali", "Ghazal", "Carnatic",
-  "Hindustani Classical", "Raga", "Dhrupad", "Gamelan", "Dangdut", "Thai Pop", "V-Pop",
-  "Pinoy Pop", "Persian Pop", "Arabic Pop", "Turkish Pop",
-
-  // ===== ÁRABE / MEDIO ORIENTE =====
-  "Arabic Music", "Shaabi", "Dabke", "Khaleeji", "Egyptian Pop", "Lebanese Pop",
-  "Iraqi Music", "Persian Music", "Turkish Music", "Kurdish Music", "Armenian Music",
-  "Israeli Music", "Mizrahi", "Andalusian Music", "Oud Music", "Traditional Middle Eastern",
-
-  // ===== OCEÁNICA =====
-  "Hawaiian", "Hawaiian Pop", "Polynesian", "Samoan", "Tahitian", "Tongan", "Maori",
-  "Aboriginal Australian", "Melanesian", "Micronesian", "Pacific Island Music",
-  "New Zealand Folk",
-
-  // ===== EXPERIMENTAL =====
-  "Experimental", "Avant-Garde", "Noise", "Drone", "Musique Concrète",
-  "Electroacoustic", "Minimalism", "Sound Art", "Free Improvisation",
-  "Experimental Electronic",
-
-  // ===== CINE / TV / VIDEOJUEGOS =====
-  "Film Score", "Soundtrack", "Movie Soundtrack", "Television Score", "Video Game Music",
-  "Anime Music", "Orchestral Score", "Cinematic", "Trailer Music", "Ambient Score",
-  "Musical Theatre", "Broadway", "Stage & Screen",
-
-  // ===== VOCAL =====
-  "A Cappella", "Vocal Pop", "Choral", "Choir", "Barbershop", "Doo-Wop", "Beatboxing",
-  "Gregorian Chant", "Operatic", "Vocal Classical",
-
-  // ===== INFANTIL / HUMOR =====
-  "Children's Music", "Nursery Rhymes", "Educational Music", "Comedy Music", "Novelty",
-  "Parody", "Comedy Rock", "Comedy Rap", "Comedy Pop",
-
-  // ===== BAILE / CLUB =====
-  "Dance", "Dance-Pop", "Eurodance", "Eurobeat", "Disco", "Nu-Disco", "Garage",
-  "Jersey Club", "Baltimore Club", "Footwork", "Juke",
-
-  // ===== ACÚSTICA =====
-  "Acústica", "Acústica Pop", "Rock Acústico", "Folk Acústico", "Latino Acústico",
-  "Indie Acústico", "Regional Mexicano Acústico", "Acústica Instrumental",
-  "Unplugged", "Balada Acústica", "Bolero Acústico"
-];
-
-const GENEROS = [...new Set(GENEROS_RAW.map(g => g.trim()).filter(Boolean))]
-  .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-
-// ================================================================
-// SUBGÉNEROS DE "REGIONAL MEXICANO"
-// ================================================================
-const SUBGENEROS_RAW = [
-  "Corridos",
-  "Corridos Tumbados",
-  "Corridos Bélicos",
-  "Corridos Tradicionales",
-  "Banda",
-  "Banda Sinaloense",
-  "Norteño",
-  "Norteño-Banda",
-  "Sierreño",
-  "Sad Sierreño",
-  "Grupero",
-  "Mariachi",
-  "Ranchera",
-  "Huapango",
-  "Duranguense",
-  "Tejano",
-  "Cumbia Norteña"
-];
-
-const SUBGENEROS = [...new Set(SUBGENEROS_RAW.map(g => g.trim()).filter(Boolean))]
-  .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-
-// ================================================================
-// ELEMENTOS DEL DOM — GÉNERO
-// ================================================================
-const generoHidden  = document.getElementById('genero');
-const genreSelect   = document.getElementById('genreSelect');
-const genreToggle   = document.getElementById('genreToggle');
-const genrePanel    = document.getElementById('genrePanel');
-const genreList     = document.getElementById('genreList');
-const genreSearch   = document.getElementById('genreSearch');
-const genreValue    = document.getElementById('genreValue');
-const genreEmpty    = document.getElementById('genreEmpty');
-
-// Elementos del DOM — SUBGÉNERO
-const subgenreGroup  = document.getElementById('subgenreGroup');
-const subgeneroHidden = document.getElementById('subgenero');
-const subgenreSelect = document.getElementById('subgenreSelect');
-const subgenreToggle = document.getElementById('subgenreToggle');
-const subgenrePanel  = document.getElementById('subgenrePanel');
-const subgenreList   = document.getElementById('subgenreList');
-const subgenreSearch = document.getElementById('subgenreSearch');
-const subgenreValue  = document.getElementById('subgenreValue');
-const subgenreEmpty  = document.getElementById('subgenreEmpty');
-
-let generoSeleccionado = '';
-let subgeneroSeleccionado = '';
-
-const normalizarTexto = (s = '') =>
-  String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-
-// ================================================================
-// RENDERIZADO DE GÉNEROS
-// ================================================================
-function pintarGeneros(filtro = '') {
-  const q = normalizarTexto(filtro);
-  const lista = q ? GENEROS.filter(g => normalizarTexto(g).includes(q)) : GENEROS;
-
-  if (!lista.length) {
-    genreList.innerHTML = '';
-    genreEmpty.classList.remove('hidden');
-    return;
+  .player-cover {
+    width: 180px;
+    height: 180px;
+    justify-self: center;
   }
 
-  genreEmpty.classList.add('hidden');
+  .player-meta {
+    text-align: center;
+    padding-right: 0;
+  }
 
-  genreList.innerHTML = lista.map(g => {
-    const sel = g === generoSeleccionado;
-    return `<button type="button" class="genre-item${sel ? ' selected' : ''}"
-              role="option" aria-selected="${sel}"
-              data-genero="${escapeHtml(g)}">
-              <span>${escapeHtml(g)}</span>
-              <span class="check">✓</span>
-            </button>`;
-  }).join('');
+  .player-meta strong { font-size: 18px; }
+  .player-meta small  { font-size: 11px; }
 }
 
-function abrirGeneros() {
-  genrePanel.classList.remove('hidden');
-  genreToggle.setAttribute('aria-expanded', 'true');
-  genreSearch.value = '';
-  pintarGeneros('');
-  setTimeout(() => { try { genreSearch.focus(); } catch (e) {} }, 30);
-}
+@media (max-width: 420px) {
+  .container { padding: 16px 0; }
 
-function cerrarGeneros() {
-  genrePanel.classList.add('hidden');
-  genreToggle.setAttribute('aria-expanded', 'false');
-}
+  .player-cover {
+    width: 150px;
+    height: 150px;
+  }
 
-function seleccionarGenero(valor) {
-  generoSeleccionado = valor || '';
-  generoHidden.value = generoSeleccionado;
-  genreValue.textContent = generoSeleccionado || 'Selecciona un género';
-  genreValue.classList.toggle('placeholder', !generoSeleccionado);
-  cerrarGeneros();
+  .player-card {
+    padding: 24px 18px 18px;
+  }
 
-  if (generoSeleccionado === 'Regional Mexicano') {
-    if (subgenreGroup) subgenreGroup.classList.remove('hidden');
-  } else {
-    if (subgenreGroup) subgenreGroup.classList.add('hidden');
-    subgeneroSeleccionado = '';
-    if (subgeneroHidden) subgeneroHidden.value = '';
-    if (subgenreValue) {
-      subgenreValue.textContent = 'Selecciona un subgénero';
-      subgenreValue.classList.add('placeholder');
-    }
-    if (typeof cerrarSubgeneros === 'function') cerrarSubgeneros();
+  .player-btn-main {
+    width: 60px;
+    height: 60px;
+    min-width: 60px;
+    font-size: 20px;
   }
 }
 
-// ================================================================
-// RENDERIZADO DE SUBGÉNEROS
-// ================================================================
-function pintarSubgeneros(filtro = '') {
-  const q = normalizarTexto(filtro);
-  const lista = q ? SUBGENEROS.filter(g => normalizarTexto(g).includes(q)) : SUBGENEROS;
-
-  if (!lista.length) {
-    subgenreList.innerHTML = '';
-    subgenreEmpty.classList.remove('hidden');
-    return;
-  }
-
-  subgenreEmpty.classList.add('hidden');
-
-  subgenreList.innerHTML = lista.map(g => {
-    const sel = g === subgeneroSeleccionado;
-    return `<button type="button" class="genre-item${sel ? ' selected' : ''}"
-              role="option" aria-selected="${sel}"
-              data-subgenero="${escapeHtml(g)}">
-              <span>${escapeHtml(g)}</span>
-              <span class="check">✓</span>
-            </button>`;
-  }).join('');
+/* ============================================
+   MENÚ HAMBURGUESA
+   ============================================ */
+.menu-wrap {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 1000;
 }
 
-function abrirSubgeneros() {
-  subgenrePanel.classList.remove('hidden');
-  subgenreToggle.setAttribute('aria-expanded', 'true');
-  subgenreSearch.value = '';
-  pintarSubgeneros('');
-  setTimeout(() => { try { subgenreSearch.focus(); } catch (e) {} }, 30);
+.menu-btn {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  padding: 0;
+  margin: 0;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1.5px solid #d0d0d0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 }
 
-function cerrarSubgeneros() {
-  if (!subgenrePanel) return;
-  subgenrePanel.classList.add('hidden');
-  if (subgenreToggle) subgenreToggle.setAttribute('aria-expanded', 'false');
+.menu-btn:hover:not(:disabled) {
+  border-color: #000000;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
 }
 
-function seleccionarSubgenero(valor) {
-  subgeneroSeleccionado = valor || '';
-  if (subgeneroHidden) subgeneroHidden.value = subgeneroSeleccionado;
-  if (subgenreValue) {
-    subgenreValue.textContent = subgeneroSeleccionado || 'Selecciona un subgénero';
-    subgenreValue.classList.toggle('placeholder', !subgeneroSeleccionado);
-  }
-  cerrarSubgeneros();
+.menu-btn span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  border-radius: 999px;
+  background: #000000;
+  transition: transform 0.25s ease, opacity 0.2s ease;
 }
 
-// ================================================================
-// EVENTOS — GÉNERO
-// ================================================================
-genreToggle.addEventListener('click', (e) => {
-  e.stopPropagation();
-  if (genrePanel.classList.contains('hidden')) abrirGeneros();
-  else cerrarGeneros();
-});
+.menu-btn.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.menu-btn.open span:nth-child(2) { opacity: 0; }
+.menu-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
-genreSearch.addEventListener('input', () => pintarGeneros(genreSearch.value));
+.menu-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 210px;
+  background: #ffffff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+  animation: menuIn 0.18s ease;
+}
 
-genreSearch.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    const primero = genreList.querySelector('.genre-item');
-    if (primero) seleccionarGenero(primero.dataset.genero);
+@keyframes menuIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.menu-item {
+  width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #000000;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background 0.18s ease;
+}
+
+.menu-item:hover:not(:disabled) {
+  background: #f5f5f5;
+  transform: none;
+  box-shadow: none;
+}
+
+.menu-item:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@media (max-width: 420px) {
+  .menu-wrap { top: 12px; right: 12px; }
+  .menu-btn  { width: 42px; height: 42px; min-width: 42px; }
+}
+
+/* ============================================
+   MODAL EDITAR
+   ============================================ */
+.edit-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.2s ease;
+}
+
+.edit-modal.hidden {
+  display: none !important;
+}
+
+.edit-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+}
+
+.edit-card {
+  position: relative;
+  width: 100%;
+  max-width: 860px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: row;
+  gap: 34px;
+  align-items: stretch;
+  animation: playerIn 0.25s ease;
+}
+
+.edit-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  margin: 0;
+  border-radius: 50%;
+  background: #f5f5f5;
+  border: 1.5px solid #e0e0e0;
+  color: #000000;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  z-index: 2;
+}
+
+.edit-close:hover {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
+  transform: rotate(90deg);
+}
+
+.edit-cover {
+  flex: 1;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.edit-cover img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 16px;
+  object-fit: cover;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  background: #f5f5f5;
+}
+
+.edit-content {
+  flex: 1.5;
+  display: flex;
+  flex-direction: column;
+}
+
+.edit-heading {
+  font-size: 24px;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 24px;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+.edit-form .form-group {
+  margin-bottom: 14px;
+}
+
+.edit-form label {
+  color: #000000;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.edit-form input {
+  background: #ffffff;
+  border: 1.5px solid #d0d0d0;
+  color: #000000;
+  padding: 12px 14px;
+}
+
+.edit-form input:focus {
+  border-color: #000000;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+}
+
+.btn-edit-submit {
+  width: 100%;
+  padding: 16px;
+  margin-top: 10px;
+  background: #000000;
+  border: none;
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  letter-spacing: 0.5px;
+}
+
+.btn-edit-submit:hover:not(:disabled) {
+  background: #222222;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.btn-edit-submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@media (max-width: 700px) {
+  .edit-card {
+    flex-direction: column;
+    padding: 28px 22px 22px;
+    gap: 16px;
+    max-width: 400px;
   }
-  if (e.key === 'Escape') cerrarGeneros();
-});
 
-genreList.addEventListener('click', (e) => {
-  const btn = e.target.closest('.genre-item');
-  if (!btn) return;
-  seleccionarGenero(btn.dataset.genero);
-});
-
-document.addEventListener('click', (e) => {
-  if (genrePanel.classList.contains('hidden')) return;
-  if (genreSelect && !genreSelect.contains(e.target)) cerrarGeneros();
-});
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !genrePanel.classList.contains('hidden')) cerrarGeneros();
-});
-
-// ================================================================
-// EVENTOS — SUBGÉNERO
-// ================================================================
-subgenreToggle.addEventListener('click', (e) => {
-  e.stopPropagation();
-  if (subgenrePanel.classList.contains('hidden')) abrirSubgeneros();
-  else cerrarSubgeneros();
-});
-
-subgenreSearch.addEventListener('input', () => pintarSubgeneros(subgenreSearch.value));
-
-subgenreSearch.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    const primero = subgenreList.querySelector('.genre-item');
-    if (primero) seleccionarSubgenero(primero.dataset.subgenero);
+  .edit-cover {
+    max-width: 180px;
+    margin: 0 auto;
   }
-  if (e.key === 'Escape') cerrarSubgeneros();
-});
 
-subgenreList.addEventListener('click', (e) => {
-  const btn = e.target.closest('.genre-item');
-  if (!btn) return;
-  seleccionarSubgenero(btn.dataset.subgenero);
-});
-
-document.addEventListener('click', (e) => {
-  if (subgenrePanel.classList.contains('hidden')) return;
-  if (subgenreSelect && !subgenreSelect.contains(e.target)) cerrarSubgeneros();
-});
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !subgenrePanel.classList.contains('hidden')) cerrarSubgeneros();
-});
-
-// ================================================================
-// RESET DEL FORMULARIO
-// ================================================================
-document.getElementById('formCancion').addEventListener('reset', () => {
-  generoSeleccionado = '';
-  generoHidden.value = '';
-  genreValue.textContent = 'Selecciona un género';
-  genreValue.classList.add('placeholder');
-  cerrarGeneros();
-
-  subgeneroSeleccionado = '';
-  if (subgeneroHidden) subgeneroHidden.value = '';
-  if (subgenreValue) {
-    subgenreValue.textContent = 'Selecciona un subgénero';
-    subgenreValue.classList.add('placeholder');
+  .edit-heading {
+    font-size: 20px;
+    margin-bottom: 16px;
   }
-  if (subgenreGroup) subgenreGroup.classList.add('hidden');
-  cerrarSubgeneros();
-});
+}
 
-// ================================================================
-// INICIALIZAR
-// ================================================================
-pintarGeneros('');
-pintarSubgeneros('');
+/* ============================================
+   SELECTOR DE GÉNERO
+   ============================================ */
+.genre-select {
+  position: relative;
+  width: 100%;
+}
+
+.genre-toggle {
+  width: 100%;
+  margin: 0;
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1.5px solid #d0d0d0;
+  border-radius: 10px;
+  color: #000000;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.genre-toggle:hover:not(:disabled) {
+  background: #ffffff;
+  border-color: #000000;
+  transform: none;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
+}
+
+.genre-toggle:active:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+}
+
+.genre-toggle[aria-expanded="true"] {
+  border-color: #000000;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+}
+
+.genre-value {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.genre-value.placeholder { color: #999999; }
+
+.genre-arrow {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #555555;
+  transition: transform 0.2s ease;
+}
+
+.genre-toggle[aria-expanded="true"] .genre-arrow { transform: rotate(180deg); }
+
+.genre-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 80;
+  background: #ffffff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  animation: genreIn 0.18s ease;
+}
+
+.genre-panel.hidden { display: none !important; }
+
+@keyframes genreIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.genre-search-wrap { position: relative; }
+
+.genre-search {
+  width: 100%;
+  padding: 11px 14px;
+  font-size: 14px;
+  border: 1.5px solid #d0d0d0;
+  border-radius: 9px;
+  background: #fafafa;
+}
+
+.genre-search:focus {
+  background: #ffffff;
+  border-color: #000000;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+}
+
+.genre-list {
+  margin-top: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 2px;
+}
+
+.genre-list::-webkit-scrollbar { width: 5px; }
+.genre-list::-webkit-scrollbar-track { background: transparent; }
+.genre-list::-webkit-scrollbar-thumb { background: #d0d0d0; border-radius: 999px; }
+.genre-list::-webkit-scrollbar-thumb:hover { background: #999999; }
+
+.genre-item {
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #000000;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.genre-item:hover:not(:disabled) {
+  background: #f5f5f5;
+  color: #000000;
+  transform: none;
+  box-shadow: none;
+}
+
+.genre-item.selected,
+.genre-item.selected:hover:not(:disabled) {
+  background: #000000;
+  color: #ffffff;
+}
+
+.genre-item .check {
+  flex-shrink: 0;
+  font-size: 12px;
+  opacity: 0;
+}
+
+.genre-item.selected .check { opacity: 1; }
+
+.genre-empty {
+  font-size: 13px;
+  color: #777777;
+  text-align: center;
+  padding: 16px 0;
+}
+
+@media (max-width: 420px) {
+  .genre-toggle { padding: 13px 14px; font-size: 14px; }
+  .genre-list   { max-height: 210px; }
+}
+
+/* ============================================
+   MODAL ESTADÍSTICAS
+   ============================================ */
+.stats-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.2s ease;
+}
+
+.stats-modal.hidden { display: none !important; }
+
+.stats-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+}
+
+.stats-card {
+  position: relative;
+  width: 100%;
+  max-width: 720px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 20px;
+  padding: 32px 28px 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  animation: playerIn 0.25s ease;
+}
+
+.stats-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  margin: 0;
+  border-radius: 50%;
+  background: #f5f5f5;
+  border: 1.5px solid #e0e0e0;
+  color: #000000;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  z-index: 2;
+}
+
+.stats-close:hover {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
+  transform: rotate(90deg);
+}
+
+.stats-heading {
+  font-size: 22px;
+  font-weight: 700;
+  color: #000000;
+  text-align: center;
+  margin-bottom: 22px;
+  letter-spacing: 0.3px;
+  padding-right: 40px;
+}
+
+.stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 46vh;
+  overflow-y: auto;
+  padding-right: 4px;
+  margin-bottom: 20px;
+}
+
+.stats-list::-webkit-scrollbar { width: 5px; }
+.stats-list::-webkit-scrollbar-track { background: transparent; }
+.stats-list::-webkit-scrollbar-thumb { background: #d0d0d0; border-radius: 999px; }
+.stats-list::-webkit-scrollbar-thumb:hover { background: #999999; }
+
+.stats-item {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 12px;
+  align-items: center;
+  background: #fafafa;
+  border: 1.5px solid #e8e8e8;
+  border-radius: 12px;
+  padding: 12px 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stats-item:hover {
+  border-color: #000000;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.stats-item img {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #f0f0f0;
+  border: 1px solid #e0e0e0;
+  grid-row: span 2;
+}
+
+.stats-item-info {
+  min-width: 0;
+}
+
+.stats-item-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stats-item-artist {
+  display: block;
+  font-size: 11px;
+  color: #666666;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.stats-item-grid {
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.stats-cell {
+  background: #ffffff;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 7px 8px;
+  text-align: center;
+}
+
+.stats-cell-label {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  color: #777777;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 3px;
+}
+
+.stats-cell-value {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stats-cell.earn .stats-cell-value { color: #0a7d3a; }
+
+.stats-empty {
+  font-size: 13px;
+  color: #777777;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.stats-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  background: #000000;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.stats-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+  min-width: 0;
+}
+
+.stats-summary-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #cccccc;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.stats-summary-value {
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stats-summary-earnings .stats-summary-value { color: #4ade80; }
+
+.stats-hint {
+  font-size: 11px;
+  color: #888888;
+  text-align: center;
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .stats-card {
+    padding: 26px 18px 20px;
+    border-radius: 16px;
+    max-height: 92vh;
+  }
+
+  .stats-heading { font-size: 18px; margin-bottom: 16px; }
+
+  .stats-list { max-height: 42vh; gap: 10px; }
+
+  .stats-item {
+    grid-template-columns: 48px 1fr;
+    padding: 10px 10px;
+  }
+
+  .stats-item img { width: 48px; height: 48px; }
+
+  .stats-item-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+  }
+
+  .stats-cell { padding: 6px 4px; }
+  .stats-cell-label { font-size: 8px; }
+  .stats-cell-value { font-size: 11px; }
+
+  .stats-summary {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .stats-summary-item {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .stats-summary-value { font-size: 15px; }
+}
+
+@media (max-width: 380px) {
+  .stats-cell-label { display: none; }
+  .stats-cell-value { font-size: 12px; }
+}
