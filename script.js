@@ -137,9 +137,7 @@ const editSubmitBtn = document.getElementById('editSubmitBtn');
 const statsModal          = document.getElementById('statsModal');
 const statsList           = document.getElementById('statsList');
 const statsEmpty          = document.getElementById('statsEmpty');
-const statsTotalPlays     = document.getElementById('statsTotalPlays');
 const statsTotalListeners = document.getElementById('statsTotalListeners');
-const statsTotalEarnings  = document.getElementById('statsTotalEarnings');
 
 let usuarioActual = null;
 let unsubscribeHistorial = null;
@@ -148,13 +146,10 @@ let cancionesActuales = [];
 let editandoId = null;
 let statsAbierto = false;
 
-// Mapa de estadísticas: { tituloNormalizado: { docId, reproducciones, oyentes } }
+// Mapa de estadísticas: { tituloNormalizado: { docId, oyentes } }
 let statsOyentes = {};
 
 const PLACEHOLDER = 'https://via.placeholder.com/64/333/666?text=%E2%99%AB';
-
-// 💵 TARIFA POR REPRODUCCIÓN
-const PAGO_POR_REPRODUCCION = 0.10; // MXN
 
 const COLECCION_OYENTES = 'oyentes_canciones';
 
@@ -196,14 +191,6 @@ function fmtNumero(n) {
   return v.toLocaleString('es-MX');
 }
 
-function fmtDinero(n) {
-  const v = Number(n) || 0;
-  return '$' + v.toLocaleString('es-MX', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }) + ' MXN';
-}
-
 // Normaliza un título para comparar de forma robusta
 function normalizarTitulo(t) {
   return String(t || '')
@@ -216,10 +203,10 @@ function normalizarTitulo(t) {
 
 // Obtiene las stats de una canción desde el mapa de oyentes_canciones
 function obtenerStatsDeCancion(cancion) {
-  if (!cancion || !cancion.titulo) return { reproducciones: 0, oyentes: 0, docId: null };
+  if (!cancion || !cancion.titulo) return { oyentes: 0, docId: null };
   const key = normalizarTitulo(cancion.titulo);
   const s = statsOyentes[key];
-  if (!s) return { reproducciones: 0, oyentes: 0, docId: null };
+  if (!s) return { oyentes: 0, docId: null };
   return s;
 }
 
@@ -382,13 +369,6 @@ function escucharOyentesCanciones() {
 
     snap.docs.forEach(d => {
       const data = d.data() || {};
-      const plays = Number(
-        data.reproducciones ??
-        data.reproductions ??
-        data.plays ??
-        data.repro ??
-        0
-      ) || 0;
       const listeners = Number(
         data.oyentes ??
         data.listeners ??
@@ -397,7 +377,6 @@ function escucharOyentesCanciones() {
 
       mapa[normalizarTitulo(d.id)] = {
         docId: d.id,
-        reproducciones: plays,
         oyentes: listeners
       };
     });
@@ -412,6 +391,7 @@ function escucharOyentesCanciones() {
 }
 
 // Asegura que exista el registro en oyentes_canciones (solo si NO existe)
+// ⚠️ NO modifica el valor de "oyentes" si el documento ya existe.
 async function asegurarRegistroOyentes(titulo) {
   if (!titulo) return;
 
@@ -427,9 +407,8 @@ async function asegurarRegistroOyentes(titulo) {
 
     if (snap.exists()) return; // Ya existe → no crear duplicado
 
-    // Creamos el registro nuevo con 0/0 (solo contadores iniciales)
+    // Creamos el registro nuevo SOLO con el contador de oyentes en 0
     await setDoc(docRef, {
-      reproducciones: 0,
       oyentes: 0
     });
 
@@ -533,11 +512,9 @@ async function eliminarCancion(id, boton, titulo, cancion) {
     await deleteDoc(doc(db, 'historial_usuarios', usuarioActual.uid, 'canciones', id));
 
     // 2) Eliminar el registro correspondiente en oyentes_canciones
-    //    (usando el título exacto o el docId detectado)
     if (cancion) {
       await eliminarRegistroOyentes(cancion);
     } else {
-      // Fallback: intentar borrar por el título visible
       try {
         await deleteDoc(doc(db, COLECCION_OYENTES, titulo));
       } catch (e) {
@@ -865,7 +842,7 @@ editImagen.addEventListener('input', () => {
 });
 
 // ================================================================
-// MODAL ESTADÍSTICAS — Lee datos de oyentes_canciones (solo lectura)
+// MODAL ESTADÍSTICAS — Lee SOLO el campo "oyentes" de oyentes_canciones
 // ================================================================
 function renderStats(canciones) {
   const lista = canciones || cancionesActuales || [];
@@ -873,30 +850,24 @@ function renderStats(canciones) {
   if (!lista.length) {
     statsList.innerHTML = '';
     statsEmpty.classList.remove('hidden');
-    statsTotalPlays.textContent     = '0';
     statsTotalListeners.textContent = '0';
-    statsTotalEarnings.textContent  = fmtDinero(0);
     return;
   }
 
   statsEmpty.classList.add('hidden');
 
-  let totalReproducciones = 0;
-  let totalOyentes        = 0;
+  let totalOyentes = 0;
 
   statsList.innerHTML = lista.map(c => {
     const img     = c.imagenUrl ? escapeHtml(c.imagenUrl) : PLACEHOLDER;
     const titulo  = escapeHtml(c.titulo  || 'Sin título');
     const artista = escapeHtml(c.artista || 'Desconocido');
 
-    // 📊 Datos reales tomados de oyentes_canciones
+    // 📊 Único dato real: oyentes desde oyentes_canciones
     const stats     = obtenerStatsDeCancion(c);
-    const plays     = stats.reproducciones || 0;
-    const listeners = stats.oyentes        || 0;
-    const ganancia  = plays * PAGO_POR_REPRODUCCION;
+    const listeners = stats.oyentes || 0;
 
-    totalReproducciones += plays;
-    totalOyentes        += listeners;
+    totalOyentes += listeners;
 
     return `
       <div class="stats-item">
@@ -911,24 +882,12 @@ function renderStats(canciones) {
             <span class="stats-cell-label">👥 Oyentes</span>
             <span class="stats-cell-value">${fmtNumero(listeners)}</span>
           </div>
-          <div class="stats-cell">
-            <span class="stats-cell-label">▶️ Repros</span>
-            <span class="stats-cell-value">${fmtNumero(plays)}</span>
-          </div>
-          <div class="stats-cell earn">
-            <span class="stats-cell-label">💰 Ganancias</span>
-            <span class="stats-cell-value">${fmtDinero(ganancia)}</span>
-          </div>
         </div>
       </div>
     `;
   }).join('');
 
-  const totalGanancias = totalReproducciones * PAGO_POR_REPRODUCCION;
-
-  statsTotalPlays.textContent     = fmtNumero(totalReproducciones);
   statsTotalListeners.textContent = fmtNumero(totalOyentes);
-  statsTotalEarnings.textContent  = fmtDinero(totalGanancias);
 }
 
 function abrirStatsModal() {
