@@ -67,6 +67,17 @@
         <input type="text" id="album" placeholder="Ej: Nombre del Album">
       </div>
 
+      <!-- ===== COLABORADORES (FORM) ===== -->
+      <div class="form-group">
+        <label for="collaboratorsContainer">3b. Colaboradores</label>
+        <div class="collaborators" id="collaboratorsContainer"></div>
+        <button type="button" id="addCollaboratorBtn" class="btn-add-collab" aria-label="Agregar colaborador">
+          <span class="plus-icon">+</span> Agregar colaborador
+        </button>
+        <p class="hint">Opcional. Agrega uno o más colaboradores de la canción.</p>
+      </div>
+      <!-- ===== FIN COLABORADORES ===== -->
+
       <!-- ===== SELECTOR DE GÉNERO ===== -->
       <div class="form-group">
         <label for="genreToggle">4. Género musical</label>
@@ -226,6 +237,18 @@
               <label for="editAlbum">3. NOMBRE DEL ÁLBUM</label>
               <input type="text" id="editAlbum" placeholder="Ej: Nombre del Album">
             </div>
+
+            <!-- ===== COLABORADORES (EDIT) ===== -->
+            <div class="form-group">
+              <label for="collaboratorsEditContainer">3b. COLABORADORES</label>
+              <div class="collaborators" id="collaboratorsEditContainer"></div>
+              <button type="button" id="addCollaboratorBtnEdit" class="btn-add-collab" aria-label="Agregar colaborador">
+                <span class="plus-icon">+</span> Agregar colaborador
+              </button>
+              <p class="hint">Opcional. Agrega uno o más colaboradores de la canción.</p>
+            </div>
+            <!-- ===== FIN COLABORADORES ===== -->
+
             <div class="form-group">
               <label for="editAudio">4. LINK DE AUDIO (DROPBOX)</label>
               <input type="url" id="editAudio" placeholder="https://www.dropbox.com/s/.../cancion.mp3?dl=0" required>
