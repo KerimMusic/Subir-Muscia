@@ -18,7 +18,9 @@ import {
   onSnapshot,
   deleteDoc,
   doc,
-  updateDoc
+  updateDoc,
+  getDoc,
+  setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ============================================
@@ -141,14 +143,20 @@ const statsTotalEarnings  = document.getElementById('statsTotalEarnings');
 
 let usuarioActual = null;
 let unsubscribeHistorial = null;
+let unsubscribeOyentes   = null;
 let cancionesActuales = [];
 let editandoId = null;
 let statsAbierto = false;
+
+// Mapa de estadísticas: { tituloNormalizado: { docId, reproducciones, oyentes } }
+let statsOyentes = {};
 
 const PLACEHOLDER = 'https://via.placeholder.com/64/333/666?text=%E2%99%AB';
 
 // 💵 TARIFA POR REPRODUCCIÓN
 const PAGO_POR_REPRODUCCION = 0.10; // MXN
+
+const COLECCION_OYENTES = 'oyentes_canciones';
 
 // ===================
 // Utilidades
@@ -194,6 +202,25 @@ function fmtDinero(n) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }) + ' MXN';
+}
+
+// Normaliza un título para comparar de forma robusta
+function normalizarTitulo(t) {
+  return String(t || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Obtiene las stats de una canción desde el mapa de oyentes_canciones
+function obtenerStatsDeCancion(cancion) {
+  if (!cancion || !cancion.titulo) return { reproducciones: 0, oyentes: 0, docId: null };
+  const key = normalizarTitulo(cancion.titulo);
+  const s = statsOyentes[key];
+  if (!s) return { reproducciones: 0, oyentes: 0, docId: null };
+  return s;
 }
 
 // ===================
@@ -246,6 +273,7 @@ onAuthStateChanged(auth, (user) => {
     userEmail.textContent = user.email;
     menuWrap.classList.remove('hidden');
     escucharHistorial(user.uid);
+    escucharOyentesCanciones();
   } else {
     loginBtn.classList.remove('hidden');
     loginBtn.disabled = false;
@@ -260,10 +288,16 @@ onAuthStateChanged(auth, (user) => {
       unsubscribeHistorial();
       unsubscribeHistorial = null;
     }
+    if (unsubscribeOyentes) {
+      unsubscribeOyentes();
+      unsubscribeOyentes = null;
+    }
+
     historyList.innerHTML = '';
     historyCount.textContent = '0';
     historyEmpty.classList.add('hidden');
     cancionesActuales = [];
+    statsOyentes = {};
     cerrarPlayer();
     cerrarEditModal();
     cerrarStatsModal();
@@ -335,6 +369,90 @@ function escucharHistorial(uid) {
   });
 }
 
+// ===================
+// OYENTES_CANCIONES (SOLO LECTURA, datos globales por título)
+// ===================
+function escucharOyentesCanciones() {
+  if (unsubscribeOyentes) unsubscribeOyentes();
+
+  const ref = collection(db, COLECCION_OYENTES);
+
+  unsubscribeOyentes = onSnapshot(ref, (snap) => {
+    const mapa = {};
+
+    snap.docs.forEach(d => {
+      const data = d.data() || {};
+      const plays = Number(
+        data.reproducciones ??
+        data.reproductions ??
+        data.plays ??
+        data.repro ??
+        0
+      ) || 0;
+      const listeners = Number(
+        data.oyentes ??
+        data.listeners ??
+        0
+      ) || 0;
+
+      mapa[normalizarTitulo(d.id)] = {
+        docId: d.id,
+        reproducciones: plays,
+        oyentes: listeners
+      };
+    });
+
+    statsOyentes = mapa;
+
+    // Refrescar el modal si está abierto
+    if (statsAbierto) renderStats(cancionesActuales);
+  }, (err) => {
+    console.error('Error al escuchar oyentes_canciones:', err);
+  });
+}
+
+// Asegura que exista el registro en oyentes_canciones (solo si NO existe)
+async function asegurarRegistroOyentes(titulo) {
+  if (!titulo) return;
+
+  const key = normalizarTitulo(titulo);
+
+  // Si ya está en el mapa cargado, no hacemos nada
+  if (statsOyentes[key]) return;
+
+  try {
+    // Verificamos con el título exacto tal como lo escribió el usuario
+    const docRef = doc(db, COLECCION_OYENTES, titulo);
+    const snap = await getDoc(docRef);
+
+    if (snap.exists()) return; // Ya existe → no crear duplicado
+
+    // Creamos el registro nuevo con 0/0 (solo contadores iniciales)
+    await setDoc(docRef, {
+      reproducciones: 0,
+      oyentes: 0
+    });
+
+  } catch (e) {
+    console.warn('No se pudo asegurar registro en oyentes_canciones:', e);
+  }
+}
+
+// Elimina el registro de oyentes_canciones asociado a una canción
+async function eliminarRegistroOyentes(cancion) {
+  if (!cancion || !cancion.titulo) return;
+
+  // Preferimos el docId real detectado en el mapa (por si difiere en mayúsculas)
+  const stats = obtenerStatsDeCancion(cancion);
+  const docId = stats.docId || cancion.titulo;
+
+  try {
+    await deleteDoc(doc(db, COLECCION_OYENTES, docId));
+  } catch (e) {
+    console.warn('No se pudo eliminar de oyentes_canciones:', e);
+  }
+}
+
 function renderHistorial(canciones) {
   cancionesActuales = canciones;
   historyCount.textContent = canciones.length;
@@ -377,7 +495,8 @@ historyList.addEventListener('click', (e) => {
     const id = deleteBtn.dataset.id;
     const item = deleteBtn.closest('.history-item');
     const titulo = item?.querySelector('.history-info strong')?.textContent || 'esta canción';
-    eliminarCancion(id, deleteBtn, titulo);
+    const cancion = cancionesActuales.find(c => c.id === id);
+    eliminarCancion(id, deleteBtn, titulo, cancion);
     return;
   }
 
@@ -397,7 +516,7 @@ historyList.addEventListener('click', (e) => {
   if (cancion) abrirPlayer(cancion);
 });
 
-async function eliminarCancion(id, boton, titulo) {
+async function eliminarCancion(id, boton, titulo, cancion) {
   if (!usuarioActual) {
     mostrarStatus('Debes iniciar sesión primero', 'error');
     return;
@@ -410,7 +529,22 @@ async function eliminarCancion(id, boton, titulo) {
     boton.disabled = true;
     boton.textContent = '⏳';
 
+    // 1) Eliminar del historial del usuario
     await deleteDoc(doc(db, 'historial_usuarios', usuarioActual.uid, 'canciones', id));
+
+    // 2) Eliminar el registro correspondiente en oyentes_canciones
+    //    (usando el título exacto o el docId detectado)
+    if (cancion) {
+      await eliminarRegistroOyentes(cancion);
+    } else {
+      // Fallback: intentar borrar por el título visible
+      try {
+        await deleteDoc(doc(db, COLECCION_OYENTES, titulo));
+      } catch (e) {
+        console.warn('Fallback eliminar oyentes_canciones:', e);
+      }
+    }
+
     mostrarStatus('🗑️ Canción eliminada correctamente', 'ok');
 
   } catch (err) {
@@ -476,10 +610,11 @@ form.addEventListener('submit', async (e) => {
       origen:    'dropbox',
       uid:       uid,
       email:     usuarioActual.email,
-      reproducciones: 0,
-      oyentes: 0,
       fecha:     serverTimestamp()
     });
+
+    // 🔄 Sincronización: crear registro en oyentes_canciones solo si NO existe
+    await asegurarRegistroOyentes(titulo);
 
     mostrarStatus('✅ Canción subida correctamente', 'ok');
 
@@ -534,6 +669,7 @@ function abrirPlayer(cancion) {
   playerModal.classList.remove('hidden');
   playerModal.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
+  // NO registrar reproducciones aquí — esta página es solo para subir
 }
 
 function cerrarPlayer() {
@@ -702,6 +838,10 @@ editForm.addEventListener('submit', async (e) => {
       fechaEdicion: serverTimestamp()
     });
 
+    // Sincronización: aseguramos que exista el registro en oyentes_canciones
+    // (con el nuevo título) sin duplicar si ya existía uno con ese nombre
+    await asegurarRegistroOyentes(titulo);
+
     mostrarStatus('✅ Canción actualizada correctamente', 'ok');
     cerrarEditModal();
 
@@ -725,7 +865,7 @@ editImagen.addEventListener('input', () => {
 });
 
 // ================================================================
-// MODAL ESTADÍSTICAS — MIS CANCIONES SUBIDAS (SOLO LECTURA)
+// MODAL ESTADÍSTICAS — Lee datos de oyentes_canciones (solo lectura)
 // ================================================================
 function renderStats(canciones) {
   const lista = canciones || cancionesActuales || [];
@@ -749,8 +889,10 @@ function renderStats(canciones) {
     const titulo  = escapeHtml(c.titulo  || 'Sin título');
     const artista = escapeHtml(c.artista || 'Desconocido');
 
-    const plays     = Number(c.reproducciones) || 0;
-    const listeners = Number(c.oyentes)        || 0;
+    // 📊 Datos reales tomados de oyentes_canciones
+    const stats     = obtenerStatsDeCancion(c);
+    const plays     = stats.reproducciones || 0;
+    const listeners = stats.oyentes        || 0;
     const ganancia  = plays * PAGO_POR_REPRODUCCION;
 
     totalReproducciones += plays;
