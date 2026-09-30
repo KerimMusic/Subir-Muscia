@@ -201,13 +201,53 @@ function normalizarTitulo(t) {
     .trim();
 }
 
-// Obtiene las stats de una canción desde el mapa de oyentes_canciones
+// ==========================================================
+// 🔧 EXTRAER OYENTES: acepta múltiples nombres de campo
+// ==========================================================
+function extraerOyentes(data) {
+  if (!data) return 0;
+  const posibles = [
+    data.oyentes,
+    data.Oyentes,
+    data.oyente,
+    data.listeners,
+    data.Listeners,
+    data.listener,
+    data.oyentes_totales,
+    data.totalOyentes,
+    data.total_oyentes,
+    data.listenerCount,
+    data.listener_count
+  ];
+  for (const v of posibles) {
+    if (v === undefined || v === null || v === '') continue;
+    const n = Number(v);
+    if (!isNaN(n)) return n;
+  }
+  return 0;
+}
+
+// ==========================================================
+// 🔧 OBTENER STATS: busca por varios campos de la canción
+// ==========================================================
 function obtenerStatsDeCancion(cancion) {
-  if (!cancion || !cancion.titulo) return { oyentes: 0, docId: null };
-  const key = normalizarTitulo(cancion.titulo);
-  const s = statsOyentes[key];
-  if (!s) return { oyentes: 0, docId: null };
-  return s;
+  if (!cancion) return { oyentes: 0, docId: null };
+
+  const candidatos = [
+    cancion.titulo,
+    cancion.title,
+    cancion.nombre,
+    cancion.id
+  ];
+
+  for (const c of candidatos) {
+    if (!c) continue;
+    const key = normalizarTitulo(c);
+    const s = statsOyentes[key];
+    if (s) return s;
+  }
+
+  return { oyentes: 0, docId: null };
 }
 
 // ===================
@@ -357,7 +397,9 @@ function escucharHistorial(uid) {
 }
 
 // ===================
-// OYENTES_CANCIONES (SOLO LECTURA, datos globales por título)
+// OYENTES_CANCIONES (SOLO LECTURA)
+// Se indexa el mismo documento bajo múltiples claves para
+// garantizar que siempre se encuentre la canción.
 // ===================
 function escucharOyentesCanciones() {
   if (unsubscribeOyentes) unsubscribeOyentes();
@@ -369,21 +411,29 @@ function escucharOyentesCanciones() {
 
     snap.docs.forEach(d => {
       const data = d.data() || {};
-      const listeners = Number(
-        data.oyentes ??
-        data.listeners ??
-        0
-      ) || 0;
+      const oyentes = extraerOyentes(data);
 
-      mapa[normalizarTitulo(d.id)] = {
-        docId: d.id,
-        oyentes: listeners
-      };
+      const stats = { docId: d.id, oyentes };
+
+      // Indexamos bajo TODAS las posibles claves:
+      const candidatos = [
+        d.id,
+        data.titulo,
+        data.title,
+        data.nombre,
+        data.cancion,
+        data.song
+      ];
+
+      candidatos.forEach(c => {
+        if (!c) return;
+        const key = normalizarTitulo(c);
+        if (key && !mapa[key]) mapa[key] = stats;
+      });
     });
 
     statsOyentes = mapa;
 
-    // Refrescar el modal si está abierto
     if (statsAbierto) renderStats(cancionesActuales);
   }, (err) => {
     console.error('Error al escuchar oyentes_canciones:', err);
@@ -401,13 +451,12 @@ async function asegurarRegistroOyentes(titulo) {
   if (statsOyentes[key]) return;
 
   try {
-    // Verificamos con el título exacto tal como lo escribió el usuario
     const docRef = doc(db, COLECCION_OYENTES, titulo);
     const snap = await getDoc(docRef);
 
     if (snap.exists()) return; // Ya existe → no crear duplicado
 
-    // Creamos el registro nuevo SOLO con el contador de oyentes en 0
+    // Creamos SOLO con el contador de oyentes en 0
     await setDoc(docRef, {
       oyentes: 0
     });
@@ -421,7 +470,6 @@ async function asegurarRegistroOyentes(titulo) {
 async function eliminarRegistroOyentes(cancion) {
   if (!cancion || !cancion.titulo) return;
 
-  // Preferimos el docId real detectado en el mapa (por si difiere en mayúsculas)
   const stats = obtenerStatsDeCancion(cancion);
   const docId = stats.docId || cancion.titulo;
 
@@ -508,10 +556,8 @@ async function eliminarCancion(id, boton, titulo, cancion) {
     boton.disabled = true;
     boton.textContent = '⏳';
 
-    // 1) Eliminar del historial del usuario
     await deleteDoc(doc(db, 'historial_usuarios', usuarioActual.uid, 'canciones', id));
 
-    // 2) Eliminar el registro correspondiente en oyentes_canciones
     if (cancion) {
       await eliminarRegistroOyentes(cancion);
     } else {
@@ -590,7 +636,7 @@ form.addEventListener('submit', async (e) => {
       fecha:     serverTimestamp()
     });
 
-    // 🔄 Sincronización: crear registro en oyentes_canciones solo si NO existe
+    // 🔄 Crear registro en oyentes_canciones solo si NO existe
     await asegurarRegistroOyentes(titulo);
 
     mostrarStatus('✅ Canción subida correctamente', 'ok');
@@ -646,7 +692,6 @@ function abrirPlayer(cancion) {
   playerModal.classList.remove('hidden');
   playerModal.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
-  // NO registrar reproducciones aquí — esta página es solo para subir
 }
 
 function cerrarPlayer() {
@@ -815,8 +860,6 @@ editForm.addEventListener('submit', async (e) => {
       fechaEdicion: serverTimestamp()
     });
 
-    // Sincronización: aseguramos que exista el registro en oyentes_canciones
-    // (con el nuevo título) sin duplicar si ya existía uno con ese nombre
     await asegurarRegistroOyentes(titulo);
 
     mostrarStatus('✅ Canción actualizada correctamente', 'ok');
@@ -842,7 +885,7 @@ editImagen.addEventListener('input', () => {
 });
 
 // ================================================================
-// MODAL ESTADÍSTICAS — Lee SOLO el campo "oyentes" de oyentes_canciones
+// MODAL ESTADÍSTICAS — Lee SOLO el campo "oyentes"
 // ================================================================
 function renderStats(canciones) {
   const lista = canciones || cancionesActuales || [];
@@ -863,7 +906,6 @@ function renderStats(canciones) {
     const titulo  = escapeHtml(c.titulo  || 'Sin título');
     const artista = escapeHtml(c.artista || 'Desconocido');
 
-    // 📊 Único dato real: oyentes desde oyentes_canciones
     const stats     = obtenerStatsDeCancion(c);
     const listeners = stats.oyentes || 0;
 
