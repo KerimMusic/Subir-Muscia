@@ -138,6 +138,7 @@ const statsModal          = document.getElementById('statsModal');
 const statsList           = document.getElementById('statsList');
 const statsEmpty          = document.getElementById('statsEmpty');
 const statsTotalListeners = document.getElementById('statsTotalListeners');
+const statsTotalEarnings  = document.getElementById('statsTotalEarnings');
 
 let usuarioActual = null;
 let unsubscribeHistorial = null;
@@ -152,6 +153,9 @@ let statsOyentes = {};
 const PLACEHOLDER = 'https://via.placeholder.com/64/333/666?text=%E2%99%AB';
 
 const COLECCION_OYENTES = 'oyentes_canciones';
+
+// 💵 Tarifa por oyente
+const PAGO_POR_OYENTE = 0.20; // MXN
 
 // ===================
 // Utilidades
@@ -189,6 +193,14 @@ function escapeHtml(str = '') {
 function fmtNumero(n) {
   const v = Number(n) || 0;
   return v.toLocaleString('es-MX');
+}
+
+function fmtDinero(n) {
+  const v = Number(n) || 0;
+  return '$' + v.toLocaleString('es-MX', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }) + ' MXN';
 }
 
 // Normaliza un título para comparar de forma robusta
@@ -904,7 +916,7 @@ editImagen.addEventListener('input', () => {
 });
 
 // ================================================================
-// MODAL ESTADÍSTICAS — Lee SOLO el campo "oyentes"
+// MODAL ESTADÍSTICAS — Oyentes + Ganancias ($0.20 MXN por oyente)
 // ================================================================
 function renderStats(canciones) {
   const lista = canciones || cancionesActuales || [];
@@ -913,6 +925,7 @@ function renderStats(canciones) {
     statsList.innerHTML = '';
     statsEmpty.classList.remove('hidden');
     statsTotalListeners.textContent = '0';
+    statsTotalEarnings.textContent  = fmtDinero(0);
     return;
   }
 
@@ -925,8 +938,12 @@ function renderStats(canciones) {
     const titulo  = escapeHtml(c.titulo  || 'Sin título');
     const artista = escapeHtml(c.artista || 'Desconocido');
 
+    // 📊 Único dato real: oyentes desde oyentes_canciones
     const stats     = obtenerStatsDeCancion(c);
     const listeners = stats.oyentes || 0;
+
+    // 💰 Ganancias = oyentes × $0.20 MXN
+    const ganancia  = listeners * PAGO_POR_OYENTE;
 
     totalOyentes += listeners;
 
@@ -943,12 +960,19 @@ function renderStats(canciones) {
             <span class="stats-cell-label">👥 Oyentes</span>
             <span class="stats-cell-value">${fmtNumero(listeners)}</span>
           </div>
+          <div class="stats-cell earn">
+            <span class="stats-cell-label">💰 Ganancias</span>
+            <span class="stats-cell-value">${fmtDinero(ganancia)}</span>
+          </div>
         </div>
       </div>
     `;
   }).join('');
 
+  const totalGanancias = totalOyentes * PAGO_POR_OYENTE;
+
   statsTotalListeners.textContent = fmtNumero(totalOyentes);
+  statsTotalEarnings.textContent  = fmtDinero(totalGanancias);
 }
 
 function abrirStatsModal() {
