@@ -1715,3 +1715,39 @@ button:disabled {
 .ob-hist-item{background:#0e0e18;border:1px solid #2a2a3a;border-radius:10px;padding:12px;margin-top:10px;font-size:13px;line-height:1.6}
 .ob-aviso{background:#3a2a00;color:#ffd76a;border:1px solid #5a4b00;border-radius:10px;padding:12px;margin:10px 0;font-size:14px}
 .ob-modal-box hr{border:none;border-top:1px solid #2a2a3a;margin:20px 0}
+/* ============================================
+   🔒 BLOQUEO DE SUBIDA SIN SUSCRIPCIÓN
+   ============================================ */
+.form-locked {
+  margin-top: 8px;
+  padding: 32px 24px;
+  background: #fafafa;
+  border: 1.5px dashed #d0d0d0;
+  border-radius: 14px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  animation: fadeIn 0.25s ease;
+}
+.form-locked .lock-icon { font-size: 42px; line-height: 1; }
+.form-locked h3 {
+  font-size: 17px;
+  font-weight: 700;
+  color: #000;
+  margin: 6px 0 0;
+  letter-spacing: -0.2px;
+}
+.form-locked p {
+  font-size: 13px;
+  color: #555;
+  max-width: 380px;
+  line-height: 1.5;
+  margin: 0 0 8px;
+}
+.form-locked .ob-btn-primario {
+  width: auto;
+  min-width: 200px;
+  margin-top: 6px;
+}
