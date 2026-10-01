@@ -6,7 +6,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore, collection, addDoc, serverTimestamp, onSnapshot,
-  deleteDoc, doc, updateDoc, getDoc, setDoc
+  deleteDoc, doc, updateDoc, getDoc, setDoc, getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
   getStorage, ref as storageRef, uploadBytes, getDownloadURL
@@ -83,6 +83,10 @@ const preview    = document.getElementById('preview');
 const previewImg = document.getElementById('previewImg');
 const previewTitulo  = document.getElementById('previewTitulo');
 const previewArtista = document.getElementById('previewArtista');
+
+const formLocked   = document.getElementById('formLocked');
+const lockMessage  = document.getElementById('lockMessage');
+const verPlanesBtn = document.getElementById('verPlanesBtn');
 
 const historySection = document.getElementById('historySection');
 const historyList    = document.getElementById('historyList');
@@ -298,7 +302,6 @@ onAuthStateChanged(auth, (user) => {
   if (user) {
     loginBtn.classList.add('hidden');
     userBox.classList.remove('hidden');
-    form.classList.remove('hidden');
     historySection.classList.remove('hidden');
     userEmail.textContent = user.email;
     menuWrap.classList.remove('hidden');
@@ -307,12 +310,16 @@ onAuthStateChanged(auth, (user) => {
 
     // ═══ INICIAR SUSCRIPCIONES ═══
     iniciarSuscripciones(user);
+
+    // 🔒 La visibilidad del form depende de la suscripción
+    actualizarAccesoSubida();
   } else {
     loginBtn.classList.remove('hidden');
     loginBtn.disabled = false;
     loginBtn.innerHTML = LOGIN_BTN_HTML;
     userBox.classList.add('hidden');
     form.classList.add('hidden');
+    formLocked?.classList.add('hidden');
     historySection.classList.add('hidden');
     menuWrap.classList.add('hidden');
     cerrarMenu();
@@ -518,6 +525,11 @@ historyList.addEventListener('click', (e) => {
 
 async function eliminarCancion(id, boton, titulo, cancion) {
   if (!usuarioActual) { mostrarStatus('Debes iniciar sesión primero', 'error'); return; }
+  if (!window.tieneAccesoVigente()) {
+    mostrarStatus('Necesitas una suscripción activa para modificar canciones.', 'error');
+    abrirModalSusc("modal-planes");
+    return;
+  }
   const confirmado = confirm(`¿Seguro que quieres eliminar "${titulo}"?\nEsta acción no se puede deshacer.`);
   if (!confirmado) return;
   try {
@@ -544,6 +556,13 @@ async function eliminarCancion(id, boton, titulo, cancion) {
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!usuarioActual) { mostrarStatus('Debes iniciar sesión primero', 'error'); return; }
+
+  // 🔒 SEGUNDA CAPA DE SEGURIDAD (la definitiva la da Firestore Rules)
+  if (!window.tieneAccesoVigente()) {
+    mostrarStatus('Necesitas una suscripción activa para subir música.', 'error');
+    abrirModalSusc("modal-planes");
+    return;
+  }
 
   const artista   = document.getElementById('artista').value.trim();
   const titulo    = document.getElementById('titulo').value.trim();
@@ -708,6 +727,14 @@ document.addEventListener('visibilitychange', () => {
    ================================================================ */
 function abrirEditModal(cancion) {
   if (!cancion) return;
+
+  // 🔒 Verificación extra al abrir el editor
+  if (!window.tieneAccesoVigente()) {
+    mostrarStatus('Necesitas una suscripción activa para editar canciones.', 'error');
+    abrirModalSusc("modal-planes");
+    return;
+  }
+
   editandoId = cancion.id;
   editArtista.value = cancion.artista || '';
   editTitulo.value  = cancion.titulo  || '';
@@ -746,6 +773,14 @@ editForm.addEventListener('submit', async (e) => {
     mostrarStatus('Error: No hay sesión o canción seleccionada', 'error');
     return;
   }
+
+  // 🔒 SEGUNDA CAPA
+  if (!window.tieneAccesoVigente()) {
+    mostrarStatus('Necesitas una suscripción activa para editar canciones.', 'error');
+    abrirModalSusc("modal-planes");
+    return;
+  }
+
   const artista   = editArtista.value.trim();
   const titulo    = editTitulo.value.trim();
   const album     = editAlbum.value.trim();
@@ -1204,7 +1239,7 @@ pintarSubgeneros('');
 
 
 /* ═══════════════════════════════════════════════════════════════
-   SISTEMA DE SUSCRIPCIONES (INTEGRADO)
+   SISTEMA DE SUSCRIPCIONES (INTEGRADO Y SIN TELÉFONO)
    ═══════════════════════════════════════════════════════════════ */
 
 let suscripcion = null;
@@ -1233,6 +1268,62 @@ window.requiereSuscripcion = function(fn) {
   };
 };
 
+/* ============================================================
+   🔒 CONTROL DE ACCESO A "SUBE TU MÚSICA"
+   ============================================================ */
+function actualizarAccesoSubida() {
+  const formLockedEl = document.getElementById("formLocked");
+  const lockMessageEl = document.getElementById("lockMessage");
+
+  // Sin sesión: no mostramos ni form ni candado
+  if (!usuarioActual) {
+    form.classList.add("hidden");
+    formLockedEl?.classList.add("hidden");
+    return;
+  }
+
+  if (window.tieneAccesoVigente()) {
+    form.classList.remove("hidden");
+    formLockedEl?.classList.add("hidden");
+    return;
+  }
+
+  // Sin suscripción activa → mostrar bloqueo con mensaje contextual
+  form.classList.add("hidden");
+  formLockedEl?.classList.remove("hidden");
+
+  if (!lockMessageEl) return;
+
+  if (!suscripcion) {
+    lockMessageEl.textContent =
+      "Activa tu suscripción para comenzar a subir tu música.";
+  } else if (suscripcion.estado === "pendiente") {
+    lockMessageEl.textContent =
+      "Tu comprobante está en revisión. Te avisaremos cuando el administrador lo apruebe.";
+  } else if (suscripcion.estado === "rechazada") {
+    lockMessageEl.textContent =
+      "Tu comprobante fue rechazado. Sube uno nuevo o contacta a soporte para reactivar tu solicitud.";
+  } else if (suscripcion.estado === "activa" && !window.tieneAccesoVigente()) {
+    lockMessageEl.textContent =
+      "Tu suscripción ha vencido. Renueva tu suscripción para continuar subiendo música.";
+  } else if (suscripcion.estado === "expirada") {
+    lockMessageEl.textContent =
+      "Tu suscripción ha vencido. Renueva tu suscripción para continuar subiendo música.";
+  } else {
+    lockMessageEl.textContent =
+      "Necesitas una suscripción activa para subir música.";
+  }
+}
+
+document.getElementById("verPlanesBtn")?.addEventListener("click", () => {
+  abrirModalSusc("modal-planes");
+});
+
+window.actualizarAccesoSubida = actualizarAccesoSubida;
+
+/* ============================================================
+   INICIAR / DETENER SUSCRIPCIONES
+   ============================================================ */
 async function iniciarSuscripciones(user) {
   try {
     const snap = await getDoc(doc(db, "config", "pagos"));
@@ -1266,6 +1357,7 @@ async function iniciarSuscripciones(user) {
       if (venc && new Date() >= venc) suscripcion.estado = "expirada";
     }
     actualizarBotonSuscripcion();
+    actualizarAccesoSubida(); // 🔒 refresca el candado/formulario
   });
 
   const btnMi = document.getElementById("btn-mi-suscripcion");
@@ -1306,49 +1398,45 @@ function actualizarBotonSuscripcion() {
   }
 }
 
-/* Seleccionar plan */
+/* ============================================================
+   SELECCIONAR PLAN → guarda solicitud pendiente → mostrar pago
+   (SIN PASO DE TELÉFONO)
+   ============================================================ */
 document.querySelectorAll(".ob-plan").forEach((card) => {
-  card.querySelector(".ob-btn-plan").onclick = () => {
+  card.querySelector(".ob-btn-plan").onclick = async () => {
+    if (!usuarioActual) { alert("Inicia sesión con Google primero."); return; }
+
     planSeleccionado = {
       plan:   card.dataset.plan,
       precio: parseFloat(card.dataset.precio)
     };
+
+    try {
+      await setDoc(doc(db, "suscripciones", usuarioActual.uid), {
+        uid: usuarioActual.uid,
+        nombre: usuarioActual.displayName || "",
+        correo: usuarioActual.email || "",
+        plan: planSeleccionado.plan,
+        precio: planSeleccionado.precio,
+        estado: "pendiente",
+        comprobanteURL: "",
+        comprobantePath: "",
+        fechaSolicitud: serverTimestamp(),
+        fechaInicio: null,
+        fechaVencimiento: null
+      }, { merge: true });
+    } catch (e) {
+      console.error("Error al guardar solicitud:", e);
+    }
+
     cerrarModalSusc("modal-planes");
-    if (suscripcion?.telefono) mostrarPago();
-    else abrirModalSusc("modal-telefono");
+    mostrarPago();
   };
 });
 
-/* Guardar teléfono */
-document.getElementById("ob-guardar-tel").onclick = async () => {
-  const tel  = document.getElementById("ob-tel").value.trim();
-  const tel2 = document.getElementById("ob-tel2").value.trim();
-  const err  = document.getElementById("ob-tel-error");
-  err.textContent = "";
-  if (!/^\d{10}$/.test(tel))  { err.textContent = "Ingresa 10 dígitos.";       return; }
-  if (tel !== tel2)           { err.textContent = "Los números no coinciden."; return; }
-  if (!planSeleccionado)      { err.textContent = "Selecciona un plan.";       return; }
-  if (!usuarioActual)         { err.textContent = "Inicia sesión con Google."; return; }
-  try {
-    await setDoc(doc(db, "suscripciones", usuarioActual.uid), {
-      uid: usuarioActual.uid,
-      nombre: usuarioActual.displayName || "",
-      correo: usuarioActual.email || "",
-      telefono: tel,
-      plan: planSeleccionado.plan,
-      precio: planSeleccionado.precio,
-      estado: "pendiente",
-      comprobanteURL: "",
-      comprobantePath: "",
-      fechaSolicitud: serverTimestamp(),
-      fechaInicio: null,
-      fechaVencimiento: null
-    }, { merge: true });
-    cerrarModalSusc("modal-telefono");
-    mostrarPago();
-  } catch (e) { console.error(e); err.textContent = "Error al guardar. Intenta de nuevo."; }
-};
-
+/* ============================================================
+   MOSTRAR PAGO
+   ============================================================ */
 function mostrarPago() {
   const plan   = planSeleccionado?.plan   || suscripcion?.plan;
   const precio = planSeleccionado?.precio ?? suscripcion?.precio;
@@ -1370,7 +1458,9 @@ function mostrarPago() {
   abrirModalSusc("modal-pago");
 }
 
-/* Subir comprobante */
+/* ============================================================
+   SUBIR COMPROBANTE
+   ============================================================ */
 document.getElementById("ob-subir").onclick = async () => {
   const fileInput = document.getElementById("ob-file");
   const msg       = document.getElementById("ob-pago-msg");
@@ -1403,7 +1493,9 @@ document.getElementById("ob-subir").onclick = async () => {
   } finally { btn.disabled = false; }
 };
 
-/* Mi suscripción */
+/* ============================================================
+   MI SUSCRIPCIÓN
+   ============================================================ */
 async function abrirMiSuscripcion() {
   if (!usuarioActual) return;
   abrirModalSusc("modal-susc");
@@ -1432,7 +1524,6 @@ async function abrirMiSuscripcion() {
     <p><strong>Estado:</strong> <span class="ob-estado ${suscripcion.estado}">${suscripcion.estado}</span></p>
     <p><strong>Fecha de inicio:</strong> ${fmtSusc(aFechaSusc(suscripcion.fechaInicio))}</p>
     <p><strong>Fecha de vencimiento:</strong> ${fmtSusc(venc)}</p>
-    <p><strong>Teléfono registrado:</strong> ${suscripcion.telefono || "—"}</p>
     ${suscripcion.estado !== "activa" || (dias !== null && dias <= 7)
       ? `<button class="ob-btn-primario" id="ob-btn-renovar">${suscripcion.estado === "activa" ? "Renovar suscripción" : "Suscribirme / Renovar"}</button>`
       : ""}`;
@@ -1467,7 +1558,9 @@ suscBtn.addEventListener("click", () => {
   setTimeout(abrirMiSuscripcion, 120);
 });
 
-/* Panel admin */
+/* ============================================================
+   PANEL ADMIN
+   ============================================================ */
 async function cargarSolicitudesAdmin() {
   if (!esAdminSusc) return;
   const cont = document.getElementById("ob-admin-lista");
@@ -1476,7 +1569,7 @@ async function cargarSolicitudesAdmin() {
     const snap = await getDocs(collection(db, "suscripciones"));
     if (snap.empty) { cont.innerHTML = "<p>No hay solicitudes.</p>"; return; }
     let html = `<table class="ob-tabla"><thead><tr>
-      <th>Usuario</th><th>Correo</th><th>Tel</th><th>Plan</th><th>Precio</th>
+      <th>Usuario</th><th>Correo</th><th>Plan</th><th>Precio</th>
       <th>Fecha</th><th>Estado</th><th>Comprobante</th><th>Acciones</th>
     </tr></thead><tbody>`;
     snap.forEach((d) => {
@@ -1484,7 +1577,6 @@ async function cargarSolicitudesAdmin() {
       html += `<tr>
         <td>${s.nombre   || "—"}</td>
         <td>${s.correo   || "—"}</td>
-        <td>${s.telefono || "—"}</td>
         <td>${s.plan}</td>
         <td>$${s.precio}</td>
         <td>${fmtSusc(aFechaSusc(s.fechaSolicitud))}</td>
@@ -1546,7 +1638,9 @@ window.rechazarPago = async (uid) => {
   cargarSolicitudesAdmin();
 };
 
-/* Cerrar modales */
+/* ============================================================
+   CERRAR MODALES
+   ============================================================ */
 document.querySelectorAll("[data-cerrar]").forEach((el) => {
   el.onclick = () => cerrarModalSusc(el.dataset.cerrar);
 });
