@@ -115,10 +115,8 @@ const collabContainerEdit = document.getElementById('collaboratorsEditContainer'
 const addCollabBtnForm    = document.getElementById('addCollaboratorBtn');
 const addCollabBtnEdit    = document.getElementById('addCollaboratorBtnEdit');
 
-const paywall         = document.getElementById('paywall');
-const paywallLogout   = document.getElementById('paywallLogout');
-const limiteBanner    = document.getElementById('limiteBanner');
-const upgradeBtn      = document.getElementById('upgradeBtn');
+const paywall       = document.getElementById('paywall');
+const paywallLogout = document.getElementById('paywallLogout');
 
 let usuarioActual = null;
 let unsubscribeHistorial = null;
@@ -132,12 +130,10 @@ const PLACEHOLDER = 'https://via.placeholder.com/64/333/666?text=%E2%99%AB';
 const COLECCION_OYENTES = 'oyentes_canciones';
 const PAGO_POR_OYENTE = 0.20;
 
-// ================== PLANES ==================
-const PLAN_ID_PRO   = 'P-88D20959NU409831ENK66MMI';
-const PLAN_ID_BASIC = 'P-6AG16533PP0259939NK7AD7I';
-const PRECIO_PRO    = 550;
-const PRECIO_BASIC  = 1;
-const LIMITE_BASICO = 1;
+// ================== PLAN ÚNICO ==================
+const PLAN_ID      = 'P-8M095356XM2937120NK7BNAA';
+const PRECIO_PLAN  = 1;          // 1 MXN
+const DURACION_DIAS = 1;         // 1 día
 
 const MESES_ENTRE_RETIROS = 3;
 const COLECCION_SUSCRIPCIONES = 'suscripciones';
@@ -300,7 +296,6 @@ onAuthStateChanged(auth, (user) => {
     form.classList.add('hidden');
     historySection.classList.add('hidden');
     menuWrap.classList.add('hidden');
-    limiteBanner?.classList.add('hidden');
     cerrarMenu();
     if (unsubscribeHistorial) { unsubscribeHistorial(); unsubscribeHistorial = null; }
     if (unsubscribeOyentes)   { unsubscribeOyentes();   unsubscribeOyentes = null; }
@@ -345,8 +340,6 @@ function escucharHistorial(uid) {
     canciones.sort((a, b) => (b.fecha?.seconds || 0) - (a.fecha?.seconds || 0));
     renderHistorial(canciones);
     if (statsAbierto) renderStats(canciones);
-    actualizarBannerLimite();
-    aplicarEstadoSuscripcion(); // refresca textos con conteo actualizado
   }, (err) => {
     console.error('Error historial:', err);
     historyList.innerHTML = '';
@@ -505,15 +498,9 @@ form.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!usuarioActual) { mostrarStatus('Debes iniciar sesión primero', 'error'); return; }
 
-  const permiso = puedeSubirCancion();
-  if (!permiso.ok) {
-    if (permiso.motivo === 'sin_suscripcion') {
-      mostrarStatus('Necesitas una suscripción activa para subir música', 'error');
-      mostrarPaywall();
-    } else if (permiso.motivo === 'limite_basico_alcanzado') {
-      mostrarStatus('Ya usaste tu única canción del plan Basic. Actualiza a Pro para subir más.', 'error');
-      setTimeout(mostrarPaywall, 900);
-    }
+  if (!estaSuscripcionActiva()) {
+    mostrarStatus('Necesitas una suscripción activa para subir música', 'error');
+    mostrarPaywall();
     return;
   }
 
@@ -732,8 +719,6 @@ editImagen.addEventListener('input', () => {
 // ============================================ ESTADÍSTICAS ============================================
 function renderStats(canciones) {
   const lista = canciones || cancionesActuales || [];
-  const esBasic = esPlanBasico();
-
   if (!lista.length) {
     statsList.innerHTML = '';
     statsEmpty.classList.remove('hidden');
@@ -752,17 +737,6 @@ function renderStats(canciones) {
     const listeners = stats.oyentes || 0;
     const ganancia = listeners * PAGO_POR_OYENTE;
     totalOyentes += listeners;
-
-    const celdaGanancia = esBasic
-      ? `<div class="stats-cell">
-           <span class="stats-cell-label">💰 Ganancias</span>
-           <span class="stats-cell-value" title="Requiere plan Pro">🔒 Pro</span>
-         </div>`
-      : `<div class="stats-cell earn">
-           <span class="stats-cell-label">💰 Ganancias</span>
-           <span class="stats-cell-value">${fmtDinero(ganancia)}</span>
-         </div>`;
-
     return `
       <div class="stats-item">
         <img src="${img}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
@@ -775,14 +749,16 @@ function renderStats(canciones) {
             <span class="stats-cell-label">👥 Oyentes</span>
             <span class="stats-cell-value">${fmtNumero(listeners)}</span>
           </div>
-          ${celdaGanancia}
+          <div class="stats-cell earn">
+            <span class="stats-cell-label">💰 Ganancias</span>
+            <span class="stats-cell-value">${fmtDinero(ganancia)}</span>
+          </div>
         </div>
       </div>`;
   }).join('');
-
   const totalGanancias = totalOyentes * PAGO_POR_OYENTE;
   statsTotalListeners.textContent = fmtNumero(totalOyentes);
-  statsTotalEarnings.textContent  = esBasic ? '🔒 Plan Pro' : fmtDinero(totalGanancias);
+  statsTotalEarnings.textContent  = fmtDinero(totalGanancias);
   renderRetiroInfo();
 }
 
@@ -1122,14 +1098,14 @@ pintarGeneros('');
 pintarSubgeneros('');
 
 // ================================================================
-// 🎵 SUSCRIPCIÓN + PLANES
+// 🎵 SUSCRIPCIÓN (PLAN ÚNICO $1 MXN / 1 DÍA)
 // ================================================================
 
 function formatearFechaLarga(ts) {
   if (!ts) return '—';
   const d = ts.toDate ? ts.toDate() : new Date(ts);
   if (isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
+  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 function estaSuscripcionActiva() {
@@ -1141,40 +1117,13 @@ function estaSuscripcionActiva() {
   return fv.getTime() > Date.now();
 }
 
-function tipoPlanActual() {
-  if (!suscripcionActual) return null;
-  return suscripcionActual.tipo || 'pro';
-}
-function esPlanBasico() { return tipoPlanActual() === 'basic'; }
-function esPlanPro()    { return tipoPlanActual() === 'pro'; }
-
-function puedeSubirCancion() {
-  if (!estaSuscripcionActiva()) return { ok: false, motivo: 'sin_suscripcion' };
-  if (esPlanPro()) return { ok: true };
-  const subidas = (cancionesActuales || []).length;
-  if (subidas >= LIMITE_BASICO) return { ok: false, motivo: 'limite_basico_alcanzado' };
-  return { ok: true };
-}
-
-function actualizarBannerLimite() {
-  if (!limiteBanner) return;
-  const activa = estaSuscripcionActiva();
-  const esBasic = esPlanBasico();
-  const subidas = (cancionesActuales || []).length;
-  if (activa && esBasic && subidas >= LIMITE_BASICO) {
-    limiteBanner.classList.remove('hidden');
-  } else {
-    limiteBanner.classList.add('hidden');
-  }
-}
-
 function mostrarPaywall() {
   if (!paywall) return;
   paywall.classList.remove('hidden');
   paywall.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
   menuWrap?.classList.add('hidden');
-  setTimeout(renderPayPalBotones, 120);
+  setTimeout(renderPayPalBoton, 120);
 }
 function ocultarPaywall() {
   if (!paywall) return;
@@ -1201,31 +1150,14 @@ function aplicarEstadoSuscripcion() {
     ocultarPaywall();
     menuWrap?.classList.remove('hidden');
 
-    const esBasic = esPlanBasico();
-    const subidas = (cancionesActuales || []).length;
-    const icono   = esBasic ? '🎧' : '🚀';
-    const nombre  = esBasic ? 'OmegaBeats Basic' : 'Artista Pro';
-
     if (subBox) {
       subBox.classList.remove('hidden', 'inactiva');
-      if (subEstado)  subEstado.textContent  = `${icono} Plan ${nombre} activo`;
-      if (subDetalle) {
-        if (esBasic) {
-          subDetalle.textContent = `Canciones: ${subidas}/${LIMITE_BASICO} · Vence el ${formatearFechaLarga(suscripcionActual.fechaVencimiento)}`;
-        } else {
-          subDetalle.textContent = `Canciones ilimitadas · Vence el ${formatearFechaLarga(suscripcionActual.fechaVencimiento)}`;
-        }
-      }
+      if (subEstado)  subEstado.textContent  = '✅ Suscripción activa';
+      if (subDetalle) subDetalle.textContent = 'Vence el ' + formatearFechaLarga(suscripcionActual.fechaVencimiento);
       if (subBtn) {
         subBtn.onclick = null;
-        if (esBasic) {
-          subBtn.textContent = 'Actualizar a Pro 🚀';
-          subBtn.disabled = false;
-          subBtn.onclick = (e) => { e.preventDefault(); mostrarPaywall(); };
-        } else {
-          subBtn.textContent = '✅ Activa';
-          subBtn.disabled = true;
-        }
+        subBtn.textContent = '✅ Activa';
+        subBtn.disabled = true;
       }
     }
   } else {
@@ -1233,27 +1165,22 @@ function aplicarEstadoSuscripcion() {
     subBox?.classList.add('hidden');
   }
 
-  actualizarBannerLimite();
   renderRetiroInfo();
 }
 
-async function guardarSuscripcion(subscriptionId, tipo = 'pro') {
+async function guardarSuscripcion(subscriptionId) {
   if (!usuarioActual) return;
 
   const inicio = new Date();
-  const venc   = new Date(inicio);
-  venc.setFullYear(venc.getFullYear() + 1);
-
-  const esBasic = tipo === 'basic';
+  const venc   = new Date(inicio.getTime() + DURACION_DIAS * 24 * 60 * 60 * 1000);
 
   try {
     await setDoc(doc(db, COLECCION_SUSCRIPCIONES, usuarioActual.uid), {
       uid: usuarioActual.uid,
       email: usuarioActual.email,
       subscriptionId: subscriptionId || '',
-      planId: esBasic ? PLAN_ID_BASIC : PLAN_ID_PRO,
-      tipo: esBasic ? 'basic' : 'pro',
-      precio: esBasic ? PRECIO_BASIC : PRECIO_PRO,
+      planId: PLAN_ID,
+      precio: PRECIO_PLAN,
       moneda: 'MXN',
       fechaInicio: serverTimestamp(),
       fechaVencimiento: venc,
@@ -1261,71 +1188,43 @@ async function guardarSuscripcion(subscriptionId, tipo = 'pro') {
     });
 
     await cargarSuscripcion(usuarioActual.uid);
-
-    mostrarStatus(
-      esBasic
-        ? '🎧 ¡Plan OmegaBeats Basic activado! Ya puedes subir 1 canción'
-        : '🎉 ¡Plan Artista Pro activado! Ya puedes subir música ilimitada',
-      'ok'
-    );
+    mostrarStatus('🎉 ¡Suscripción activada! Tienes acceso completo por 24 horas', 'ok');
   } catch (e) {
     console.error('[Suscripción] Error al guardar:', e);
     mostrarStatus('Error al guardar suscripción: ' + e.message, 'error');
   }
 }
 
-function renderPayPalBotones() {
+function renderPayPalBoton() {
   if (paypalRenderizado) return;
   if (typeof window.paypal === 'undefined') {
-    setTimeout(renderPayPalBotones, 300);
+    setTimeout(renderPayPalBoton, 300);
     return;
   }
 
-  // BOTÓN BASIC
-  const contBasic = document.getElementById('paypal-button-basic');
-  if (contBasic && contBasic.dataset.rendered !== '1') {
-    contBasic.dataset.rendered = '1';
-    contBasic.innerHTML = '';
-    try {
-      window.paypal.Buttons({
-        style: { shape: 'pill', color: 'blue', layout: 'vertical', label: 'subscribe' },
-        createSubscription: function (data, actions) {
-          return actions.subscription.create({ plan_id: PLAN_ID_BASIC });
-        },
-        onApprove: async function (data) {
-          await guardarSuscripcion(data.subscriptionID, 'basic');
-        },
-        onError: function (err) {
-          console.error('[PayPal Basic] Error:', err);
-          mostrarStatus('Error con PayPal: ' + (err?.message || 'Intenta de nuevo'), 'error');
-        }
-      }).render('#paypal-button-basic');
-    } catch (e) { console.error('[PayPal Basic] Render falló:', e); }
-  }
+  const container = document.getElementById('paypal-button-container-P-8M095356XM2937120NK7BNAA');
+  if (!container || container.dataset.rendered === '1') return;
+  container.dataset.rendered = '1';
+  container.innerHTML = '';
 
-  // BOTÓN PRO
-  const contPro = document.getElementById('paypal-button-pro');
-  if (contPro && contPro.dataset.rendered !== '1') {
-    contPro.dataset.rendered = '1';
-    contPro.innerHTML = '';
-    try {
-      window.paypal.Buttons({
-        style: { shape: 'pill', color: 'black', layout: 'vertical', label: 'subscribe' },
-        createSubscription: function (data, actions) {
-          return actions.subscription.create({ plan_id: PLAN_ID_PRO });
-        },
-        onApprove: async function (data) {
-          await guardarSuscripcion(data.subscriptionID, 'pro');
-        },
-        onError: function (err) {
-          console.error('[PayPal Pro] Error:', err);
-          mostrarStatus('Error con PayPal: ' + (err?.message || 'Intenta de nuevo'), 'error');
-        }
-      }).render('#paypal-button-pro');
-    } catch (e) { console.error('[PayPal Pro] Render falló:', e); }
+  try {
+    window.paypal.Buttons({
+      style: { shape: 'pill', color: 'blue', layout: 'vertical', label: 'subscribe' },
+      createSubscription: function (data, actions) {
+        return actions.subscription.create({ plan_id: PLAN_ID });
+      },
+      onApprove: async function (data) {
+        await guardarSuscripcion(data.subscriptionID);
+      },
+      onError: function (err) {
+        console.error('[PayPal] Error:', err);
+        mostrarStatus('Error con PayPal: ' + (err?.message || 'Intenta de nuevo'), 'error');
+      }
+    }).render('#paypal-button-container-P-8M095356XM2937120NK7BNAA');
+    paypalRenderizado = true;
+  } catch (e) {
+    console.error('[PayPal] Render falló:', e);
   }
-
-  paypalRenderizado = true;
 }
 
 paywallLogout?.addEventListener('click', async () => {
@@ -1341,10 +1240,6 @@ paywallLogout?.addEventListener('click', async () => {
   }
 });
 
-upgradeBtn?.addEventListener('click', () => {
-  mostrarPaywall();
-});
-
 // ============ RETIROS ============
 function calcularTotalGanancias() {
   let total = 0;
@@ -1356,7 +1251,6 @@ function calcularTotalGanancias() {
 }
 function retiroDisponible() {
   if (!estaSuscripcionActiva()) return { disponible: false, razon: 'Necesitas una suscripción activa' };
-  if (esPlanBasico())            return { disponible: false, razon: 'Requiere plan Pro' };
   if (!suscripcionActual?.ultimoRetiro) return { disponible: true, proximo: 'Disponible ahora' };
   const ult = suscripcionActual.ultimoRetiro;
   const fechaUlt = ult.toDate ? ult.toDate() : new Date(ult);
@@ -1374,12 +1268,6 @@ function renderRetiroInfo() {
     retiroBtn.textContent = 'Solicitar retiro';
     return;
   }
-  if (esPlanBasico()) {
-    retiroInfo.textContent = '🔒 Requiere plan Pro';
-    retiroBtn.disabled = true;
-    retiroBtn.textContent = '🔒 Actualiza a Pro';
-    return;
-  }
   const estado = retiroDisponible();
   const total = calcularTotalGanancias();
   retiroInfo.textContent = `${estado.proximo} · Saldo: ${fmtDinero(total)}`;
@@ -1393,7 +1281,6 @@ function renderRetiroInfo() {
 }
 async function solicitarRetiro() {
   if (!usuarioActual || !estaSuscripcionActiva()) return;
-  if (esPlanBasico()) { mostrarStatus('Requiere plan Pro para retirar', 'error'); return; }
 
   const estado = retiroDisponible();
   if (!estado.disponible) { mostrarStatus(estado.proximo || 'Aún no puedes retirar', 'error'); return; }
@@ -1427,12 +1314,11 @@ retiroBtn?.addEventListener('click', solicitarRetiro);
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     await cargarSuscripcion(user.uid);
-    renderPayPalBotones();
+    renderPayPalBoton();
   } else {
     ocultarPaywall();
     suscripcionActual = null;
     subBox?.classList.add('hidden');
-    limiteBanner?.classList.add('hidden');
     if (retiroBtn)  retiroBtn.disabled = true;
     if (retiroInfo) retiroInfo.textContent = '—';
   }
