@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Subir Canción - Kerim Music</title>
   <link rel="stylesheet" href="styles.css">
+  <!-- PayPal SDK -->
+  <script src="https://www.paypal.com/sdk/js?client-id=AWMpHEjbn9JV-yZg1TGxTTYzH2EmXGdPFzcuN7U_fephJuTCp1QH96JIoyawwweolPzxe6R2b8OwdghD&vault=true&intent=subscription" data-sdk-integration-source="button-factory"></script>
 </head>
 <body>
 
@@ -38,6 +40,19 @@
       <span class="dot"></span>
       <span id="userEmail">Cargando...</span>
     </div>
+
+    <!-- ============ ESTADO DE SUSCRIPCIÓN ============ -->
+    <div id="subBox" class="sub-box hidden">
+      <div class="sub-info">
+        <span class="sub-icon" id="subIcon">🎵</span>
+        <div class="sub-text">
+          <strong id="subEstado">Cargando suscripción...</strong>
+          <small id="subDetalle">—</small>
+        </div>
+      </div>
+      <button type="button" id="subBtn" class="btn-sub">Suscribirme</button>
+    </div>
+    <!-- ============================================== -->
 
     <!-- Botón login si no está autenticado -->
     <button id="loginBtn" class="btn-google">
@@ -238,7 +253,6 @@
               <input type="text" id="editAlbum" placeholder="Ej: Nombre del Album">
             </div>
 
-            <!-- ===== COLABORADORES (EDIT) ===== -->
             <div class="form-group">
               <label for="collaboratorsEditContainer">3b. COLABORADORES</label>
               <div class="collaborators" id="collaboratorsEditContainer"></div>
@@ -247,7 +261,6 @@
               </button>
               <p class="hint">Opcional. Agrega uno o más colaboradores de la canción.</p>
             </div>
-            <!-- ===== FIN COLABORADORES ===== -->
 
             <div class="form-group">
               <label for="editAudio">4. LINK DE AUDIO (DROPBOX)</label>
@@ -291,10 +304,50 @@
           </div>
         </div>
 
+        <!-- ============ RETIRO DE GANANCIAS ============ -->
+        <div class="retiro-section">
+          <div class="retiro-header">
+            <span class="retiro-icon">🏦</span>
+            <div>
+              <strong>Solicitud de retiro</strong>
+              <small id="retiroInfo">—</small>
+            </div>
+          </div>
+          <button type="button" id="retiroBtn" class="btn-retiro" disabled>
+            Solicitar retiro
+          </button>
+        </div>
+        <!-- ============================================== -->
+
         <p class="stats-hint">💵 Tarifa: $0.20 MXN por oyente. Las cifras se actualizan automáticamente.</p>
       </div>
     </div>
     <!-- ============================================================== -->
+
+    <!-- ============ MODAL SUSCRIPCIÓN ============ -->
+    <div id="subModal" class="sub-modal hidden" aria-hidden="true">
+      <div class="sub-backdrop" data-close="1"></div>
+
+      <div class="sub-card" role="dialog" aria-modal="true" aria-labelledby="subHeading">
+        <button type="button" class="sub-close" data-close="1" title="Cerrar">✕</button>
+
+        <h2 id="subHeading" class="sub-heading">🎵 Suscripción de Artista</h2>
+        <p class="sub-price">$550 <span>MXN / año</span></p>
+
+        <ul class="sub-benefits">
+          <li>🎵 Sube toda la música que quieras</li>
+          <li>📊 Estadísticas de tus canciones</li>
+          <li>📈 Comportamiento diario de tus temas</li>
+          <li>💰 Consulta tus ganancias generadas</li>
+          <li>🏦 Solicita retiros cada 3 meses</li>
+        </ul>
+
+        <div id="paypal-button-container-P-88D20959NU409831ENK66MMI" class="paypal-wrap"></div>
+
+        <p class="sub-hint">Pago seguro procesado por PayPal. La suscripción se renueva automáticamente cada año.</p>
+      </div>
+    </div>
+    <!-- ============================================== -->
 
   </div>
 
