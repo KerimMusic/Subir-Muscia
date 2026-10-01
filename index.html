@@ -5,20 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Subir Canción - Kerim Music</title>
   <link rel="stylesheet" href="styles.css">
-  <!-- PayPal SDK (pago único, LIVE) -->
-  <script src="https://www.paypal.com/sdk/js?client-id=BAA67y5g3q2kH7fROADMt6yoMLblZIULQ6eja43XvANZhyWDQzm3vpNgicA5kzyGbJexLdm2Tiky4o2iyE&currency=MXN" data-sdk-integration-source="button-factory"></script>
 </head>
 <body>
 
+  <!-- ============ MENÚ HAMBURGUESA (SUPERIOR DERECHA) ============ -->
   <div id="menuWrap" class="menu-wrap hidden">
     <button id="menuBtn" class="menu-btn" type="button" aria-label="Abrir menú" aria-expanded="false">
-      <span></span><span></span><span></span>
+      <span></span>
+      <span></span>
+      <span></span>
     </button>
+
     <div id="menuDropdown" class="menu-dropdown hidden">
-      <button id="statsBtn" class="menu-item" type="button">📚 Mis canciones subidas</button>
-      <button id="logoutBtn" class="menu-item" type="button">🚪 Cerrar sesión</button>
+      <button id="statsBtn" class="menu-item" type="button">
+        📚 Mis canciones subidas
+      </button>
+      <button id="logoutBtn" class="menu-item" type="button">
+        🚪 Cerrar sesión
+      </button>
     </div>
   </div>
+  <!-- ============================================================= -->
 
   <div class="container">
     <div class="header">
@@ -26,22 +33,13 @@
       <p>Comparte tu musica al mundo</p>
     </div>
 
+    <!-- Estado del usuario -->
     <div id="userBox" class="user-box hidden">
       <span class="dot"></span>
       <span id="userEmail">Cargando...</span>
     </div>
 
-    <div id="subBox" class="sub-box hidden">
-      <div class="sub-info">
-        <span class="sub-icon">🎵</span>
-        <div class="sub-text">
-          <strong id="subEstado">—</strong>
-          <small id="subDetalle">—</small>
-        </div>
-      </div>
-      <button type="button" id="subBtn" class="btn-sub">Suscribirme</button>
-    </div>
-
+    <!-- Botón login si no está autenticado -->
     <button id="loginBtn" class="btn-google">
       <svg width="18" height="18" viewBox="0 0 24 24">
         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -52,68 +50,86 @@
       Iniciar sesión con Google
     </button>
 
+    <!-- Formulario -->
     <form id="formCancion" class="hidden">
       <div class="form-group">
         <label for="artista">1. Nombre del artista</label>
         <input type="text" id="artista" placeholder="Ej: Artista" required>
       </div>
+
       <div class="form-group">
         <label for="titulo">2. Título de la canción</label>
         <input type="text" id="titulo" placeholder="Ej: Nombre de la cancion" required>
       </div>
+
       <div class="form-group">
         <label for="album">3. Nombre del álbum</label>
         <input type="text" id="album" placeholder="Ej: Nombre del Album">
       </div>
 
+      <!-- ===== COLABORADORES (FORM) ===== -->
       <div class="form-group">
-        <label>3b. Colaboradores</label>
+        <label for="collaboratorsContainer">3b. Colaboradores</label>
         <div class="collaborators" id="collaboratorsContainer"></div>
-        <button type="button" id="addCollaboratorBtn" class="btn-add-collab">
+        <button type="button" id="addCollaboratorBtn" class="btn-add-collab" aria-label="Agregar colaborador">
           <span class="plus-icon">+</span> Agregar colaborador
         </button>
         <p class="hint">Opcional. Agrega uno o más colaboradores de la canción.</p>
       </div>
+      <!-- ===== FIN COLABORADORES ===== -->
 
+      <!-- ===== SELECTOR DE GÉNERO ===== -->
       <div class="form-group">
-        <label>4. Género musical</label>
+        <label for="genreToggle">4. Género musical</label>
+
         <div class="genre-select" id="genreSelect">
           <button type="button" id="genreToggle" class="genre-toggle"
                   aria-haspopup="listbox" aria-expanded="false" aria-controls="genrePanel">
             <span id="genreValue" class="genre-value placeholder">Selecciona un género</span>
             <span class="genre-arrow" aria-hidden="true">▾</span>
           </button>
+
           <div id="genrePanel" class="genre-panel hidden">
             <div class="genre-search-wrap">
               <input type="text" id="genreSearch" class="genre-search"
-                     placeholder="🔍 Buscar género..." autocomplete="off">
+                     placeholder="🔍 Buscar género..." autocomplete="off"
+                     aria-label="Buscar género" aria-controls="genreList">
             </div>
-            <div id="genreList" class="genre-list" role="listbox"></div>
+            <div id="genreList" class="genre-list" role="listbox" aria-label="Lista de géneros"></div>
             <p id="genreEmpty" class="genre-empty hidden">No se encontraron géneros</p>
           </div>
         </div>
+
         <input type="hidden" id="genero" name="genero" value="">
+        <p class="hint">Opcional. Abre la lista y usa el buscador para encontrar tu género.</p>
       </div>
 
+      <!-- ===== SUBSELECTOR: SOLO APARECE SI ELIGES "Regional Mexicano" ===== -->
       <div class="form-group hidden" id="subgenreGroup">
-        <label>4b. Subgénero (Regional Mexicano)</label>
+        <label for="subgenreToggle">4b. Subgénero (Regional Mexicano)</label>
+
         <div class="genre-select" id="subgenreSelect">
           <button type="button" id="subgenreToggle" class="genre-toggle"
                   aria-haspopup="listbox" aria-expanded="false" aria-controls="subgenrePanel">
             <span id="subgenreValue" class="genre-value placeholder">Selecciona un subgénero</span>
             <span class="genre-arrow" aria-hidden="true">▾</span>
           </button>
+
           <div id="subgenrePanel" class="genre-panel hidden">
             <div class="genre-search-wrap">
               <input type="text" id="subgenreSearch" class="genre-search"
-                     placeholder="🔍 Buscar subgénero..." autocomplete="off">
+                     placeholder="🔍 Buscar subgénero..." autocomplete="off"
+                     aria-label="Buscar subgénero" aria-controls="subgenreList">
             </div>
-            <div id="subgenreList" class="genre-list" role="listbox"></div>
+            <div id="subgenreList" class="genre-list" role="listbox" aria-label="Lista de subgéneros"></div>
             <p id="subgenreEmpty" class="genre-empty hidden">No se encontraron subgéneros</p>
           </div>
         </div>
+
         <input type="hidden" id="subgenero" name="subgenero" value="">
+        <p class="hint">Elige el subgénero específico (ej: Corridos Tumbados, Banda, Sierreño...).</p>
       </div>
+      <!-- ===== FIN SUBSELECTOR ===== -->
 
       <div class="form-group">
         <label for="audio">5. Link de audio (Dropbox)</label>
@@ -127,6 +143,7 @@
         <p class="hint">Opcional. Si lo dejas vacío se mostrará una imagen por defecto.</p>
       </div>
 
+      <!-- Vista previa -->
       <div id="preview" class="preview">
         <img id="previewImg" src="" alt="">
         <div class="preview-info">
@@ -141,49 +158,72 @@
 
     <div id="status" class="status"></div>
 
+    <!-- ================= HISTORIAL ================= -->
     <section id="historySection" class="history hidden">
       <div class="history-header">
         <h2>📚 Mis canciones subidas</h2>
         <span id="historyCount" class="badge">0</span>
       </div>
-      <div id="historyList" class="history-list"></div>
-      <p id="historyEmpty" class="history-empty hidden">Todavía no has subido ninguna canción.</p>
-    </section>
 
+      <div id="historyList" class="history-list"></div>
+
+      <p id="historyEmpty" class="history-empty hidden">
+        Todavía no has subido ninguna canción.
+      </p>
+    </section>
+    <!-- ============================================= -->
+
+    <!-- ================= MODAL REPRODUCTOR ================= -->
     <div id="playerModal" class="player-modal hidden" aria-hidden="true">
       <div class="player-backdrop" data-close="1"></div>
-      <div class="player-card" role="dialog" aria-modal="true">
+
+      <div class="player-card" role="dialog" aria-modal="true" aria-labelledby="playerTitle">
         <button type="button" class="player-close" data-close="1" title="Cerrar">✕</button>
-        <div class="player-cover"><img id="playerImg" src="" alt=""></div>
+
+        <div class="player-cover">
+          <img id="playerImg" src="" alt="">
+        </div>
+
         <div class="player-meta">
           <strong id="playerTitle">—</strong>
           <small id="playerArtist">—</small>
         </div>
+
         <div class="player-progress">
           <span id="playerCurrent">0:00</span>
           <input type="range" id="playerSeek" min="0" max="1000" value="0" step="1">
           <span id="playerDuration">0:00</span>
         </div>
+
         <div class="player-controls">
           <button type="button" id="playerRewind" class="player-btn" title="-10s">⏪</button>
           <button type="button" id="playerPlay" class="player-btn player-btn-main" title="Reproducir">▶</button>
           <button type="button" id="playerForward" class="player-btn" title="+10s">⏩</button>
         </div>
+
         <div class="player-volume">
           <span>🔊</span>
           <input type="range" id="playerVol" min="0" max="1" step="0.01" value="1">
         </div>
+
         <p class="player-hint">Vista previa — así se verá y sonará en el reproductor.</p>
       </div>
     </div>
+    <!-- ====================================================== -->
 
+    <!-- ================= MODAL EDITAR ================= -->
     <div id="editModal" class="edit-modal hidden" aria-hidden="true">
       <div class="edit-backdrop" data-close="1"></div>
-      <div class="edit-card" role="dialog" aria-modal="true">
+
+      <div class="edit-card" role="dialog" aria-modal="true" aria-labelledby="editHeading">
         <button type="button" class="edit-close" data-close="1" title="Cerrar">✕</button>
-        <div class="edit-cover"><img id="editImg" src="" alt=""></div>
+
+        <div class="edit-cover">
+          <img id="editImg" src="" alt="">
+        </div>
+
         <div class="edit-content">
-          <h2 class="edit-heading">EDITAR TU MUSICA</h2>
+          <h2 id="editHeading" class="edit-heading">EDITAR TU MUSICA</h2>
           <form id="editForm" class="edit-form">
             <div class="form-group">
               <label for="editArtista">1. NOMBRE DEL ARTISTA</label>
@@ -197,13 +237,18 @@
               <label for="editAlbum">3. NOMBRE DEL ÁLBUM</label>
               <input type="text" id="editAlbum" placeholder="Ej: Nombre del Album">
             </div>
+
+            <!-- ===== COLABORADORES (EDIT) ===== -->
             <div class="form-group">
-              <label>3b. COLABORADORES</label>
+              <label for="collaboratorsEditContainer">3b. COLABORADORES</label>
               <div class="collaborators" id="collaboratorsEditContainer"></div>
-              <button type="button" id="addCollaboratorBtnEdit" class="btn-add-collab">
+              <button type="button" id="addCollaboratorBtnEdit" class="btn-add-collab" aria-label="Agregar colaborador">
                 <span class="plus-icon">+</span> Agregar colaborador
               </button>
+              <p class="hint">Opcional. Agrega uno o más colaboradores de la canción.</p>
             </div>
+            <!-- ===== FIN COLABORADORES ===== -->
+
             <div class="form-group">
               <label for="editAudio">4. LINK DE AUDIO (DROPBOX)</label>
               <input type="url" id="editAudio" placeholder="https://www.dropbox.com/s/.../cancion.mp3?dl=0" required>
@@ -217,15 +262,24 @@
         </div>
       </div>
     </div>
+    <!-- ====================================================== -->
 
+    <!-- ================= MODAL ESTADÍSTICAS ================= -->
     <div id="statsModal" class="stats-modal hidden" aria-hidden="true">
       <div class="stats-backdrop" data-close="1"></div>
-      <div class="stats-card" role="dialog" aria-modal="true">
-        <button type="button" class="stats-close" data-close="1" title="Cerrar">✕</button>
-        <h2 class="stats-heading">📚 Mis canciones subidas</h2>
-        <div id="statsList" class="stats-list"></div>
-        <p id="statsEmpty" class="stats-empty hidden">Todavía no has subido ninguna canción.</p>
 
+      <div class="stats-card" role="dialog" aria-modal="true" aria-labelledby="statsHeading">
+        <button type="button" class="stats-close" data-close="1" title="Cerrar">✕</button>
+
+        <h2 id="statsHeading" class="stats-heading">📚 Mis canciones subidas</h2>
+
+        <div id="statsList" class="stats-list"></div>
+
+        <p id="statsEmpty" class="stats-empty hidden">
+          Todavía no has subido ninguna canción.
+        </p>
+
+        <!-- Resumen general -->
         <div id="statsSummary" class="stats-summary">
           <div class="stats-summary-item">
             <span class="stats-summary-label">👥 Total oyentes</span>
@@ -237,50 +291,11 @@
           </div>
         </div>
 
-        <div class="retiro-section">
-          <div class="retiro-header">
-            <span class="retiro-icon">🏦</span>
-            <div>
-              <strong>Solicitud de retiro</strong>
-              <small id="retiroInfo">—</small>
-            </div>
-          </div>
-          <button type="button" id="retiroBtn" class="btn-retiro" disabled>Solicitar retiro</button>
-        </div>
-
         <p class="stats-hint">💵 Tarifa: $0.20 MXN por oyente. Las cifras se actualizan automáticamente.</p>
       </div>
     </div>
+    <!-- ============================================================== -->
 
-  </div>
-
-  <!-- ============ PAYWALL (pago único) ============ -->
-  <div id="paywall" class="paywall hidden" aria-hidden="true">
-    <div class="paywall-card">
-      <div class="paywall-brand">
-        <h1>🎵 Kerim Music</h1>
-        <p>PLATAFORMA PARA ARTISTAS</p>
-      </div>
-
-      <h2 class="paywall-title">Activa tu acceso</h2>
-      <p class="paywall-subtitle">Pago único. Acceso completo por 24 horas.</p>
-
-      <p class="paywall-price">$1 <span>MXN / 24 horas</span></p>
-
-      <ul class="paywall-benefits">
-        <li>🎵 Sube toda la música que quieras</li>
-        <li>📊 Estadísticas de tus canciones</li>
-        <li>📈 Comportamiento diario de tus temas</li>
-        <li>💰 Consulta tus ganancias generadas</li>
-        <li>⏱️ Acceso completo por 24 horas</li>
-      </ul>
-
-      <div id="paypal-button-container" class="paywall-paypal"></div>
-
-      <p class="paywall-hint">🔒 Pago único procesado por PayPal</p>
-
-      <button type="button" id="paywallLogout" class="paywall-logout">🚪 Cerrar sesión</button>
-    </div>
   </div>
 
   <script type="module" src="script.js"></script>
