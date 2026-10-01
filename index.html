@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Subir Canción - Kerim Music</title>
   <link rel="stylesheet" href="styles.css">
-  <!-- PayPal SDK (LIVE) -->
-  <script src="https://www.paypal.com/sdk/js?client-id=BAA67y5g3q2kH7fROADMt6yoMLblZIULQ6eja43XvANZhyWDQzm3vpNgicA5kzyGbJexLdm2Tiky4o2iyE&vault=true&intent=subscription" data-sdk-integration-source="button-factory"></script>
+  <!-- PayPal SDK (pago único, LIVE) -->
+  <script src="https://www.paypal.com/sdk/js?client-id=BAA67y5g3q2kH7fROADMt6yoMLblZIULQ6eja43XvANZhyWDQzm3vpNgicA5kzyGbJexLdm2Tiky4o2iyE&currency=MXN" data-sdk-integration-source="button-factory"></script>
 </head>
 <body>
 
@@ -254,7 +254,7 @@
 
   </div>
 
-  <!-- ============ PAYWALL ============ -->
+  <!-- ============ PAYWALL (pago único) ============ -->
   <div id="paywall" class="paywall hidden" aria-hidden="true">
     <div class="paywall-card">
       <div class="paywall-brand">
@@ -262,10 +262,10 @@
         <p>PLATAFORMA PARA ARTISTAS</p>
       </div>
 
-      <h2 class="paywall-title">Activa tu suscripción</h2>
-      <p class="paywall-subtitle">Acceso completo a la plataforma por 24 horas.</p>
+      <h2 class="paywall-title">Activa tu acceso</h2>
+      <p class="paywall-subtitle">Pago único. Acceso completo por 24 horas.</p>
 
-      <p class="paywall-price">$1 <span>MXN / día</span></p>
+      <p class="paywall-price">$1 <span>MXN / 24 horas</span></p>
 
       <ul class="paywall-benefits">
         <li>🎵 Sube toda la música que quieras</li>
@@ -275,9 +275,9 @@
         <li>⏱️ Acceso completo por 24 horas</li>
       </ul>
 
-      <div id="paypal-button-container-P-68D98156KX953822UNK7KYIQ" class="paywall-paypal"></div>
+      <div id="paypal-button-container" class="paywall-paypal"></div>
 
-      <p class="paywall-hint">🔒 Pago seguro procesado por PayPal</p>
+      <p class="paywall-hint">🔒 Pago único procesado por PayPal</p>
 
       <button type="button" id="paywallLogout" class="paywall-logout">🚪 Cerrar sesión</button>
     </div>
