@@ -140,7 +140,7 @@ const statsEmpty          = document.getElementById('statsEmpty');
 const statsTotalListeners = document.getElementById('statsTotalListeners');
 const statsTotalEarnings  = document.getElementById('statsTotalEarnings');
 
-// 🆕 Colaboradores
+// Colaboradores
 const collabContainerForm = document.getElementById('collaboratorsContainer');
 const collabContainerEdit = document.getElementById('collaboratorsEditContainer');
 const addCollabBtnForm    = document.getElementById('addCollaboratorBtn');
@@ -220,10 +220,8 @@ function normalizarTitulo(t) {
 }
 
 // ==========================================================
-// 👥 COLABORADORES (NUEVA FUNCIÓN)
+// 👥 COLABORADORES
 // ==========================================================
-
-// Crea una fila de input para un colaborador
 function crearFilaColaborador(valor = '') {
   const row = document.createElement('div');
   row.className = 'collaborator-row';
@@ -241,13 +239,11 @@ function crearFilaColaborador(valor = '') {
   return row;
 }
 
-// Agrega una fila vacía al contenedor
 function agregarColaboradorAlContenedor(contenedor) {
   if (!contenedor) return;
   contenedor.appendChild(crearFilaColaborador(''));
 }
 
-// Obtiene todos los colaboradores del contenedor (sin vacíos)
 function obtenerColaboradoresDe(contenedor) {
   if (!contenedor) return [];
   return Array.from(contenedor.querySelectorAll('.collaborator-input'))
@@ -255,8 +251,6 @@ function obtenerColaboradoresDe(contenedor) {
     .filter(v => v !== '');
 }
 
-// Carga colaboradores en el contenedor.
-// Si la lista está vacía, deja una fila vacía por defecto.
 function cargarColaboradoresEn(contenedor, colaboradores) {
   if (!contenedor) return;
   contenedor.innerHTML = '';
@@ -268,30 +262,23 @@ function cargarColaboradoresEn(contenedor, colaboradores) {
   }
 }
 
-// Botón (+) del formulario principal
 addCollabBtnForm?.addEventListener('click', () => {
   agregarColaboradorAlContenedor(collabContainerForm);
   const inputs = collabContainerForm.querySelectorAll('.collaborator-input');
   inputs[inputs.length - 1]?.focus();
 });
 
-// Botón (+) del modal de editar
 addCollabBtnEdit?.addEventListener('click', () => {
   agregarColaboradorAlContenedor(collabContainerEdit);
   const inputs = collabContainerEdit.querySelectorAll('.collaborator-input');
   inputs[inputs.length - 1]?.focus();
 });
 
-// Inicializar con una fila vacía en el formulario principal
 cargarColaboradoresEn(collabContainerForm, []);
 cargarColaboradoresEn(collabContainerEdit, []);
 
 // ==========================================================
 // 🔧 EXTRAER OYENTES
-// Soporta dos formatos:
-//   1) Número directo:  data.oyentes = 42
-//   2) Mapa/objeto:     data.oyentes = { uid1: fecha1, uid2: fecha2, ... }
-//      → en este caso se cuenta cuántas claves tiene (oyentes únicos)
 // ==========================================================
 function extraerOyentes(data) {
   if (!data) return 0;
@@ -328,7 +315,7 @@ function extraerOyentes(data) {
 }
 
 // ==========================================================
-// 🔧 OBTENER STATS: busca por varios campos de la canción
+// 🔧 OBTENER STATS
 // ==========================================================
 function obtenerStatsDeCancion(cancion) {
   if (!cancion) return { oyentes: 0, docId: null };
@@ -432,7 +419,7 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // ===================
-// Vista previa dinámica (formulario)
+// Vista previa dinámica
 // ===================
 ['artista', 'titulo', 'imagen', 'album'].forEach(id => {
   document.getElementById(id).addEventListener('input', actualizarPreview);
@@ -497,7 +484,7 @@ function escucharHistorial(uid) {
 }
 
 // ===================
-// OYENTES_CANCIONES (SOLO LECTURA)
+// OYENTES_CANCIONES
 // ===================
 function escucharOyentesCanciones() {
   if (unsubscribeOyentes) unsubscribeOyentes();
@@ -537,7 +524,6 @@ function escucharOyentesCanciones() {
   });
 }
 
-// Asegura que exista el registro en oyentes_canciones (solo si NO existe)
 async function asegurarRegistroOyentes(titulo) {
   if (!titulo) return;
 
@@ -558,7 +544,7 @@ async function asegurarRegistroOyentes(titulo) {
 }
 
 // ==========================================================
-// 🆕 SINCRONIZAR OYENTES AL EDITAR UNA CANCIÓN
+// 🆕 SINCRONIZAR OYENTES AL EDITAR
 // ==========================================================
 async function sincronizarOyentesAlEditar(tituloAntiguo, tituloNuevo) {
   if (!tituloNuevo) return;
@@ -626,7 +612,6 @@ async function sincronizarOyentesAlEditar(tituloAntiguo, tituloNuevo) {
   }
 }
 
-// Elimina el registro de oyentes_canciones asociado a una canción
 async function eliminarRegistroOyentes(cancion) {
   if (!cancion || !cancion.titulo) return;
 
@@ -749,6 +734,13 @@ form.addEventListener('submit', async (e) => {
     return;
   }
 
+  // 🔒 Verificar suscripción activa (si el bloqueo está aplicado)
+  if (typeof estaSuscripcionActiva === 'function' && !estaSuscripcionActiva()) {
+    mostrarStatus('Necesitas una suscripción activa para subir música', 'error');
+    if (typeof abrirSubModal === 'function') abrirSubModal();
+    return;
+  }
+
   const artista   = document.getElementById('artista').value.trim();
   const titulo    = document.getElementById('titulo').value.trim();
   const album     = document.getElementById('album').value.trim();
@@ -756,7 +748,7 @@ form.addEventListener('submit', async (e) => {
   const subgenero = (document.getElementById('subgenero')?.value || '').trim();
   const audioRaw  = document.getElementById('audio').value.trim();
   const imagenRaw = document.getElementById('imagen').value.trim();
-  const colaboradores = obtenerColaboradoresDe(collabContainerForm); // 🆕
+  const colaboradores = obtenerColaboradoresDe(collabContainerForm);
 
   if (!artista || !titulo || !audioRaw) {
     mostrarStatus('Completa artista, título y audio', 'error');
@@ -789,7 +781,7 @@ form.addEventListener('submit', async (e) => {
       album:     album,
       genero:    genero,
       subgenero: subgenero,
-      colaboradores: colaboradores, // 🆕
+      colaboradores: colaboradores,
       audioUrl:  audioUrl,
       imagenUrl: imagenUrl,
       origen:    'dropbox',
@@ -804,7 +796,7 @@ form.addEventListener('submit', async (e) => {
 
     form.reset();
     preview.classList.remove('show');
-    cargarColaboradoresEn(collabContainerForm, []); // 🆕
+    cargarColaboradoresEn(collabContainerForm, []);
 
     const albumSpan = document.querySelector('.preview-info .Album');
     if (albumSpan) albumSpan.textContent = 'Reggeton 1';
@@ -958,7 +950,6 @@ function abrirEditModal(cancion) {
   editAudio.value   = revertirDropbox(cancion.audioUrl || '');
   editImagen.value  = revertirDropbox(cancion.imagenUrl || '');
 
-  // 🆕 Cargar colaboradores existentes
   cargarColaboradoresEn(collabContainerEdit, cancion.colaboradores || []);
 
   editImg.src = cancion.imagenUrl || PLACEHOLDER;
@@ -975,7 +966,7 @@ function cerrarEditModal() {
   document.body.style.overflow = '';
   editandoId = null;
   editForm.reset();
-  cargarColaboradoresEn(collabContainerEdit, []); // 🆕
+  cargarColaboradoresEn(collabContainerEdit, []);
 }
 
 editModal.addEventListener('click', (e) => {
@@ -1001,7 +992,7 @@ editForm.addEventListener('submit', async (e) => {
   const album     = editAlbum.value.trim();
   const audioRaw  = editAudio.value.trim();
   const imagenRaw = editImagen.value.trim();
-  const colaboradores = obtenerColaboradoresDe(collabContainerEdit); // 🆕
+  const colaboradores = obtenerColaboradoresDe(collabContainerEdit);
 
   if (!artista || !titulo || !audioRaw) {
     mostrarStatus('Completa artista, título y audio', 'error');
@@ -1026,7 +1017,7 @@ editForm.addEventListener('submit', async (e) => {
       artista:   artista,
       titulo:    titulo,
       album:     album,
-      colaboradores: colaboradores, // 🆕
+      colaboradores: colaboradores,
       audioUrl:  audioUrl,
       imagenUrl: imagenUrl,
       fechaEdicion: serverTimestamp()
@@ -1057,7 +1048,7 @@ editImagen.addEventListener('input', () => {
 });
 
 // ================================================================
-// MODAL ESTADÍSTICAS — Oyentes + Ganancias ($0.20 MXN por oyente)
+// MODAL ESTADÍSTICAS
 // ================================================================
 function renderStats(canciones) {
   const lista = canciones || cancionesActuales || [];
@@ -1067,6 +1058,7 @@ function renderStats(canciones) {
     statsEmpty.classList.remove('hidden');
     statsTotalListeners.textContent = '0';
     statsTotalEarnings.textContent  = fmtDinero(0);
+    if (typeof renderRetiroInfo === 'function') renderRetiroInfo();
     return;
   }
 
@@ -1111,6 +1103,8 @@ function renderStats(canciones) {
 
   statsTotalListeners.textContent = fmtNumero(totalOyentes);
   statsTotalEarnings.textContent  = fmtDinero(totalGanancias);
+
+  if (typeof renderRetiroInfo === 'function') renderRetiroInfo();
 }
 
 function abrirStatsModal() {
@@ -1145,7 +1139,7 @@ statsBtn.addEventListener('click', () => {
 });
 
 // ================================================================
-// MENÚ HAMBURGUESA + CERRAR SESIÓN
+// MENÚ HAMBURGUESA
 // ================================================================
 function abrirMenu() {
   if (!menuDropdown || !menuBtn) return;
@@ -1199,10 +1193,9 @@ logoutBtn.addEventListener('click', async () => {
 });
 
 // ================================================================
-// SELECTOR DE GÉNERO MUSICAL CON BUSCADOR
+// SELECTOR DE GÉNERO MUSICAL
 // ================================================================
 const GENEROS_RAW = [
-  // ===== CATEGORÍAS PRINCIPALES =====
   "Regional Mexicano",
   "Reggaetón",
   "Pop",
@@ -1230,57 +1223,39 @@ const GENEROS_RAW = [
   "Instrumental",
   "Soundtrack",
   "Otros",
-
-  // ===== POP =====
   "Art Pop", "Dance Pop", "Electropop", "Synth-pop", "Indie Pop", "Dream Pop",
   "Bedroom Pop", "Hyperpop", "Teen Pop", "Bubblegum Pop", "Power Pop",
   "C-Pop", "Latin Pop", "Europop", "Britpop", "Sophisti-Pop", "Baroque Pop",
   "Sunshine Pop", "Chamber Pop", "Experimental Pop",
-
-  // ===== ROCK =====
   "Alternative Rock", "Indie Rock", "Hard Rock", "Soft Rock", "Classic Rock",
   "Progressive Rock", "Psychedelic Rock", "Garage Rock", "Blues Rock", "Folk Rock",
   "Southern Rock", "Surf Rock", "Glam Rock", "Art Rock", "Experimental Rock", "Post-Rock",
   "Math Rock", "Noise Rock", "Space Rock", "Gothic Rock", "Industrial Rock",
   "Christian Rock", "Grunge", "Brit Rock", "Emo", "Shoegaze", "Dream Rock",
-
-  // ===== METAL =====
   "Heavy Metal", "Thrash Metal", "Death Metal", "Black Metal", "Doom Metal", "Power Metal",
   "Speed Metal", "Progressive Metal", "Symphonic Metal", "Folk Metal", "Groove Metal",
   "Nu Metal", "Alternative Metal", "Industrial Metal", "Gothic Metal", "Metalcore",
   "Deathcore", "Grindcore", "Sludge Metal", "Stoner Metal", "Funeral Doom",
   "Melodic Death Metal", "Technical Death Metal", "Viking Metal", "Pagan Metal",
   "Post-Metal", "Djent",
-
-  // ===== PUNK =====
   "Punk Rock", "Hardcore Punk", "Post-Punk", "Pop Punk", "Skate Punk", "Street Punk",
   "Anarcho-Punk", "Crust Punk", "D-Beat", "Garage Punk", "Riot Grrrl", "Emo Punk",
   "Ska Punk", "Celtic Punk", "Folk Punk", "Horror Punk", "Psychobilly",
-
-  // ===== HIP-HOP / RAP =====
   "Hip-Hop", "Rap", "Trap", "Drill", "Gangsta Rap", "Boom Bap", "Conscious Hip-Hop",
   "Underground Hip-Hop", "Alternative Hip-Hop", "Old School Hip-Hop", "West Coast Hip-Hop",
   "East Coast Hip-Hop", "Southern Hip-Hop", "Crunk", "Dirty South", "G-Funk", "Cloud Rap",
   "Emo Rap", "Jazz Rap", "Experimental Hip-Hop", "Hardcore Hip-Hop", "Latin Hip-Hop",
   "Chicano Rap", "UK Hip-Hop", "UK Drill", "Grime", "Freestyle Rap", "Trap Latino",
-
-  // ===== R&B / SOUL =====
   "R&B", "Contemporary R&B", "Alternative R&B", "Neo Soul", "Soul", "Classic Soul",
   "Southern Soul", "Motown", "Funk", "P-Funk", "Quiet Storm", "New Jack Swing",
   "Blue-Eyed Soul", "Psychedelic Soul", "Gospel Soul", "Soul Jazz",
-
-  // ===== BLUES =====
   "Blues", "Delta Blues", "Chicago Blues", "Texas Blues", "Electric Blues",
   "Acoustic Blues", "Country Blues", "Piedmont Blues", "British Blues", "Jump Blues",
   "Swamp Blues", "Gospel Blues", "Soul Blues",
-
-  // ===== JAZZ =====
   "Jazz", "Bebop", "Hard Bop", "Cool Jazz", "Free Jazz", "Fusion", "Jazz Fusion",
   "Smooth Jazz", "Acid Jazz", "Latin Jazz", "Afro-Cuban Jazz", "Gypsy Jazz", "Swing",
   "Big Band", "Dixieland", "Ragtime", "Modal Jazz", "Avant-Garde Jazz", "Jazz Funk",
   "Nu Jazz", "Vocal Jazz", "Contemporary Jazz",
-
-  // ===== ELECTRÓNICA =====
   "Electronic", "EDM", "House", "Deep House", "Tech House", "Progressive House",
   "Electro House", "Future House", "Tropical House", "Bass House", "Acid House",
   "Chicago House", "French House", "Minimal House", "Techno", "Detroit Techno",
@@ -1290,100 +1265,62 @@ const GENEROS_RAW = [
   "Drum & Bass", "Jungle", "Liquid Drum & Bass", "Dubstep", "Brostep", "UK Garage",
   "Future Bass", "Synthwave", "Vaporwave", "Retrowave", "Lo-Fi", "Chillwave", "Glitch",
   "Industrial", "EBM", "Hardcore", "Gabber", "Hardstyle", "Future Rave",
-
-  // ===== REGGAE =====
   "Reggae", "Roots Reggae", "Dancehall", "Dub", "Rocksteady", "Ska", "Lovers Rock",
   "Ragga", "Reggae Fusion", "Digital Reggae", "Dub Poetry",
-
-  // ===== MÚSICA LATINA =====
   "Música Latina", "Latin Urban", "Salsa", "Salsa Romántica", "Salsa Dura",
   "Son Cubano", "Bachata", "Merengue", "Cumbia", "Cumbia Mexicana", "Cumbia Colombiana",
   "Cumbia Villera", "Cumbia Peruana", "Cumbia Andina", "Vallenato", "Bolero", "Mambo",
   "Cha-cha-chá", "Rumba", "Guaracha", "Danzón", "Timba", "Latin Rock", "Latin Soul",
   "Tango", "Milonga", "Bossa Nova", "Samba", "MPB", "Forró", "Axé",
   "Frevo", "Sertanejo",
-
-  // ===== REGIONAL MEXICANO =====
   "Mariachi", "Ranchera", "Norteño", "Norteño-Banda", "Banda", "Banda Sinaloense",
   "Corridos", "Corrido Tradicional", "Corrido Tumbado", "Corrido Bélico",
   "Corridos Alterados", "Tejano", "Grupero", "Duranguense", "Sierreño", "Huapango",
   "Son Jarocho", "Son Huasteco", "Música de Tierra Caliente", "Música Norteña",
   "Cumbia Norteña", "Bolero Ranchero", "Mariachi Moderno",
-
-  // ===== COUNTRY =====
   "Country", "Country Pop", "Country Rock", "Traditional Country", "Outlaw Country",
   "Alternative Country", "Bluegrass", "Americana", "Honky Tonk", "Country Blues",
   "Western Swing", "Nashville Sound", "Red Dirt", "Contemporary Country", "Country Folk",
-
-  // ===== FOLK =====
   "Folk", "Contemporary Folk", "Traditional Folk", "Celtic Folk", "Irish Folk",
   "Scottish Folk", "English Folk", "American Folk", "Appalachian", "Nordic Folk",
   "Balkan Folk", "Slavic Folk", "Gypsy / Romani", "Klezmer", "Neofolk", "World Folk",
   "Folk Fusion",
-
-  // ===== CLÁSICA =====
   "Música Clásica", "Medieval", "Renacimiento", "Barroco", "Clasicismo", "Romanticismo",
   "Impresionismo", "Modernismo", "Música Contemporánea", "Música de Cámara", "Sinfónica",
   "Coral", "Ópera", "Opereta", "Oratorio", "Cantata", "Concierto", "Sonata", "Sinfonía",
   "Música Minimalista", "Música Experimental",
-
-  // ===== CRISTIANA / GOSPEL =====
   "Gospel", "Christian", "Christian Pop", "Christian Hip-Hop", "Christian Metal",
   "Worship", "Contemporary Christian", "Spiritual", "Hymns", "Islamic Music", "Nasheed",
   "Jewish Music", "Buddhist Music", "Hindu Devotional", "Mantra",
-
-  // ===== AFRO =====
   "Afrobeat", "Afrobeats", "Afro-Pop", "Amapiano", "Highlife", "Hiplife", "Kizomba",
   "Kuduro", "Kwaito", "Gqom", "Mbalax", "Juju", "Fuji", "Makossa", "Soukous",
   "Congolese Rumba", "Benga", "Bikutsi", "Chimurenga", "Jit", "Marrabenta", "Mbube",
   "Marabi", "Township Jazz", "Rai", "Gnawa", "Desert Blues", "Maloya", "Sega", "Cape Jazz",
-
-  // ===== CARIBEÑA =====
   "Calypso", "Soca", "Zouk", "Kompa", "Son", "Mento", "Steelpan", "Bouyon", "Punta",
-
-  // ===== BRASILEÑA =====
   "Pagode", "Choro", "Tropicália", "Maracatu", "Baião", "Carimbó", "Lambada",
   "Música Caipira", "Samba-Reggae", "Funk Carioca",
-
-  // ===== ASIÁTICA =====
   "K-Rock", "K-Hip-Hop", "J-Rock", "J-Hip-Hop", "City Pop", "Enka", "Shibuya-kei",
   "Mandopop", "Cantopop", "Bollywood", "Bhangra", "Qawwali", "Ghazal", "Carnatic",
   "Hindustani Classical", "Raga", "Dhrupad", "Gamelan", "Dangdut", "Thai Pop", "V-Pop",
   "Pinoy Pop", "Persian Pop", "Arabic Pop", "Turkish Pop",
-
-  // ===== ÁRABE / MEDIO ORIENTE =====
   "Arabic Music", "Shaabi", "Dabke", "Khaleeji", "Egyptian Pop", "Lebanese Pop",
   "Iraqi Music", "Persian Music", "Turkish Music", "Kurdish Music", "Armenian Music",
   "Israeli Music", "Mizrahi", "Andalusian Music", "Oud Music", "Traditional Middle Eastern",
-
-  // ===== OCEÁNICA =====
   "Hawaiian", "Hawaiian Pop", "Polynesian", "Samoan", "Tahitian", "Tongan", "Maori",
   "Aboriginal Australian", "Melanesian", "Micronesian", "Pacific Island Music",
   "New Zealand Folk",
-
-  // ===== EXPERIMENTAL =====
   "Experimental", "Avant-Garde", "Noise", "Drone", "Musique Concrète",
   "Electroacoustic", "Minimalism", "Sound Art", "Free Improvisation",
   "Experimental Electronic",
-
-  // ===== CINE / TV / VIDEOJUEGOS =====
   "Film Score", "Soundtrack", "Movie Soundtrack", "Television Score", "Video Game Music",
   "Anime Music", "Orchestral Score", "Cinematic", "Trailer Music", "Ambient Score",
   "Musical Theatre", "Broadway", "Stage & Screen",
-
-  // ===== VOCAL =====
   "A Cappella", "Vocal Pop", "Choral", "Choir", "Barbershop", "Doo-Wop", "Beatboxing",
   "Gregorian Chant", "Operatic", "Vocal Classical",
-
-  // ===== INFANTIL / HUMOR =====
   "Children's Music", "Nursery Rhymes", "Educational Music", "Comedy Music", "Novelty",
   "Parody", "Comedy Rock", "Comedy Rap", "Comedy Pop",
-
-  // ===== BAILE / CLUB =====
   "Dance", "Dance-Pop", "Eurodance", "Eurobeat", "Disco", "Nu-Disco", "Garage",
   "Jersey Club", "Baltimore Club", "Footwork", "Juke",
-
-  // ===== ACÚSTICA =====
   "Acústica", "Acústica Pop", "Rock Acústico", "Folk Acústico", "Latino Acústico",
   "Indie Acústico", "Regional Mexicano Acústico", "Acústica Instrumental",
   "Unplugged", "Balada Acústica", "Bolero Acústico"
@@ -1392,9 +1329,6 @@ const GENEROS_RAW = [
 const GENEROS = [...new Set(GENEROS_RAW.map(g => g.trim()).filter(Boolean))]
   .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
 
-// ================================================================
-// SUBGÉNEROS DE "REGIONAL MEXICANO"
-// ================================================================
 const SUBGENEROS_RAW = [
   "Corridos",
   "Corridos Tumbados",
@@ -1418,9 +1352,7 @@ const SUBGENEROS_RAW = [
 const SUBGENEROS = [...new Set(SUBGENEROS_RAW.map(g => g.trim()).filter(Boolean))]
   .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
 
-// ================================================================
-// ELEMENTOS DEL DOM — GÉNERO
-// ================================================================
+// Elementos del DOM — GÉNERO
 const generoHidden  = document.getElementById('genero');
 const genreSelect   = document.getElementById('genreSelect');
 const genreToggle   = document.getElementById('genreToggle');
@@ -1431,15 +1363,15 @@ const genreValue    = document.getElementById('genreValue');
 const genreEmpty    = document.getElementById('genreEmpty');
 
 // Elementos del DOM — SUBGÉNERO
-const subgenreGroup  = document.getElementById('subgenreGroup');
+const subgenreGroup   = document.getElementById('subgenreGroup');
 const subgeneroHidden = document.getElementById('subgenero');
-const subgenreSelect = document.getElementById('subgenreSelect');
-const subgenreToggle = document.getElementById('subgenreToggle');
-const subgenrePanel  = document.getElementById('subgenrePanel');
-const subgenreList   = document.getElementById('subgenreList');
-const subgenreSearch = document.getElementById('subgenreSearch');
-const subgenreValue  = document.getElementById('subgenreValue');
-const subgenreEmpty  = document.getElementById('subgenreEmpty');
+const subgenreSelect  = document.getElementById('subgenreSelect');
+const subgenreToggle  = document.getElementById('subgenreToggle');
+const subgenrePanel   = document.getElementById('subgenrePanel');
+const subgenreList    = document.getElementById('subgenreList');
+const subgenreSearch  = document.getElementById('subgenreSearch');
+const subgenreValue   = document.getElementById('subgenreValue');
+const subgenreEmpty   = document.getElementById('subgenreEmpty');
 
 let generoSeleccionado = '';
 let subgeneroSeleccionado = '';
@@ -1447,9 +1379,6 @@ let subgeneroSeleccionado = '';
 const normalizarTexto = (s = '') =>
   String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
-// ================================================================
-// RENDERIZADO DE GÉNEROS
-// ================================================================
 function pintarGeneros(filtro = '') {
   const q = normalizarTexto(filtro);
   const lista = q ? GENEROS.filter(g => normalizarTexto(g).includes(q)) : GENEROS;
@@ -1507,9 +1436,6 @@ function seleccionarGenero(valor) {
   }
 }
 
-// ================================================================
-// RENDERIZADO DE SUBGÉNEROS
-// ================================================================
 function pintarSubgeneros(filtro = '') {
   const q = normalizarTexto(filtro);
   const lista = q ? SUBGENEROS.filter(g => normalizarTexto(g).includes(q)) : SUBGENEROS;
@@ -1557,9 +1483,6 @@ function seleccionarSubgenero(valor) {
   cerrarSubgeneros();
 }
 
-// ================================================================
-// EVENTOS — GÉNERO
-// ================================================================
 genreToggle.addEventListener('click', (e) => {
   e.stopPropagation();
   if (genrePanel.classList.contains('hidden')) abrirGeneros();
@@ -1592,9 +1515,6 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !genrePanel.classList.contains('hidden')) cerrarGeneros();
 });
 
-// ================================================================
-// EVENTOS — SUBGÉNERO
-// ================================================================
 subgenreToggle.addEventListener('click', (e) => {
   e.stopPropagation();
   if (subgenrePanel.classList.contains('hidden')) abrirSubgeneros();
@@ -1627,9 +1547,6 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !subgenrePanel.classList.contains('hidden')) cerrarSubgeneros();
 });
 
-// ================================================================
-// RESET DEL FORMULARIO
-// ================================================================
 document.getElementById('formCancion').addEventListener('reset', () => {
   generoSeleccionado = '';
   generoHidden.value = '';
@@ -1646,12 +1563,322 @@ document.getElementById('formCancion').addEventListener('reset', () => {
   if (subgenreGroup) subgenreGroup.classList.add('hidden');
   cerrarSubgeneros();
 
-  // 🆕 Resetear colaboradores
   cargarColaboradoresEn(collabContainerForm, []);
 });
 
-// ================================================================
-// INICIALIZAR
-// ================================================================
 pintarGeneros('');
 pintarSubgeneros('');
+
+// ================================================================
+// 🎵 SISTEMA DE SUSCRIPCIÓN DE ARTISTAS
+// ================================================================
+const PRECIO_SUSCRIPCION   = 550;
+const MESES_ENTRE_RETIROS  = 3;
+const COLECCION_SUSCRIPCIONES = 'suscripciones';
+const PLAN_ID = 'P-88D20959NU409831ENK66MMI';
+
+let suscripcionActual = null;
+let paypalRenderizado = false;
+
+// ---------- Elementos DOM ----------
+const subBox        = document.getElementById('subBox');
+const subEstado     = document.getElementById('subEstado');
+const subDetalle    = document.getElementById('subDetalle');
+const subBtn        = document.getElementById('subBtn');
+const subModal      = document.getElementById('subModal');
+const retiroBtn     = document.getElementById('retiroBtn');
+const retiroInfo    = document.getElementById('retiroInfo');
+
+// ---------- Utilidades ----------
+function formatearFechaLarga(ts) {
+  if (!ts) return '—';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('es-MX', {
+    day: '2-digit', month: 'long', year: 'numeric'
+  });
+}
+
+function estaSuscripcionActiva() {
+  if (!suscripcionActual) return false;
+  if (suscripcionActual.estado === 'cancelada') return false;
+  const venc = suscripcionActual.fechaVencimiento;
+  if (!venc) return false;
+  const fv = venc.toDate ? venc.toDate() : new Date(venc);
+  return fv.getTime() > Date.now();
+}
+
+// ---------- Cargar suscripción ----------
+async function cargarSuscripcion(uid) {
+  try {
+    const snap = await getDoc(doc(db, COLECCION_SUSCRIPCIONES, uid));
+    suscripcionActual = snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  } catch (e) {
+    console.error('[Suscripción] Error al cargar:', e);
+    suscripcionActual = null;
+  }
+  aplicarEstadoSuscripcion();
+}
+
+// ---------- Aplicar estado visual ----------
+function aplicarEstadoSuscripcion() {
+  const formCancion = document.getElementById('formCancion');
+  if (!subBox || !formCancion) return;
+
+  const activa = estaSuscripcionActiva();
+
+  if (activa) {
+    formCancion.classList.remove('bloqueado');
+    subBox.classList.remove('inactiva');
+    if (subEstado)  subEstado.textContent = '✅ Suscripción activa';
+    if (subDetalle) subDetalle.textContent =
+      'Vence el ' + formatearFechaLarga(suscripcionActual.fechaVencimiento);
+    if (subBtn)     subBtn.textContent = 'Renovar';
+  } else {
+    formCancion.classList.add('bloqueado');
+    subBox.classList.add('inactiva');
+    if (subEstado)  subEstado.textContent = '⚠️ Suscripción no activa';
+    if (subDetalle) subDetalle.textContent =
+      suscripcionActual
+        ? 'Venció el ' + formatearFechaLarga(suscripcionActual.fechaVencimiento)
+        : 'Contrata tu plan por $550 MXN/año';
+    if (subBtn)     subBtn.textContent = 'Suscribirme';
+  }
+
+  renderRetiroInfo();
+}
+
+// ---------- Modal suscripción ----------
+function abrirSubModal() {
+  if (!subModal) return;
+  subModal.classList.remove('hidden');
+  subModal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+  setTimeout(renderPayPal, 120);
+}
+
+function cerrarSubModal() {
+  if (!subModal) return;
+  subModal.classList.add('hidden');
+  subModal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+// ---------- Guardar suscripción tras pago aprobado ----------
+async function guardarSuscripcion(subscriptionId) {
+  if (!usuarioActual) return;
+
+  const inicio = new Date();
+  const venc   = new Date(inicio);
+  venc.setFullYear(venc.getFullYear() + 1);
+
+  try {
+    await setDoc(doc(db, COLECCION_SUSCRIPCIONES, usuarioActual.uid), {
+      uid: usuarioActual.uid,
+      email: usuarioActual.email,
+      subscriptionId: subscriptionId || '',
+      planId: PLAN_ID,
+      precio: PRECIO_SUSCRIPCION,
+      moneda: 'MXN',
+      fechaInicio: serverTimestamp(),
+      fechaVencimiento: venc,
+      estado: 'activa'
+    });
+
+    await cargarSuscripcion(usuarioActual.uid);
+    mostrarStatus('🎉 ¡Suscripción activada! Ya puedes subir música', 'ok');
+    cerrarSubModal();
+
+  } catch (e) {
+    console.error('[Suscripción] Error al guardar:', e);
+    mostrarStatus('Error al guardar suscripción: ' + e.message, 'error');
+  }
+}
+
+// ---------- PayPal ----------
+function renderPayPal() {
+  if (paypalRenderizado) return;
+  if (typeof window.paypal === 'undefined') {
+    setTimeout(renderPayPal, 300);
+    return;
+  }
+
+  const container = document.getElementById('paypal-button-container-P-88D20959NU409831ENK66MMI');
+  if (!container || container.dataset.rendered === '1') return;
+  container.dataset.rendered = '1';
+  container.innerHTML = '';
+
+  try {
+    window.paypal.Buttons({
+      style: {
+        shape: 'pill',
+        color: 'blue',
+        layout: 'vertical',
+        label: 'subscribe'
+      },
+      createSubscription: function (data, actions) {
+        return actions.subscription.create({ plan_id: PLAN_ID });
+      },
+      onApprove: async function (data) {
+        await guardarSuscripcion(data.subscriptionID);
+      },
+      onError: function (err) {
+        console.error('[PayPal] Error:', err);
+        mostrarStatus('Error con PayPal: ' + (err?.message || 'Intenta de nuevo'), 'error');
+      }
+    }).render('#paypal-button-container-P-88D20959NU409831ENK66MMI');
+
+    paypalRenderizado = true;
+  } catch (e) {
+    console.error('[PayPal] Render falló:', e);
+  }
+}
+
+// ---------- Eventos ----------
+subBtn?.addEventListener('click', () => abrirSubModal());
+
+subModal?.addEventListener('click', (e) => {
+  if (e.target.dataset.close === '1') cerrarSubModal();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && subModal && !subModal.classList.contains('hidden')) {
+    cerrarSubModal();
+  }
+});
+
+// Bloquea el form y abre modal al hacer clic cuando no hay suscripción
+document.getElementById('formCancion')?.addEventListener('click', (e) => {
+  const formCancion = document.getElementById('formCancion');
+  if (formCancion && formCancion.classList.contains('bloqueado')) {
+    e.preventDefault();
+    e.stopPropagation();
+    abrirSubModal();
+  }
+}, true);
+
+// ---------- Retiros ----------
+function calcularTotalGanancias() {
+  let total = 0;
+  (cancionesActuales || []).forEach(c => {
+    const stats = obtenerStatsDeCancion(c);
+    total += (stats.oyentes || 0) * PAGO_POR_OYENTE;
+  });
+  return total;
+}
+
+function retiroDisponible() {
+  if (!estaSuscripcionActiva()) {
+    return { disponible: false, razon: 'Necesitas una suscripción activa' };
+  }
+  if (!suscripcionActual?.ultimoRetiro) {
+    return { disponible: true, proximo: 'Disponible ahora' };
+  }
+  const ult = suscripcionActual.ultimoRetiro;
+  const fechaUlt = ult.toDate ? ult.toDate() : new Date(ult);
+  const prox = new Date(fechaUlt);
+  prox.setMonth(prox.getMonth() + MESES_ENTRE_RETIROS);
+
+  if (prox.getTime() <= Date.now()) {
+    return { disponible: true, proximo: 'Disponible ahora' };
+  }
+  return { disponible: false, proximo: 'Próximo retiro: ' + formatearFechaLarga(prox) };
+}
+
+function renderRetiroInfo() {
+  if (!retiroBtn || !retiroInfo) return;
+
+  if (!estaSuscripcionActiva()) {
+    retiroInfo.textContent = 'Requiere suscripción activa';
+    retiroBtn.disabled = true;
+    retiroBtn.textContent = 'Solicitar retiro';
+    return;
+  }
+
+  const estado = retiroDisponible();
+  const total = calcularTotalGanancias();
+  retiroInfo.textContent = `${estado.proximo} · Saldo: ${fmtDinero(total)}`;
+
+  if (estado.disponible && total > 0) {
+    retiroBtn.disabled = false;
+    retiroBtn.textContent = `Solicitar retiro (${fmtDinero(total)})`;
+  } else {
+    retiroBtn.disabled = true;
+    retiroBtn.textContent = 'Solicitar retiro';
+  }
+}
+
+async function solicitarRetiro() {
+  if (!usuarioActual || !estaSuscripcionActiva()) return;
+
+  const estado = retiroDisponible();
+  if (!estado.disponible) {
+    mostrarStatus(estado.proximo || 'Aún no puedes retirar', 'error');
+    return;
+  }
+
+  const total = calcularTotalGanancias();
+  if (total <= 0) {
+    mostrarStatus('No tienes ganancias para retirar todavía', 'error');
+    return;
+  }
+
+  const ok = confirm(
+    `¿Solicitar retiro de ${fmtDinero(total)}?\n` +
+    `Se procesará en un plazo de 5-7 días hábiles.`
+  );
+  if (!ok) return;
+
+  retiroBtn.disabled = true;
+  retiroBtn.innerHTML = '<span class="loader"></span>Enviando...';
+
+  try {
+    await addDoc(collection(db, 'retiros', usuarioActual.uid, 'solicitudes'), {
+      uid: usuarioActual.uid,
+      email: usuarioActual.email,
+      monto: total,
+      moneda: 'MXN',
+      estado: 'pendiente',
+      metodo: 'PayPal',
+      fecha: serverTimestamp()
+    });
+
+    await updateDoc(doc(db, COLECCION_SUSCRIPCIONES, usuarioActual.uid), {
+      ultimoRetiro: serverTimestamp()
+    });
+
+    suscripcionActual.ultimoRetiro = { seconds: Date.now() / 1000 };
+
+    mostrarStatus('✅ Solicitud de retiro enviada correctamente', 'ok');
+    renderRetiroInfo();
+
+  } catch (e) {
+    console.error('[Retiro] Error:', e);
+    mostrarStatus('Error al solicitar retiro: ' + e.message, 'error');
+  } finally {
+    renderRetiroInfo();
+  }
+}
+
+retiroBtn?.addEventListener('click', solicitarRetiro);
+
+// ---------- Observador de auth extra para suscripción ----------
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    subBox?.classList.remove('hidden');
+    await cargarSuscripcion(user.uid);
+    renderPayPal();
+  } else {
+    subBox?.classList.add('hidden');
+    suscripcionActual = null;
+    document.getElementById('formCancion')?.classList.remove('bloqueado');
+    if (retiroBtn)  retiroBtn.disabled = true;
+    if (retiroInfo) retiroInfo.textContent = '—';
+    cerrarSubModal();
+  }
+});
+
+// Refrescar info de retiro al abrir stats
+statsBtn?.addEventListener('click', () => {
+  setTimeout(renderRetiroInfo, 250);
+});
