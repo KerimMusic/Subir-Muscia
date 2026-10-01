@@ -8,24 +8,17 @@
 </head>
 <body>
 
-  <!-- ============ MENÚ HAMBURGUESA (SUPERIOR DERECHA) ============ -->
+  <!-- ============ MENÚ HAMBURGUESA ============ -->
   <div id="menuWrap" class="menu-wrap hidden">
     <button id="menuBtn" class="menu-btn" type="button" aria-label="Abrir menú" aria-expanded="false">
-      <span></span>
-      <span></span>
-      <span></span>
+      <span></span><span></span><span></span>
     </button>
-
     <div id="menuDropdown" class="menu-dropdown hidden">
-      <button id="statsBtn" class="menu-item" type="button">
-        📚 Mis canciones subidas
-      </button>
-      <button id="logoutBtn" class="menu-item" type="button">
-        🚪 Cerrar sesión
-      </button>
+      <button id="statsBtn" class="menu-item" type="button">📚 Mis canciones subidas</button>
+      <button id="suscBtn" class="menu-item" type="button">💳 Mi suscripción</button>
+      <button id="logoutBtn" class="menu-item" type="button">🚪 Cerrar sesión</button>
     </div>
   </div>
-  <!-- ============================================================= -->
 
   <div class="container">
     <div class="header">
@@ -33,13 +26,11 @@
       <p>Comparte tu musica al mundo</p>
     </div>
 
-    <!-- Estado del usuario -->
     <div id="userBox" class="user-box hidden">
       <span class="dot"></span>
       <span id="userEmail">Cargando...</span>
     </div>
 
-    <!-- Botón login si no está autenticado -->
     <button id="loginBtn" class="btn-google">
       <svg width="18" height="18" viewBox="0 0 24 24">
         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -50,24 +41,20 @@
       Iniciar sesión con Google
     </button>
 
-    <!-- Formulario -->
     <form id="formCancion" class="hidden">
       <div class="form-group">
         <label for="artista">1. Nombre del artista</label>
         <input type="text" id="artista" placeholder="Ej: Artista" required>
       </div>
-
       <div class="form-group">
         <label for="titulo">2. Título de la canción</label>
         <input type="text" id="titulo" placeholder="Ej: Nombre de la cancion" required>
       </div>
-
       <div class="form-group">
         <label for="album">3. Nombre del álbum</label>
         <input type="text" id="album" placeholder="Ej: Nombre del Album">
       </div>
 
-      <!-- ===== COLABORADORES (FORM) ===== -->
       <div class="form-group">
         <label for="collaboratorsContainer">3b. Colaboradores</label>
         <div class="collaborators" id="collaboratorsContainer"></div>
@@ -76,19 +63,15 @@
         </button>
         <p class="hint">Opcional. Agrega uno o más colaboradores de la canción.</p>
       </div>
-      <!-- ===== FIN COLABORADORES ===== -->
 
-      <!-- ===== SELECTOR DE GÉNERO ===== -->
       <div class="form-group">
         <label for="genreToggle">4. Género musical</label>
-
         <div class="genre-select" id="genreSelect">
           <button type="button" id="genreToggle" class="genre-toggle"
                   aria-haspopup="listbox" aria-expanded="false" aria-controls="genrePanel">
             <span id="genreValue" class="genre-value placeholder">Selecciona un género</span>
             <span class="genre-arrow" aria-hidden="true">▾</span>
           </button>
-
           <div id="genrePanel" class="genre-panel hidden">
             <div class="genre-search-wrap">
               <input type="text" id="genreSearch" class="genre-search"
@@ -99,22 +82,18 @@
             <p id="genreEmpty" class="genre-empty hidden">No se encontraron géneros</p>
           </div>
         </div>
-
         <input type="hidden" id="genero" name="genero" value="">
         <p class="hint">Opcional. Abre la lista y usa el buscador para encontrar tu género.</p>
       </div>
 
-      <!-- ===== SUBSELECTOR: SOLO APARECE SI ELIGES "Regional Mexicano" ===== -->
       <div class="form-group hidden" id="subgenreGroup">
         <label for="subgenreToggle">4b. Subgénero (Regional Mexicano)</label>
-
         <div class="genre-select" id="subgenreSelect">
           <button type="button" id="subgenreToggle" class="genre-toggle"
                   aria-haspopup="listbox" aria-expanded="false" aria-controls="subgenrePanel">
             <span id="subgenreValue" class="genre-value placeholder">Selecciona un subgénero</span>
             <span class="genre-arrow" aria-hidden="true">▾</span>
           </button>
-
           <div id="subgenrePanel" class="genre-panel hidden">
             <div class="genre-search-wrap">
               <input type="text" id="subgenreSearch" class="genre-search"
@@ -125,11 +104,9 @@
             <p id="subgenreEmpty" class="genre-empty hidden">No se encontraron subgéneros</p>
           </div>
         </div>
-
         <input type="hidden" id="subgenero" name="subgenero" value="">
         <p class="hint">Elige el subgénero específico (ej: Corridos Tumbados, Banda, Sierreño...).</p>
       </div>
-      <!-- ===== FIN SUBSELECTOR ===== -->
 
       <div class="form-group">
         <label for="audio">5. Link de audio (Dropbox)</label>
@@ -143,7 +120,6 @@
         <p class="hint">Opcional. Si lo dejas vacío se mostrará una imagen por defecto.</p>
       </div>
 
-      <!-- Vista previa -->
       <div id="preview" class="preview">
         <img id="previewImg" src="" alt="">
         <div class="preview-info">
@@ -158,70 +134,47 @@
 
     <div id="status" class="status"></div>
 
-    <!-- ================= HISTORIAL ================= -->
     <section id="historySection" class="history hidden">
       <div class="history-header">
         <h2>📚 Mis canciones subidas</h2>
         <span id="historyCount" class="badge">0</span>
       </div>
-
       <div id="historyList" class="history-list"></div>
-
-      <p id="historyEmpty" class="history-empty hidden">
-        Todavía no has subido ninguna canción.
-      </p>
+      <p id="historyEmpty" class="history-empty hidden">Todavía no has subido ninguna canción.</p>
     </section>
-    <!-- ============================================= -->
 
-    <!-- ================= MODAL REPRODUCTOR ================= -->
     <div id="playerModal" class="player-modal hidden" aria-hidden="true">
       <div class="player-backdrop" data-close="1"></div>
-
       <div class="player-card" role="dialog" aria-modal="true" aria-labelledby="playerTitle">
         <button type="button" class="player-close" data-close="1" title="Cerrar">✕</button>
-
-        <div class="player-cover">
-          <img id="playerImg" src="" alt="">
-        </div>
-
+        <div class="player-cover"><img id="playerImg" src="" alt=""></div>
         <div class="player-meta">
           <strong id="playerTitle">—</strong>
           <small id="playerArtist">—</small>
         </div>
-
         <div class="player-progress">
           <span id="playerCurrent">0:00</span>
           <input type="range" id="playerSeek" min="0" max="1000" value="0" step="1">
           <span id="playerDuration">0:00</span>
         </div>
-
         <div class="player-controls">
           <button type="button" id="playerRewind" class="player-btn" title="-10s">⏪</button>
           <button type="button" id="playerPlay" class="player-btn player-btn-main" title="Reproducir">▶</button>
           <button type="button" id="playerForward" class="player-btn" title="+10s">⏩</button>
         </div>
-
         <div class="player-volume">
           <span>🔊</span>
           <input type="range" id="playerVol" min="0" max="1" step="0.01" value="1">
         </div>
-
         <p class="player-hint">Vista previa — así se verá y sonará en el reproductor.</p>
       </div>
     </div>
-    <!-- ====================================================== -->
 
-    <!-- ================= MODAL EDITAR ================= -->
     <div id="editModal" class="edit-modal hidden" aria-hidden="true">
       <div class="edit-backdrop" data-close="1"></div>
-
       <div class="edit-card" role="dialog" aria-modal="true" aria-labelledby="editHeading">
         <button type="button" class="edit-close" data-close="1" title="Cerrar">✕</button>
-
-        <div class="edit-cover">
-          <img id="editImg" src="" alt="">
-        </div>
-
+        <div class="edit-cover"><img id="editImg" src="" alt=""></div>
         <div class="edit-content">
           <h2 id="editHeading" class="edit-heading">EDITAR TU MUSICA</h2>
           <form id="editForm" class="edit-form">
@@ -237,8 +190,6 @@
               <label for="editAlbum">3. NOMBRE DEL ÁLBUM</label>
               <input type="text" id="editAlbum" placeholder="Ej: Nombre del Album">
             </div>
-
-            <!-- ===== COLABORADORES (EDIT) ===== -->
             <div class="form-group">
               <label for="collaboratorsEditContainer">3b. COLABORADORES</label>
               <div class="collaborators" id="collaboratorsEditContainer"></div>
@@ -247,8 +198,6 @@
               </button>
               <p class="hint">Opcional. Agrega uno o más colaboradores de la canción.</p>
             </div>
-            <!-- ===== FIN COLABORADORES ===== -->
-
             <div class="form-group">
               <label for="editAudio">4. LINK DE AUDIO (DROPBOX)</label>
               <input type="url" id="editAudio" placeholder="https://www.dropbox.com/s/.../cancion.mp3?dl=0" required>
@@ -262,24 +211,14 @@
         </div>
       </div>
     </div>
-    <!-- ====================================================== -->
 
-    <!-- ================= MODAL ESTADÍSTICAS ================= -->
     <div id="statsModal" class="stats-modal hidden" aria-hidden="true">
       <div class="stats-backdrop" data-close="1"></div>
-
       <div class="stats-card" role="dialog" aria-modal="true" aria-labelledby="statsHeading">
         <button type="button" class="stats-close" data-close="1" title="Cerrar">✕</button>
-
         <h2 id="statsHeading" class="stats-heading">📚 Mis canciones subidas</h2>
-
         <div id="statsList" class="stats-list"></div>
-
-        <p id="statsEmpty" class="stats-empty hidden">
-          Todavía no has subido ninguna canción.
-        </p>
-
-        <!-- Resumen general -->
+        <p id="statsEmpty" class="stats-empty hidden">Todavía no has subido ninguna canción.</p>
         <div id="statsSummary" class="stats-summary">
           <div class="stats-summary-item">
             <span class="stats-summary-label">👥 Total oyentes</span>
@@ -290,13 +229,96 @@
             <strong id="statsTotalEarnings" class="stats-summary-value">$0.00 MXN</strong>
           </div>
         </div>
-
         <p class="stats-hint">💵 Tarifa: $0.20 MXN por oyente. Las cifras se actualizan automáticamente.</p>
       </div>
     </div>
-    <!-- ============================================================== -->
 
   </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SISTEMA DE SUSCRIPCIONES
+       ═══════════════════════════════════════════════════════════ -->
+
+  <button id="btn-mi-suscripcion" class="ob-btn-susc" style="display:none">Mi suscripción</button>
+
+  <div id="modal-planes" class="ob-modal">
+    <div class="ob-modal-box">
+      <span class="ob-cerrar" data-cerrar="modal-planes">×</span>
+      <h2>Elige tu suscripción</h2>
+      <div class="ob-planes">
+        <div class="ob-plan" data-plan="mensual" data-precio="399.90">
+          <h3>Mensual</h3>
+          <p class="ob-precio">$399.90 <small>MXN</small></p>
+          <p class="ob-desc">Acceso por 1 mes</p>
+          <button class="ob-btn-plan">Seleccionar</button>
+        </div>
+        <div class="ob-plan ob-destacado" data-plan="anual" data-precio="500.00">
+          <h3>Anual</h3>
+          <p class="ob-precio">$500.00 <small>MXN</small></p>
+          <p class="ob-desc">Acceso por 1 año · ¡Mejor precio!</p>
+          <button class="ob-btn-plan">Seleccionar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-telefono" class="ob-modal">
+    <div class="ob-modal-box">
+      <span class="ob-cerrar" data-cerrar="modal-telefono">×</span>
+      <h2>Registra tu WhatsApp</h2>
+      <p>Lo usaremos para comunicarnos contigo sobre tu pago y suscripción.</p>
+      <label>Número de teléfono (10 dígitos)</label>
+      <input id="ob-tel" type="tel" inputmode="numeric" maxlength="10" placeholder="5512345678">
+      <label>Confirma tu número</label>
+      <input id="ob-tel2" type="tel" inputmode="numeric" maxlength="10" placeholder="5512345678">
+      <p id="ob-tel-error" class="ob-error"></p>
+      <button id="ob-guardar-tel" class="ob-btn-primario">Continuar al pago</button>
+    </div>
+  </div>
+
+  <div id="modal-pago" class="ob-modal">
+    <div class="ob-modal-box">
+      <span class="ob-cerrar" data-cerrar="modal-pago">×</span>
+      <h2>Datos para tu pago</h2>
+      <div class="ob-resumen">
+        <p><strong>Plan:</strong> <span id="ob-res-plan">—</span></p>
+        <p><strong>Precio:</strong> <span id="ob-res-precio">—</span></p>
+      </div>
+      <div id="ob-datos-bancarios" class="ob-bancos"><p>Cargando…</p></div>
+      <a id="ob-btn-whatsapp" class="ob-btn-whats" target="_blank" rel="noopener">💬 Contactar por WhatsApp</a>
+      <hr>
+      <h3>Sube tu comprobante</h3>
+      <input id="ob-file" type="file" accept="image/jpeg,image/jpg,image/png,image/webp">
+      <button id="ob-subir" class="ob-btn-primario">Enviar comprobante de pago</button>
+      <p id="ob-pago-msg" class="ob-msg"></p>
+    </div>
+  </div>
+
+  <div id="modal-susc" class="ob-modal">
+    <div class="ob-modal-box">
+      <span class="ob-cerrar" data-cerrar="modal-susc">×</span>
+      <h2>Mi suscripción</h2>
+      <div id="ob-info-susc">Cargando…</div>
+      <div id="ob-historial"></div>
+    </div>
+  </div>
+
+  <div id="modal-admin" class="ob-modal">
+    <div class="ob-modal-box ob-ancho">
+      <span class="ob-cerrar" data-cerrar="modal-admin">×</span>
+      <h2>Panel de administración — Pagos</h2>
+      <div id="ob-admin-lista">Cargando solicitudes…</div>
+    </div>
+  </div>
+
+  <div id="modal-img" class="ob-modal">
+    <div class="ob-modal-box ob-ancho">
+      <span class="ob-cerrar" data-cerrar="modal-img">×</span>
+      <img id="ob-img-visor" style="width:100%;border-radius:10px;">
+    </div>
+  </div>
+
+  <!-- ═══════════════ FIN SUSCRIPCIONES ═══════════════ -->
 
   <script type="module" src="script.js"></script>
 </body>
