@@ -1,530 +1,1327 @@
-/* ============================================ RESET Y BASE ============================================ */
-* {
-  margin: 0; padding: 0; box-sizing: border-box;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-body {
-  background: #ffffff; color: #000000;
-  min-height: 100vh; display: flex; justify-content: center; align-items: center;
-  padding: 20px; line-height: 1.5;
-}
-.container { width: 100%; max-width: 580px; padding: 20px 0; }
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect,
+  getRedirectResult, onAuthStateChanged, signOut,
+  setPersistence, browserLocalPersistence
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore, collection, addDoc, serverTimestamp, onSnapshot,
+  deleteDoc, doc, updateDoc, getDoc, setDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-/* ============================================ HEADER ============================================ */
-.header { text-align: center; margin-bottom: 32px; }
-.header h1 { font-size: 28px; font-weight: 700; color: #000; margin-bottom: 4px; letter-spacing: -0.5px; }
-.header p { font-size: 13px; color: #555; font-weight: 500; text-transform: uppercase; letter-spacing: 2px; }
+// ============================================ FIREBASE ============================================
+const firebaseConfig = {
+  apiKey: "AIzaSyDMabE70hIApcNU5RY3_WEEIF-BWUzO0K4",
+  authDomain: "kerim-music-a9c46.firebaseapp.com",
+  projectId: "kerim-music-a9c46",
+  storageBucket: "kerim-music-a9c46.firebasestorage.app",
+  messagingSenderId: "470731440209",
+  appId: "1:470731440209:web:f6eba4784027a5d8c57870",
+  measurementId: "G-LBHTKL8KDK"
+};
 
-/* ============================================ USER BOX ============================================ */
-.user-box {
-  display: flex; align-items: center; gap: 10px;
-  background: #f5f5f5; border: 1px solid #e0e0e0;
-  border-radius: 10px; padding: 12px 16px; margin-bottom: 24px;
-  font-size: 13px; color: #000; overflow: hidden;
-}
-.user-box #userEmail { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.user-box .dot {
-  width: 8px; height: 8px; background: #000; border-radius: 50%;
-  flex-shrink: 0; animation: pulse 1.8s ease-in-out infinite;
-}
-@keyframes pulse { 0%,100% { opacity: 1; transform: scale(1);} 50% { opacity: .5; transform: scale(.9);} }
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
 
-/* ============================================ FORMULARIO ============================================ */
-.form-group { margin-bottom: 20px; }
-label {
-  display: block; font-size: 12px; font-weight: 700; color: #000;
-  margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.8px;
-}
-input {
-  width: 100%; padding: 14px 16px; background: #fff;
-  border: 1.5px solid #d0d0d0; border-radius: 10px; color: #000;
-  font-size: 15px; outline: none;
-  transition: border-color .2s, box-shadow .2s;
-}
-input:focus { border-color: #000; box-shadow: 0 0 0 3px rgba(0,0,0,.08); }
-input::placeholder { color: #999; }
-.hint { font-size: 11px; color: #777; margin-top: 6px; line-height: 1.4; }
+// ============================================ WEBVIEW ============================================
+setPersistence(auth, browserLocalPersistence).catch(err => {
+  console.warn('[WebView] No se pudo establecer persistencia:', err);
+});
 
-/* ============================================ BOTONES ============================================ */
-button {
-  width: 100%; padding: 15px; margin-top: 10px;
-  background: #000; border: none; border-radius: 10px; color: #fff;
-  font-size: 16px; font-weight: 600; cursor: pointer; letter-spacing: .3px;
-  transition: background .2s, transform .15s, box-shadow .2s;
-}
-button:hover:not(:disabled) { background: #222; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,.15); }
-button:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
-button:disabled { opacity: .4; cursor: not-allowed; }
-
-.btn-google {
-  background: #fff; color: #000; border: 1.5px solid #d0d0d0;
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  box-shadow: none;
-}
-.btn-google:hover:not(:disabled) { background: #fafafa; border-color: #000; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
-
-/* ============================================ STATUS ============================================ */
-.status {
-  margin-top: 18px; padding: 14px; border-radius: 10px; font-size: 14px;
-  text-align: center; display: none; line-height: 1.4; border: 1.5px solid transparent;
-}
-.status.ok { display: block; background: #f0f0f0; border-color: #000; color: #000; }
-.status.error { display: block; background: #fff0f0; border-color: #cc0000; color: #cc0000; }
-.status.loading { display: block; background: #f5f5f5; border-color: #999; color: #555; }
-.hidden { display: none !important; }
-
-/* ============================================ PREVIEW ============================================ */
-.preview {
-  margin-top: 20px; padding: 16px; background: #fafafa;
-  border-radius: 10px; border: 1.5px dashed #d0d0d0;
-  display: none; align-items: center; gap: 14px;
-}
-.preview.show { display: flex; }
-.preview img { width: 64px; height: 64px; border-radius: 8px; object-fit: cover; background: #f0f0f0; border: 1px solid #e0e0e0; }
-.preview-info { flex: 1; min-width: 0; }
-.preview-info strong { display: block; font-size: 15px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #000; }
-.preview-info small { color: #555; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
-.preview-info .Album {
-  display: inline-block; margin-top: 6px; padding: 3px 10px; font-size: 10px;
-  font-weight: 700; color: #000; background: #e8e8e8; border: 1px solid #d0d0d0;
-  border-radius: 999px; text-transform: uppercase; letter-spacing: 1px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
-}
-.loader {
-  display: inline-block; width: 16px; height: 16px;
-  border: 2px solid rgba(255,255,255,.3); border-top-color: #fff;
-  border-radius: 50%; animation: spin .8s linear infinite;
-  vertical-align: middle; margin-right: 8px;
-}
-@keyframes spin { to { transform: rotate(360deg);} }
-
-/* ============================================ COLABORADORES ============================================ */
-.collaborators { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
-.collaborator-row { display: flex; align-items: center; gap: 8px; animation: fadeIn .2s; }
-.collaborator-input {
-  flex: 1; width: auto; padding: 12px 14px; font-size: 15px;
-  background: #fff; border: 1.5px solid #d0d0d0; border-radius: 10px;
-  color: #000; outline: none; margin: 0;
-  transition: border-color .2s, box-shadow .2s;
-}
-.collaborator-input:focus { border-color: #000; box-shadow: 0 0 0 3px rgba(0,0,0,.08); }
-.collaborator-input::placeholder { color: #999; }
-.btn-remove-collab {
-  width: 42px; height: 42px; min-width: 42px; padding: 0; margin: 0;
-  border-radius: 10px; background: #f5f5f5; border: 1.5px solid #e0e0e0;
-  color: #000; font-size: 14px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; flex-shrink: 0; box-shadow: none;
-  transition: background .18s, border-color .18s, color .18s, transform .15s;
-}
-.btn-remove-collab:hover:not(:disabled) { background: #cc0000; border-color: #cc0000; color: #fff; transform: scale(1.05); }
-.btn-add-collab {
-  width: 100%; margin: 0; padding: 12px 16px; background: #fff;
-  border: 1.5px dashed #d0d0d0; border-radius: 10px; color: #000;
-  font-size: 14px; font-weight: 600; display: flex; align-items: center;
-  justify-content: center; gap: 8px; cursor: pointer; box-shadow: none;
-  transition: border-color .2s, background .2s, color .2s;
-}
-.btn-add-collab:hover:not(:disabled) { background: #000; border-color: #000; border-style: solid; color: #fff; }
-.btn-add-collab .plus-icon { font-size: 18px; line-height: 1; font-weight: 700; }
-.edit-form .collaborator-input { padding: 12px 14px; font-size: 14px; }
-.edit-form .btn-add-collab { padding: 11px 14px; font-size: 13px; }
-
-@media (max-width: 420px) {
-  .collaborator-input { padding: 11px 12px; font-size: 14px; }
-  .btn-remove-collab { width: 38px; height: 38px; min-width: 38px; font-size: 13px; }
-  .btn-add-collab { padding: 11px 12px; font-size: 13px; }
+function esWebView() {
+  const ua = (navigator.userAgent || '').toLowerCase();
+  const esAndroidWV = /android/.test(ua) && /(wv|version\/[\d.]+)/.test(ua);
+  const esIOSWV = /iphone|ipad|ipod/.test(ua) && !/safari|crios|fxios|edgios/.test(ua);
+  const tieneBridge = !!(window.Android || window.ReactNativeWebView || (window.webkit && window.webkit.messageHandlers));
+  return esAndroidWV || esIOSWV || tieneBridge;
 }
 
-/* ============================================ HISTORIAL ============================================ */
-.history { margin-top: 36px; padding-top: 24px; border-top: 1.5px solid #e8e8e8; }
-.history-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-.history-header h2 { font-size: 16px; font-weight: 700; color: #000; }
-.badge {
-  background: #000; color: #fff; font-size: 12px; font-weight: 700;
-  padding: 2px 12px; border-radius: 999px; min-width: 30px; text-align: center;
-}
-.history-list { display: flex; flex-direction: column; gap: 10px; max-height: 360px; overflow-y: auto; padding-right: 4px; }
-.history-list::-webkit-scrollbar { width: 5px; }
-.history-list::-webkit-scrollbar-thumb { background: #d0d0d0; border-radius: 999px; }
-.history-item {
-  display: flex; align-items: center; gap: 12px;
-  background: #fff; border: 1.5px solid #e8e8e8; border-radius: 10px;
-  padding: 10px 12px; cursor: pointer;
-  transition: border-color .2s, box-shadow .2s;
-  animation: fadeIn .25s;
-}
-.history-item:hover { border-color: #000; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
-.history-item img { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; background: #f0f0f0; flex-shrink: 0; border: 1px solid #e0e0e0; }
-.history-info { flex: 1; min-width: 0; }
-.history-info strong { display: block; font-size: 14px; font-weight: 600; color: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.history-info small { display: block; font-size: 11px; color: #555; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.btn-edit, .btn-delete {
-  width: 36px; height: 36px; min-width: 36px; padding: 0; margin: 0;
-  flex-shrink: 0; border-radius: 8px; background: #f5f5f5;
-  border: 1.5px solid #e0e0e0; color: #000; font-size: 15px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; box-shadow: none;
-  transition: background .18s, border-color .18s, transform .15s;
-}
-.btn-edit:hover:not(:disabled), .btn-delete:hover:not(:disabled) { background: #000; border-color: #000; color: #fff; }
-.history-empty { font-size: 13px; color: #777; text-align: center; padding: 18px 0; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px);} to { opacity: 1; transform: translateY(0);} }
+const LOGIN_BTN_HTML = `
+  <svg width="18" height="18" viewBox="0 0 24 24">
+    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+  </svg>
+  Iniciar sesión con Google
+`;
 
-/* ============================================ MODAL REPRODUCTOR ============================================ */
-.player-modal { position: fixed; inset: 0; z-index: 999; display: flex; align-items: center; justify-content: center; padding: 24px; animation: fadeIn .2s; }
-.player-modal.hidden { display: none !important; }
-.player-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.4); backdrop-filter: blur(4px); }
-.player-card {
-  position: relative; width: 100%; max-width: 820px; background: #fff;
-  border: 1.5px solid #e0e0e0; border-radius: 20px; padding: 32px;
-  box-shadow: 0 20px 60px rgba(0,0,0,.12);
-  display: grid; grid-template-columns: 240px 1fr;
-  grid-template-areas: "cover meta" "cover progress" "cover controls" "cover volume" "cover hint";
-  gap: 14px 34px; align-items: center; animation: playerIn .25s;
-}
-@keyframes playerIn { from { opacity: 0; transform: translateY(14px) scale(.97);} to { opacity: 1; transform: translateY(0) scale(1);} }
-.player-close {
-  position: absolute; top: 16px; right: 16px;
-  width: 36px; height: 36px; min-width: 36px; padding: 0; margin: 0;
-  border-radius: 50%; background: #f5f5f5; border: 1.5px solid #e0e0e0;
-  color: #000; font-size: 14px; display: flex; align-items: center;
-  justify-content: center; cursor: pointer; z-index: 2;
-  transition: background .2s, border-color .2s, transform .2s;
-}
-.player-close:hover { background: #000; border-color: #000; color: #fff; transform: rotate(90deg); }
-.player-cover { grid-area: cover; width: 240px; height: 240px; border-radius: 16px; overflow: hidden; background: #f5f5f5; border: 1px solid #e0e0e0; box-shadow: 0 10px 30px rgba(0,0,0,.06); align-self: center; }
-.player-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.player-meta { grid-area: meta; padding-right: 48px; min-width: 0; }
-.player-meta strong { display: block; font-size: 22px; font-weight: 700; color: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -.3px; }
-.player-meta small { display: block; font-size: 12px; color: #555; margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.player-progress { grid-area: progress; display: flex; align-items: center; gap: 12px; font-size: 11px; color: #555; font-variant-numeric: tabular-nums; }
-.player-progress span { min-width: 40px; text-align: center; }
-.player-progress input[type="range"], .player-volume input[type="range"] {
-  -webkit-appearance: none; appearance: none; flex: 1; height: 4px; padding: 0; margin: 0;
-  border-radius: 999px; background: #e0e0e0; border: none; outline: none; cursor: pointer; width: auto;
-}
-.player-progress input[type="range"]::-webkit-slider-thumb, .player-volume input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none; width: 14px; height: 14px;
-  border-radius: 50%; background: #000; cursor: pointer; border: 2px solid #fff;
-  box-shadow: 0 2px 6px rgba(0,0,0,.2);
-}
-.player-controls { grid-area: controls; display: flex; align-items: center; justify-content: center; gap: 22px; }
-.player-btn {
-  width: 48px; height: 48px; min-width: 48px; padding: 0; margin: 0;
-  border-radius: 50%; background: #f5f5f5; border: 1.5px solid #e0e0e0;
-  color: #000; font-size: 16px; display: flex; align-items: center;
-  justify-content: center; cursor: pointer; box-shadow: none;
-  transition: background .2s, border-color .2s, transform .15s;
-}
-.player-btn:hover { background: #000; border-color: #000; color: #fff; transform: scale(1.06); }
-.player-btn-main { width: 68px; height: 68px; min-width: 68px; font-size: 24px; background: #000; border: none; color: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.15); }
-.player-btn-main:hover { background: #222; transform: scale(1.08); }
-.player-volume { grid-area: volume; display: flex; align-items: center; gap: 12px; font-size: 14px; color: #555; }
-.player-hint { grid-area: hint; font-size: 11px; color: #888; text-align: center; }
+getRedirectResult(auth)
+  .then(result => {
+    if (result && result.user) mostrarStatus('✅ Sesión iniciada correctamente', 'ok');
+  })
+  .catch(err => {
+    if (err && err.code && err.code !== 'auth/no-auth-event') {
+      console.error('[Auth] getRedirectResult:', err);
+      mostrarStatus('Error al iniciar sesión: ' + err.message, 'error');
+    }
+  });
 
-@media (max-width: 700px) {
-  .player-card { grid-template-columns: 1fr; grid-template-areas: "cover" "meta" "progress" "controls" "volume" "hint"; max-width: 400px; padding: 28px 22px 22px; gap: 16px; }
-  .player-cover { width: 180px; height: 180px; justify-self: center; }
-  .player-meta { text-align: center; padding-right: 0; }
-  .player-meta strong { font-size: 18px; } .player-meta small { font-size: 11px; }
-}
-@media (max-width: 420px) {
-  .container { padding: 16px 0; }
-  .player-cover { width: 150px; height: 150px; }
-  .player-card { padding: 24px 18px 18px; }
-  .player-btn-main { width: 60px; height: 60px; min-width: 60px; font-size: 20px; }
-}
+// ============================================ DOM ============================================
+const loginBtn   = document.getElementById('loginBtn');
+const form       = document.getElementById('formCancion');
+const userBox    = document.getElementById('userBox');
+const userEmail  = document.getElementById('userEmail');
+const status     = document.getElementById('status');
+const submitBtn  = document.getElementById('submitBtn');
+const preview    = document.getElementById('preview');
+const previewImg = document.getElementById('previewImg');
+const previewTitulo  = document.getElementById('previewTitulo');
+const previewArtista = document.getElementById('previewArtista');
 
-/* ============================================ MENÚ ============================================ */
-.menu-wrap { position: fixed; top: 18px; right: 18px; z-index: 1000; }
-.menu-btn {
-  width: 46px; height: 46px; min-width: 46px; padding: 0; margin: 0;
-  border-radius: 10px; background: #fff; border: 1.5px solid #d0d0d0;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 5px; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,.06);
-  transition: border-color .2s, box-shadow .2s, transform .15s;
-}
-.menu-btn:hover:not(:disabled) { border-color: #000; box-shadow: 0 4px 16px rgba(0,0,0,.1); transform: translateY(-1px); }
-.menu-btn span { display: block; width: 20px; height: 2px; border-radius: 999px; background: #000; transition: transform .25s, opacity .2s; }
-.menu-btn.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-.menu-btn.open span:nth-child(2) { opacity: 0; }
-.menu-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
-.menu-dropdown {
-  position: absolute; top: calc(100% + 10px); right: 0; min-width: 210px;
-  background: #fff; border: 1.5px solid #e0e0e0; border-radius: 12px;
-  padding: 8px; box-shadow: 0 12px 40px rgba(0,0,0,.1);
-  animation: menuIn .18s;
-}
-@keyframes menuIn { from { opacity: 0; transform: translateY(-6px) scale(.97);} to { opacity: 1; transform: translateY(0) scale(1);} }
-.menu-item {
-  width: 100%; margin: 0; padding: 12px 14px; background: transparent;
-  border: none; border-radius: 8px; color: #000; font-size: 14px;
-  font-weight: 600; text-align: left; display: flex; align-items: center;
-  gap: 10px; cursor: pointer; box-shadow: none; transition: background .18s;
-}
-.menu-item:hover:not(:disabled) { background: #f5f5f5; }
-@media (max-width: 420px) {
-  .menu-wrap { top: 12px; right: 12px; }
-  .menu-btn { width: 42px; height: 42px; min-width: 42px; }
+const historySection = document.getElementById('historySection');
+const historyList    = document.getElementById('historyList');
+const historyCount   = document.getElementById('historyCount');
+const historyEmpty   = document.getElementById('historyEmpty');
+
+const menuWrap     = document.getElementById('menuWrap');
+const menuBtn      = document.getElementById('menuBtn');
+const menuDropdown = document.getElementById('menuDropdown');
+const logoutBtn    = document.getElementById('logoutBtn');
+const statsBtn     = document.getElementById('statsBtn');
+
+const playerModal    = document.getElementById('playerModal');
+const playerImg      = document.getElementById('playerImg');
+const playerTitle    = document.getElementById('playerTitle');
+const playerArtist   = document.getElementById('playerArtist');
+const playerPlay     = document.getElementById('playerPlay');
+const playerRewind   = document.getElementById('playerRewind');
+const playerForward  = document.getElementById('playerForward');
+const playerSeek     = document.getElementById('playerSeek');
+const playerVol      = document.getElementById('playerVol');
+const playerCurrent  = document.getElementById('playerCurrent');
+const playerDuration = document.getElementById('playerDuration');
+
+const editModal    = document.getElementById('editModal');
+const editForm     = document.getElementById('editForm');
+const editImg      = document.getElementById('editImg');
+const editArtista  = document.getElementById('editArtista');
+const editTitulo   = document.getElementById('editTitulo');
+const editAlbum    = document.getElementById('editAlbum');
+const editAudio    = document.getElementById('editAudio');
+const editImagen   = document.getElementById('editImagen');
+const editSubmitBtn = document.getElementById('editSubmitBtn');
+
+const statsModal          = document.getElementById('statsModal');
+const statsList           = document.getElementById('statsList');
+const statsEmpty          = document.getElementById('statsEmpty');
+const statsTotalListeners = document.getElementById('statsTotalListeners');
+const statsTotalEarnings  = document.getElementById('statsTotalEarnings');
+
+const collabContainerForm = document.getElementById('collaboratorsContainer');
+const collabContainerEdit = document.getElementById('collaboratorsEditContainer');
+const addCollabBtnForm    = document.getElementById('addCollaboratorBtn');
+const addCollabBtnEdit    = document.getElementById('addCollaboratorBtnEdit');
+
+const paywall       = document.getElementById('paywall');
+const paywallLogout = document.getElementById('paywallLogout');
+
+let usuarioActual = null;
+let unsubscribeHistorial = null;
+let unsubscribeOyentes   = null;
+let cancionesActuales = [];
+let editandoId = null;
+let statsAbierto = false;
+let statsOyentes = {};
+
+const PLACEHOLDER = 'https://via.placeholder.com/64/333/666?text=%E2%99%AB';
+const COLECCION_OYENTES = 'oyentes_canciones';
+const PAGO_POR_OYENTE = 0.20;
+
+// ================== PLAN ÚNICO $1 MXN / 1 DÍA ==================
+const PLAN_ID      = 'P-68D98156KX953822UNK7KYIQ';
+const PRECIO_PLAN  = 1;
+const DURACION_DIAS = 1;
+
+const MESES_ENTRE_RETIROS = 3;
+const COLECCION_SUSCRIPCIONES = 'suscripciones';
+
+const subBox     = document.getElementById('subBox');
+const subEstado  = document.getElementById('subEstado');
+const subDetalle = document.getElementById('subDetalle');
+const subBtn     = document.getElementById('subBtn');
+const retiroBtn  = document.getElementById('retiroBtn');
+const retiroInfo = document.getElementById('retiroInfo');
+
+let suscripcionActual = null;
+let paypalRenderizado = false;
+
+// ============================================ UTILIDADES ============================================
+function mostrarStatus(msg, tipo = 'ok') {
+  status.textContent = msg;
+  status.className = 'status ' + tipo;
+  if (tipo === 'ok') setTimeout(() => { status.className = 'status'; }, 4000);
 }
 
-/* ============================================ MODAL EDITAR ============================================ */
-.edit-modal { position: fixed; inset: 0; z-index: 1001; display: flex; align-items: center; justify-content: center; padding: 24px; animation: fadeIn .2s; }
-.edit-modal.hidden { display: none !important; }
-.edit-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.4); backdrop-filter: blur(4px); }
-.edit-card {
-  position: relative; width: 100%; max-width: 860px; max-height: 90vh; overflow-y: auto;
-  background: #fff; border: 1.5px solid #e0e0e0; border-radius: 20px; padding: 32px;
-  box-shadow: 0 20px 60px rgba(0,0,0,.12); display: flex; flex-direction: row;
-  gap: 34px; align-items: stretch; animation: playerIn .25s;
-}
-.edit-close {
-  position: absolute; top: 16px; right: 16px;
-  width: 36px; height: 36px; min-width: 36px; padding: 0; margin: 0;
-  border-radius: 50%; background: #f5f5f5; border: 1.5px solid #e0e0e0;
-  color: #000; font-size: 14px; display: flex; align-items: center;
-  justify-content: center; cursor: pointer; z-index: 2;
-  transition: background .2s, border-color .2s, transform .2s;
-}
-.edit-close:hover { background: #000; border-color: #000; color: #fff; transform: rotate(90deg); }
-.edit-cover { flex: 1; max-width: 300px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-.edit-cover img { width: 100%; aspect-ratio: 1/1; border-radius: 16px; object-fit: cover; border: 1px solid #e0e0e0; box-shadow: 0 10px 30px rgba(0,0,0,.06); background: #f5f5f5; }
-.edit-content { flex: 1.5; display: flex; flex-direction: column; }
-.edit-heading { font-size: 24px; font-weight: 700; color: #000; margin-bottom: 24px; text-align: center; letter-spacing: .5px; }
-.edit-form .form-group { margin-bottom: 14px; }
-.edit-form label { color: #000; font-size: 11px; letter-spacing: 1px; }
-.edit-form input { background: #fff; border: 1.5px solid #d0d0d0; color: #000; padding: 12px 14px; }
-.edit-form input:focus { border-color: #000; box-shadow: 0 0 0 3px rgba(0,0,0,.08); }
-.btn-edit-submit {
-  width: 100%; padding: 16px; margin-top: 10px; background: #000;
-  border: none; border-radius: 10px; color: #fff; font-size: 18px;
-  font-weight: 700; cursor: pointer; letter-spacing: .5px;
-  transition: background .2s, transform .15s, box-shadow .2s;
-}
-.btn-edit-submit:hover:not(:disabled) { background: #222; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,.15); }
-@media (max-width: 700px) {
-  .edit-card { flex-direction: column; padding: 28px 22px 22px; gap: 16px; max-width: 400px; }
-  .edit-cover { max-width: 180px; margin: 0 auto; }
-  .edit-heading { font-size: 20px; margin-bottom: 16px; }
+function dropboxDirecto(url) {
+  if (!url) return '';
+  url = url.trim();
+  return url
+    .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
+    .replace('?dl=0', '').replace('?dl=1', '')
+    .replace('&dl=0', '').replace('&dl=1', '')
+    .replace('?raw=1', '');
 }
 
-/* ============================================ SELECTOR DE GÉNERO ============================================ */
-.genre-select { position: relative; width: 100%; }
-.genre-toggle {
-  width: 100%; margin: 0; padding: 14px 16px; background: #fff;
-  border: 1.5px solid #d0d0d0; border-radius: 10px; color: #000;
-  font-size: 15px; font-weight: 500; display: flex; align-items: center;
-  justify-content: space-between; gap: 10px; text-align: left;
-  cursor: pointer; box-shadow: none;
-  transition: border-color .2s, box-shadow .2s;
-}
-.genre-toggle:hover:not(:disabled) { border-color: #000; box-shadow: 0 0 0 3px rgba(0,0,0,.06); }
-.genre-toggle[aria-expanded="true"] { border-color: #000; box-shadow: 0 0 0 3px rgba(0,0,0,.08); }
-.genre-value { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.genre-value.placeholder { color: #999; }
-.genre-arrow { flex-shrink: 0; font-size: 12px; color: #555; transition: transform .2s; }
-.genre-toggle[aria-expanded="true"] .genre-arrow { transform: rotate(180deg); }
-.genre-panel {
-  position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 80;
-  background: #fff; border: 1.5px solid #e0e0e0; border-radius: 12px;
-  padding: 10px; box-shadow: 0 12px 40px rgba(0,0,0,.12);
-  animation: genreIn .18s;
-}
-@keyframes genreIn { from { opacity: 0; transform: translateY(-6px) scale(.98);} to { opacity: 1; transform: translateY(0) scale(1);} }
-.genre-search { width: 100%; padding: 11px 14px; font-size: 14px; border: 1.5px solid #d0d0d0; border-radius: 9px; background: #fafafa; }
-.genre-search:focus { background: #fff; border-color: #000; box-shadow: 0 0 0 3px rgba(0,0,0,.08); }
-.genre-list { margin-top: 8px; max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding-right: 2px; }
-.genre-list::-webkit-scrollbar { width: 5px; }
-.genre-list::-webkit-scrollbar-thumb { background: #d0d0d0; border-radius: 999px; }
-.genre-item {
-  width: 100%; margin: 0; padding: 10px 12px; background: transparent;
-  border: none; border-radius: 8px; color: #000; font-size: 14px;
-  font-weight: 500; text-align: left; display: flex; align-items: center;
-  justify-content: space-between; gap: 10px; cursor: pointer;
-  box-shadow: none; transition: background .15s, color .15s;
-}
-.genre-item:hover:not(:disabled) { background: #f5f5f5; }
-.genre-item.selected, .genre-item.selected:hover:not(:disabled) { background: #000; color: #fff; }
-.genre-item .check { flex-shrink: 0; font-size: 12px; opacity: 0; }
-.genre-item.selected .check { opacity: 1; }
-.genre-empty { font-size: 13px; color: #777; text-align: center; padding: 16px 0; }
-
-/* ============================================ MODAL ESTADÍSTICAS ============================================ */
-.stats-modal { position: fixed; inset: 0; z-index: 1002; display: flex; align-items: center; justify-content: center; padding: 24px; animation: fadeIn .2s; }
-.stats-modal.hidden { display: none !important; }
-.stats-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.45); backdrop-filter: blur(4px); }
-.stats-card {
-  position: relative; width: 100%; max-width: 720px; max-height: 90vh; overflow-y: auto;
-  background: #fff; border: 1.5px solid #e0e0e0; border-radius: 20px; padding: 32px 28px 24px;
-  box-shadow: 0 20px 60px rgba(0,0,0,.15); animation: playerIn .25s;
-}
-.stats-close {
-  position: absolute; top: 16px; right: 16px;
-  width: 36px; height: 36px; min-width: 36px; padding: 0; margin: 0;
-  border-radius: 50%; background: #f5f5f5; border: 1.5px solid #e0e0e0;
-  color: #000; font-size: 14px; display: flex; align-items: center;
-  justify-content: center; cursor: pointer; z-index: 2;
-  transition: background .2s, border-color .2s, transform .2s;
-}
-.stats-close:hover { background: #000; border-color: #000; color: #fff; transform: rotate(90deg); }
-.stats-heading { font-size: 22px; font-weight: 700; color: #000; text-align: center; margin-bottom: 22px; padding-right: 40px; }
-.stats-list { display: flex; flex-direction: column; gap: 12px; max-height: 46vh; overflow-y: auto; padding-right: 4px; margin-bottom: 20px; }
-.stats-list::-webkit-scrollbar { width: 5px; }
-.stats-list::-webkit-scrollbar-thumb { background: #d0d0d0; border-radius: 999px; }
-.stats-item { display: grid; grid-template-columns: 56px 1fr; gap: 12px; align-items: center; background: #fafafa; border: 1.5px solid #e8e8e8; border-radius: 12px; padding: 12px 14px; }
-.stats-item:hover { border-color: #000; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
-.stats-item img { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; background: #f0f0f0; border: 1px solid #e0e0e0; grid-row: span 2; }
-.stats-item-info { min-width: 0; }
-.stats-item-title { display: block; font-size: 14px; font-weight: 700; color: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.stats-item-artist { display: block; font-size: 11px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.stats-item-grid { grid-column: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
-.stats-cell { background: #fff; border: 1px solid #e8e8e8; border-radius: 8px; padding: 7px 8px; text-align: center; }
-.stats-cell-label { display: block; font-size: 9px; font-weight: 700; color: #777; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 3px; }
-.stats-cell-value { display: block; font-size: 13px; font-weight: 700; color: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.stats-cell.earn .stats-cell-value { color: #0a7d3a; }
-.stats-empty { font-size: 13px; color: #777; text-align: center; padding: 20px 0; }
-.stats-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #000; border-radius: 14px; padding: 16px; margin-bottom: 12px; }
-.stats-summary-item { display: flex; flex-direction: column; gap: 4px; text-align: center; min-width: 0; }
-.stats-summary-label { font-size: 10px; font-weight: 700; color: #ccc; text-transform: uppercase; letter-spacing: .6px; }
-.stats-summary-value { font-size: 16px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.stats-summary-earnings .stats-summary-value { color: #4ade80; }
-.stats-hint { font-size: 11px; color: #888; text-align: center; line-height: 1.4; }
-@media (max-width: 640px) {
-  .stats-card { padding: 26px 18px 20px; border-radius: 16px; max-height: 92vh; }
-  .stats-heading { font-size: 18px; margin-bottom: 16px; }
-  .stats-list { max-height: 42vh; gap: 10px; }
-  .stats-item { grid-template-columns: 48px 1fr; padding: 10px; }
-  .stats-item img { width: 48px; height: 48px; }
-  .stats-item-grid { gap: 5px; }
-  .stats-cell { padding: 6px 4px; }
-  .stats-cell-label { font-size: 8px; }
-  .stats-cell-value { font-size: 11px; }
-  .stats-summary { grid-template-columns: 1fr; gap: 10px; padding: 14px; }
-  .stats-summary-item { flex-direction: row; justify-content: space-between; align-items: center; }
-  .stats-summary-value { font-size: 15px; }
+function escapeHtml(str = '') {
+  return String(str).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
 }
 
-/* ============================================ SUSCRIPCIÓN BOX ============================================ */
-.sub-box {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; background: #f8f8f8; border: 1.5px solid #e0e0e0;
-  border-radius: 10px; padding: 12px 14px; margin-bottom: 20px;
-  animation: fadeIn .25s;
-}
-.sub-box.inactiva { background: #fff8e8; border-color: #e0b000; }
-.sub-info { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
-.sub-icon { font-size: 20px; flex-shrink: 0; }
-.sub-text { display: flex; flex-direction: column; min-width: 0; }
-.sub-text strong { font-size: 13px; font-weight: 700; color: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sub-text small { font-size: 11px; color: #666; font-weight: 500; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.btn-sub {
-  width: auto; margin: 0; padding: 9px 16px; font-size: 12px;
-  font-weight: 700; letter-spacing: .4px; border-radius: 8px;
-  background: #000; color: #fff; border: none; white-space: nowrap;
-  flex-shrink: 0; box-shadow: none; transition: background .2s;
-}
-.btn-sub:hover:not(:disabled) { background: #222; }
-.btn-sub:disabled { opacity: .5; cursor: default; }
-
-/* ============================================ PAYWALL ============================================ */
-.paywall {
-  position: fixed; inset: 0; z-index: 9999;
-  background: #ffffff; display: flex; align-items: center; justify-content: center;
-  padding: 24px; overflow-y: auto; animation: fadeIn .3s ease;
-}
-.paywall.hidden { display: none !important; }
-
-.paywall-card {
-  width: 100%; max-width: 460px;
-  background: #fff; border: 1.5px solid #e0e0e0; border-radius: 20px;
-  padding: 32px 28px 24px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-  text-align: center; animation: playerIn .35s ease;
+function fmtNumero(n) { return (Number(n) || 0).toLocaleString('es-MX'); }
+function fmtDinero(n) {
+  return '$' + (Number(n) || 0).toLocaleString('es-MX', {
+    minimumFractionDigits: 2, maximumFractionDigits: 2
+  }) + ' MXN';
 }
 
-.paywall-brand { margin-bottom: 24px; }
-.paywall-brand h1 {
-  font-size: 26px; font-weight: 700; color: #000;
-  letter-spacing: -0.5px; margin-bottom: 4px;
-}
-.paywall-brand p {
-  font-size: 11px; font-weight: 700; color: #777;
-  letter-spacing: 2px; text-transform: uppercase;
+function normalizarTitulo(t) {
+  return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
-.paywall-title {
-  font-size: 20px; font-weight: 700; color: #000;
-  margin-bottom: 8px; letter-spacing: -0.3px;
+// ============================================ COLABORADORES ============================================
+function crearFilaColaborador(valor = '') {
+  const row = document.createElement('div');
+  row.className = 'collaborator-row';
+  row.innerHTML = `
+    <input type="text" class="collaborator-input"
+           placeholder="Ej: Nombre del colaborador"
+           value="${escapeHtml(valor)}">
+    <button type="button" class="btn-remove-collab"
+            title="Eliminar colaborador" aria-label="Eliminar">✕</button>
+  `;
+  row.querySelector('.btn-remove-collab').addEventListener('click', () => row.remove());
+  return row;
 }
-.paywall-subtitle {
-  font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 20px;
+function agregarColaboradorAlContenedor(contenedor) {
+  if (!contenedor) return;
+  contenedor.appendChild(crearFilaColaborador(''));
+}
+function obtenerColaboradoresDe(contenedor) {
+  if (!contenedor) return [];
+  return Array.from(contenedor.querySelectorAll('.collaborator-input'))
+    .map(inp => inp.value.trim()).filter(v => v !== '');
+}
+function cargarColaboradoresEn(contenedor, colaboradores) {
+  if (!contenedor) return;
+  contenedor.innerHTML = '';
+  const lista = Array.isArray(colaboradores) ? colaboradores.filter(Boolean) : [];
+  if (lista.length === 0) contenedor.appendChild(crearFilaColaborador(''));
+  else lista.forEach(n => contenedor.appendChild(crearFilaColaborador(n)));
+}
+addCollabBtnForm?.addEventListener('click', () => {
+  agregarColaboradorAlContenedor(collabContainerForm);
+  const inputs = collabContainerForm.querySelectorAll('.collaborator-input');
+  inputs[inputs.length - 1]?.focus();
+});
+addCollabBtnEdit?.addEventListener('click', () => {
+  agregarColaboradorAlContenedor(collabContainerEdit);
+  const inputs = collabContainerEdit.querySelectorAll('.collaborator-input');
+  inputs[inputs.length - 1]?.focus();
+});
+cargarColaboradoresEn(collabContainerForm, []);
+cargarColaboradoresEn(collabContainerEdit, []);
+
+// ============================================ OYENTES ============================================
+function extraerOyentes(data) {
+  if (!data) return 0;
+  const posibles = [data.oyentes, data.Oyentes, data.oyente, data.listeners,
+    data.Listeners, data.listener, data.oyentes_totales, data.totalOyentes,
+    data.total_oyentes, data.listenerCount, data.listener_count];
+  for (const v of posibles) {
+    if (v === undefined || v === null || v === '') continue;
+    if (typeof v === 'object' && !Array.isArray(v)) return Object.keys(v).length;
+    if (Array.isArray(v)) return v.length;
+    const n = Number(v);
+    if (!isNaN(n)) return n;
+  }
+  return 0;
+}
+function obtenerStatsDeCancion(cancion) {
+  if (!cancion) return { oyentes: 0, docId: null };
+  const candidatos = [cancion.titulo, cancion.title, cancion.nombre, cancion.id];
+  for (const c of candidatos) {
+    if (!c) continue;
+    const s = statsOyentes[normalizarTitulo(c)];
+    if (s) return s;
+  }
+  return { oyentes: 0, docId: null };
 }
 
-.paywall-price {
-  font-size: 40px; font-weight: 800; color: #000;
-  letter-spacing: -1.5px; margin-bottom: 22px; line-height: 1;
-}
-.paywall-price span {
-  display: block; font-size: 12px; font-weight: 700; color: #777;
-  letter-spacing: 1.5px; text-transform: uppercase;
-  margin-top: 6px;
+// ============================================ AUTH LOGIN ============================================
+loginBtn.addEventListener('click', async () => {
+  try {
+    loginBtn.disabled = true;
+    loginBtn.innerHTML = '<span class="loader"></span>Iniciando sesión...';
+    if (esWebView()) { await signInWithRedirect(auth, provider); return; }
+    await signInWithPopup(auth, provider);
+  } catch (e) {
+    console.error('[Auth] Error login:', e);
+    const necesitaFallback =
+      e.code === 'auth/popup-blocked' ||
+      e.code === 'auth/operation-not-supported-in-this-environment' ||
+      e.code === 'auth/web-storage-unsupported';
+    if (necesitaFallback) {
+      try { await signInWithRedirect(auth, provider); return; }
+      catch (e2) {
+        console.error('[Auth] Fallback redirect falló:', e2);
+        mostrarStatus('Error al iniciar sesión: ' + e2.message, 'error');
+      }
+    } else mostrarStatus('Error al iniciar sesión: ' + e.message, 'error');
+    loginBtn.disabled = false;
+    loginBtn.innerHTML = LOGIN_BTN_HTML;
+  }
+});
+
+onAuthStateChanged(auth, (user) => {
+  usuarioActual = user;
+  if (user) {
+    loginBtn.classList.add('hidden');
+    userBox.classList.remove('hidden');
+    form.classList.remove('hidden');
+    historySection.classList.remove('hidden');
+    userEmail.textContent = user.email;
+    menuWrap.classList.remove('hidden');
+    escucharHistorial(user.uid);
+    escucharOyentesCanciones();
+  } else {
+    loginBtn.classList.remove('hidden');
+    loginBtn.disabled = false;
+    loginBtn.innerHTML = LOGIN_BTN_HTML;
+    userBox.classList.add('hidden');
+    form.classList.add('hidden');
+    historySection.classList.add('hidden');
+    menuWrap.classList.add('hidden');
+    cerrarMenu();
+    if (unsubscribeHistorial) { unsubscribeHistorial(); unsubscribeHistorial = null; }
+    if (unsubscribeOyentes)   { unsubscribeOyentes();   unsubscribeOyentes = null; }
+    historyList.innerHTML = '';
+    historyCount.textContent = '0';
+    historyEmpty.classList.add('hidden');
+    cancionesActuales = [];
+    statsOyentes = {};
+    cerrarPlayer(); cerrarEditModal(); cerrarStatsModal();
+  }
+});
+
+// ============================================ PREVIEW ============================================
+['artista', 'titulo', 'imagen', 'album'].forEach(id => {
+  document.getElementById(id).addEventListener('input', actualizarPreview);
+});
+function actualizarPreview() {
+  const artista = document.getElementById('artista').value.trim();
+  const titulo  = document.getElementById('titulo').value.trim();
+  const imagen  = document.getElementById('imagen').value.trim();
+  const album   = document.getElementById('album').value.trim();
+  if (!artista && !titulo && !imagen && !album) { preview.classList.remove('show'); return; }
+  preview.classList.add('show');
+  previewTitulo.textContent  = titulo || '—';
+  previewArtista.textContent = artista || '—';
+  const albumSpan = document.querySelector('.preview-info .Album');
+  if (albumSpan) albumSpan.textContent = album || 'Reggeton 1';
+  if (imagen) {
+    previewImg.src = dropboxDirecto(imagen);
+    previewImg.onerror = () => { previewImg.src = PLACEHOLDER; };
+  } else previewImg.src = PLACEHOLDER;
 }
 
-.paywall-benefits {
-  list-style: none; background: #fafafa;
-  border: 1.5px solid #e8e8e8; border-radius: 12px;
-  padding: 16px 18px; margin-bottom: 22px;
-  display: flex; flex-direction: column; gap: 11px;
-  text-align: left;
-}
-.paywall-benefits li {
-  font-size: 14px; font-weight: 500; color: #000; line-height: 1.4;
-}
-
-.paywall-paypal { margin-bottom: 14px; min-height: 50px; }
-
-.paywall-hint {
-  font-size: 11px; color: #888; line-height: 1.4; margin-bottom: 16px;
-}
-
-.paywall-logout {
-  width: 100%; margin: 0; padding: 12px;
-  background: #f5f5f5; color: #666;
-  border: 1.5px solid #e0e0e0; border-radius: 10px;
-  font-size: 13px; font-weight: 600;
-  cursor: pointer; box-shadow: none;
-  transition: background .2s, color .2s, border-color .2s;
-}
-.paywall-logout:hover:not(:disabled) {
-  background: #fff; color: #000; border-color: #000;
-  transform: none; box-shadow: none;
+// ============================================ HISTORIAL ============================================
+function escucharHistorial(uid) {
+  if (unsubscribeHistorial) unsubscribeHistorial();
+  historyList.innerHTML = '<p class="history-empty">Cargando canciones...</p>';
+  historyEmpty.classList.add('hidden');
+  const ref = collection(db, 'historial_usuarios', uid, 'canciones');
+  unsubscribeHistorial = onSnapshot(ref, (snap) => {
+    const canciones = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    canciones.sort((a, b) => (b.fecha?.seconds || 0) - (a.fecha?.seconds || 0));
+    renderHistorial(canciones);
+    if (statsAbierto) renderStats(canciones);
+  }, (err) => {
+    console.error('Error historial:', err);
+    historyList.innerHTML = '';
+    mostrarStatus('Error al cargar el historial: ' + err.message, 'error');
+  });
 }
 
-@media (max-width: 420px) {
-  .paywall-card { padding: 26px 18px 20px; }
-  .paywall-brand h1 { font-size: 22px; }
-  .paywall-title { font-size: 18px; }
-  .paywall-price { font-size: 34px; }
-  .paywall-benefits li { font-size: 13px; }
+function escucharOyentesCanciones() {
+  if (unsubscribeOyentes) unsubscribeOyentes();
+  const ref = collection(db, COLECCION_OYENTES);
+  unsubscribeOyentes = onSnapshot(ref, (snap) => {
+    const mapa = {};
+    snap.docs.forEach(d => {
+      const data = d.data() || {};
+      const stats = { docId: d.id, oyentes: extraerOyentes(data) };
+      const candidatos = [d.id, data.titulo, data.title, data.nombre, data.cancion, data.song];
+      candidatos.forEach(c => {
+        if (!c) return;
+        const key = normalizarTitulo(c);
+        if (key && !mapa[key]) mapa[key] = stats;
+      });
+    });
+    statsOyentes = mapa;
+    if (statsAbierto) renderStats(cancionesActuales);
+  }, (err) => console.error('Error oyentes:', err));
 }
 
-/* ============================================ RETIRO ============================================ */
-.retiro-section {
-  display: flex; flex-direction: column; gap: 10px;
-  background: #f8faf8; border: 1.5px solid #d6e6d6;
-  border-radius: 12px; padding: 14px 16px; margin-bottom: 12px;
+async function asegurarRegistroOyentes(titulo) {
+  if (!titulo) return;
+  if (statsOyentes[normalizarTitulo(titulo)]) return;
+  try {
+    const docRef = doc(db, COLECCION_OYENTES, titulo);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) return;
+    await setDoc(docRef, { oyentes: 0 });
+  } catch (e) { console.warn('No asegurarRegistroOyentes:', e); }
 }
-.retiro-header { display: flex; align-items: center; gap: 10px; }
-.retiro-icon { font-size: 22px; }
-.retiro-header > div { display: flex; flex-direction: column; min-width: 0; }
-.retiro-header strong { font-size: 13px; font-weight: 700; color: #000; }
-.retiro-header small { font-size: 11px; color: #666; margin-top: 1px; line-height: 1.3; }
-.btn-retiro {
-  width: 100%; margin: 0; padding: 12px;
-  font-size: 14px; font-weight: 700;
-  border-radius: 10px; background: #0a7d3a; color: #fff; border: none;
-  cursor: pointer; transition: background .2s, transform .15s;
+
+async function sincronizarOyentesAlEditar(tituloAntiguo, tituloNuevo) {
+  if (!tituloNuevo) return;
+  const keyAntiguo = normalizarTitulo(tituloAntiguo);
+  const keyNuevo   = normalizarTitulo(tituloNuevo);
+  if (keyAntiguo === keyNuevo) { await asegurarRegistroOyentes(tituloNuevo); return; }
+  try {
+    const statsAntiguas = statsOyentes[keyAntiguo];
+    const docIdAntiguo  = statsAntiguas?.docId || tituloAntiguo;
+    let contenidoAntiguo = null;
+    if (docIdAntiguo) {
+      const s = await getDoc(doc(db, COLECCION_OYENTES, docIdAntiguo));
+      if (s.exists()) contenidoAntiguo = s.data();
+    }
+    const snapNuevo   = await getDoc(doc(db, COLECCION_OYENTES, tituloNuevo));
+    const existeNuevo = snapNuevo.exists();
+    if (contenidoAntiguo) {
+      if (existeNuevo) {
+        const datosNuevos = snapNuevo.data() || {};
+        const oA = contenidoAntiguo.oyentes || {};
+        const oN = datosNuevos.oyentes || {};
+        let oyentesFinales;
+        if (oA && typeof oA === 'object' && !Array.isArray(oA) &&
+            oN && typeof oN === 'object' && !Array.isArray(oN)) {
+          oyentesFinales = { ...oA, ...oN };
+        } else if (Array.isArray(oA) && Array.isArray(oN)) {
+          oyentesFinales = Array.from(new Set([...oA, ...oN]));
+        } else oyentesFinales = oN || oA || {};
+        await setDoc(doc(db, COLECCION_OYENTES, tituloNuevo), { ...datosNuevos, oyentes: oyentesFinales });
+      } else {
+        await setDoc(doc(db, COLECCION_OYENTES, tituloNuevo), contenidoAntiguo);
+      }
+    } else if (!existeNuevo) {
+      await setDoc(doc(db, COLECCION_OYENTES, tituloNuevo), { oyentes: {} });
+    }
+    if (docIdAntiguo && docIdAntiguo !== tituloNuevo) {
+      await deleteDoc(doc(db, COLECCION_OYENTES, docIdAntiguo));
+    }
+  } catch (e) { console.warn('No sincronizarOyentesAlEditar:', e); }
 }
-.btn-retiro:hover:not(:disabled) { background: #086b30; transform: translateY(-1px); }
-.btn-retiro:disabled { background: #d0d0d0; color: #666; cursor: not-allowed; opacity: .7; }
+
+async function eliminarRegistroOyentes(cancion) {
+  if (!cancion || !cancion.titulo) return;
+  const stats = obtenerStatsDeCancion(cancion);
+  const docId = stats.docId || cancion.titulo;
+  try { await deleteDoc(doc(db, COLECCION_OYENTES, docId)); }
+  catch (e) { console.warn('No eliminarRegistroOyentes:', e); }
+}
+
+function renderHistorial(canciones) {
+  cancionesActuales = canciones;
+  historyCount.textContent = canciones.length;
+  if (!canciones.length) {
+    historyList.innerHTML = '';
+    historyEmpty.classList.remove('hidden');
+    return;
+  }
+  historyEmpty.classList.add('hidden');
+  historyList.innerHTML = canciones.map(c => {
+    const img = c.imagenUrl ? escapeHtml(c.imagenUrl) : PLACEHOLDER;
+    const titulo  = escapeHtml(c.titulo  || 'Sin título');
+    const artista = escapeHtml(c.artista || 'Desconocido');
+    return `
+      <div class="history-item" data-id="${escapeHtml(c.id)}">
+        <img src="${img}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
+        <div class="history-info">
+          <strong title="${titulo}">${titulo}</strong>
+          <small title="${artista}">${artista}</small>
+        </div>
+        <button type="button" class="btn-edit" data-id="${escapeHtml(c.id)}" title="Editar">✏️</button>
+        <button type="button" class="btn-delete" data-id="${escapeHtml(c.id)}" title="Eliminar">🗑️</button>
+      </div>`;
+  }).join('');
+}
+
+historyList.addEventListener('click', (e) => {
+  const deleteBtn = e.target.closest('.btn-delete');
+  if (deleteBtn) {
+    const id = deleteBtn.dataset.id;
+    const item = deleteBtn.closest('.history-item');
+    const titulo = item?.querySelector('.history-info strong')?.textContent || 'esta canción';
+    const cancion = cancionesActuales.find(c => c.id === id);
+    eliminarCancion(id, deleteBtn, titulo, cancion);
+    return;
+  }
+  const editBtn = e.target.closest('.btn-edit');
+  if (editBtn) {
+    const cancion = cancionesActuales.find(c => c.id === editBtn.dataset.id);
+    if (cancion) abrirEditModal(cancion);
+    return;
+  }
+  const item = e.target.closest('.history-item');
+  if (!item) return;
+  const cancion = cancionesActuales.find(c => c.id === item.dataset.id);
+  if (cancion) abrirPlayer(cancion);
+});
+
+async function eliminarCancion(id, boton, titulo, cancion) {
+  if (!usuarioActual) { mostrarStatus('Debes iniciar sesión primero', 'error'); return; }
+  if (!confirm(`¿Seguro que quieres eliminar "${titulo}"?\nEsta acción no se puede deshacer.`)) return;
+  try {
+    boton.disabled = true; boton.textContent = '⏳';
+    await deleteDoc(doc(db, 'historial_usuarios', usuarioActual.uid, 'canciones', id));
+    if (cancion) await eliminarRegistroOyentes(cancion);
+    else {
+      try { await deleteDoc(doc(db, COLECCION_OYENTES, titulo)); }
+      catch (e) { console.warn('Fallback eliminar oyentes:', e); }
+    }
+    mostrarStatus('🗑️ Canción eliminada correctamente', 'ok');
+  } catch (err) {
+    console.error('Error al eliminar:', err);
+    mostrarStatus('Error al eliminar: ' + err.message, 'error');
+    boton.disabled = false; boton.textContent = '🗑️';
+  }
+}
+
+// ============================================ GUARDAR CANCIÓN ============================================
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!usuarioActual) { mostrarStatus('Debes iniciar sesión primero', 'error'); return; }
+
+  if (!estaSuscripcionActiva()) {
+    mostrarStatus('Necesitas una suscripción activa para subir música', 'error');
+    mostrarPaywall();
+    return;
+  }
+
+  const artista   = document.getElementById('artista').value.trim();
+  const titulo    = document.getElementById('titulo').value.trim();
+  const album     = document.getElementById('album').value.trim();
+  const genero    = (document.getElementById('genero')?.value || '').trim();
+  const subgenero = (document.getElementById('subgenero')?.value || '').trim();
+  const audioRaw  = document.getElementById('audio').value.trim();
+  const imagenRaw = document.getElementById('imagen').value.trim();
+  const colaboradores = obtenerColaboradoresDe(collabContainerForm);
+
+  if (!artista || !titulo || !audioRaw) {
+    mostrarStatus('Completa artista, título y audio', 'error');
+    return;
+  }
+
+  const audioUrl  = dropboxDirecto(audioRaw);
+  const imagenUrl = imagenRaw ? dropboxDirecto(imagenRaw) : '';
+
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<span class="loader"></span>Verificando audio...';
+  mostrarStatus('Verificando que el audio de Dropbox sea accesible...', 'loading');
+
+  try {
+    const res = await fetch(audioUrl, { method: 'HEAD' });
+    if (!res.ok) throw new Error('El link de audio no responde correctamente');
+  } catch (err) { console.warn('Validación de audio:', err); }
+
+  try {
+    submitBtn.innerHTML = '<span class="loader"></span>Guardando...';
+    mostrarStatus('Guardando en la base de datos...', 'loading');
+    const uid = usuarioActual.uid;
+    await addDoc(collection(db, 'historial_usuarios', uid, 'canciones'), {
+      artista, titulo, album, genero, subgenero, colaboradores,
+      audioUrl, imagenUrl, origen: 'dropbox',
+      uid, email: usuarioActual.email, fecha: serverTimestamp()
+    });
+    await asegurarRegistroOyentes(titulo);
+    mostrarStatus('✅ Canción subida correctamente', 'ok');
+
+    form.reset();
+    preview.classList.remove('show');
+    cargarColaboradoresEn(collabContainerForm, []);
+    const albumSpan = document.querySelector('.preview-info .Album');
+    if (albumSpan) albumSpan.textContent = 'Reggeton 1';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Subir canción';
+  } catch (err) {
+    console.error(err);
+    mostrarStatus('Error al guardar: ' + err.message, 'error');
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Subir canción';
+  }
+});
+
+// ============================================ REPRODUCTOR ============================================
+const previewAudio = new Audio();
+previewAudio.preload = 'metadata';
+function fmtTiempo(seg) {
+  if (!isFinite(seg) || seg < 0) return '0:00';
+  const m = Math.floor(seg / 60);
+  const s = Math.floor(seg % 60);
+  return m + ':' + String(s).padStart(2, '0');
+}
+function abrirPlayer(cancion) {
+  if (!cancion) return;
+  playerImg.src = cancion.imagenUrl || PLACEHOLDER;
+  playerImg.onerror = () => { playerImg.onerror = null; playerImg.src = PLACEHOLDER; };
+  playerTitle.textContent  = cancion.titulo  || 'Sin título';
+  playerArtist.textContent = cancion.artista || 'Desconocido';
+  playerSeek.value = 0;
+  playerCurrent.textContent = '0:00';
+  playerDuration.textContent = '0:00';
+  playerPlay.textContent = '▶';
+  previewAudio.pause();
+  previewAudio.src = cancion.audioUrl || '';
+  previewAudio.currentTime = 0;
+  playerModal.classList.remove('hidden');
+  playerModal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+function cerrarPlayer() {
+  previewAudio.pause();
+  previewAudio.currentTime = 0;
+  previewAudio.src = '';
+  if (playerModal) {
+    playerModal.classList.add('hidden');
+    playerModal.setAttribute('aria-hidden', 'true');
+  }
+  document.body.style.overflow = '';
+  if (playerPlay) playerPlay.textContent = '▶';
+}
+playerModal.addEventListener('click', (e) => { if (e.target.dataset.close === '1') cerrarPlayer(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !playerModal.classList.contains('hidden')) cerrarPlayer();
+});
+playerPlay.addEventListener('click', async () => {
+  if (!previewAudio.src) return;
+  try {
+    if (previewAudio.paused) { await previewAudio.play(); playerPlay.textContent = '⏸'; }
+    else { previewAudio.pause(); playerPlay.textContent = '▶'; }
+  } catch (err) { console.warn('No se pudo reproducir:', err); }
+});
+playerRewind.addEventListener('click', () => {
+  previewAudio.currentTime = Math.max(0, previewAudio.currentTime - 10);
+});
+playerForward.addEventListener('click', () => {
+  previewAudio.currentTime = Math.min(previewAudio.duration || 0, previewAudio.currentTime + 10);
+});
+previewAudio.addEventListener('loadedmetadata', () => {
+  playerDuration.textContent = fmtTiempo(previewAudio.duration);
+});
+previewAudio.addEventListener('timeupdate', () => {
+  if (!previewAudio.duration) return;
+  playerSeek.value = (previewAudio.currentTime / previewAudio.duration) * 1000;
+  playerCurrent.textContent = fmtTiempo(previewAudio.currentTime);
+});
+playerSeek.addEventListener('input', () => {
+  if (!previewAudio.duration) return;
+  previewAudio.currentTime = (playerSeek.value / 1000) * previewAudio.duration;
+});
+previewAudio.addEventListener('ended', () => {
+  playerPlay.textContent = '▶';
+  previewAudio.currentTime = 0;
+  playerSeek.value = 0;
+  playerCurrent.textContent = '0:00';
+});
+playerVol.addEventListener('input', () => {
+  previewAudio.volume = parseFloat(playerVol.value);
+});
+previewAudio.volume = parseFloat(playerVol.value);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && !previewAudio.paused) {
+    previewAudio.pause();
+    playerPlay.textContent = '▶';
+  }
+});
+
+// ============================================ EDITAR ============================================
+function abrirEditModal(cancion) {
+  if (!cancion) return;
+  editandoId = cancion.id;
+  editArtista.value = cancion.artista || '';
+  editTitulo.value  = cancion.titulo  || '';
+  editAlbum.value   = cancion.album   || '';
+  const revertir = (url) => url ? url.replace('dl.dropboxusercontent.com', 'www.dropbox.com') : '';
+  editAudio.value  = revertir(cancion.audioUrl || '');
+  editImagen.value = revertir(cancion.imagenUrl || '');
+  cargarColaboradoresEn(collabContainerEdit, cancion.colaboradores || []);
+  editImg.src = cancion.imagenUrl || PLACEHOLDER;
+  editImg.onerror = () => { editImg.onerror = null; editImg.src = PLACEHOLDER; };
+  editModal.classList.remove('hidden');
+  editModal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+function cerrarEditModal() {
+  editModal.classList.add('hidden');
+  editModal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+  editandoId = null;
+  editForm.reset();
+  cargarColaboradoresEn(collabContainerEdit, []);
+}
+editModal.addEventListener('click', (e) => { if (e.target.dataset.close === '1') cerrarEditModal(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !editModal.classList.contains('hidden')) cerrarEditModal();
+});
+editForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!usuarioActual || !editandoId) {
+    mostrarStatus('Error: No hay sesión o canción seleccionada', 'error');
+    return;
+  }
+  const artista   = editArtista.value.trim();
+  const titulo    = editTitulo.value.trim();
+  const album     = editAlbum.value.trim();
+  const audioRaw  = editAudio.value.trim();
+  const imagenRaw = editImagen.value.trim();
+  const colaboradores = obtenerColaboradoresDe(collabContainerEdit);
+  if (!artista || !titulo || !audioRaw) {
+    mostrarStatus('Completa artista, título y audio', 'error');
+    return;
+  }
+  const audioUrl  = dropboxDirecto(audioRaw);
+  const imagenUrl = imagenRaw ? dropboxDirecto(imagenRaw) : '';
+  editSubmitBtn.disabled = true;
+  editSubmitBtn.innerHTML = '<span class="loader"></span>Guardando cambios...';
+  try {
+    const uid = usuarioActual.uid;
+    const cancionAntigua = cancionesActuales.find(c => c.id === editandoId);
+    const tituloAntiguo  = cancionAntigua?.titulo || '';
+    await updateDoc(doc(db, 'historial_usuarios', uid, 'canciones', editandoId), {
+      artista, titulo, album, colaboradores, audioUrl, imagenUrl,
+      fechaEdicion: serverTimestamp()
+    });
+    await sincronizarOyentesAlEditar(tituloAntiguo, titulo);
+    mostrarStatus('✅ Canción actualizada correctamente', 'ok');
+    cerrarEditModal();
+  } catch (err) {
+    console.error('Error al editar:', err);
+    mostrarStatus('Error al guardar cambios: ' + err.message, 'error');
+  } finally {
+    editSubmitBtn.disabled = false;
+    editSubmitBtn.textContent = 'TEREMINAR';
+  }
+});
+editImagen.addEventListener('input', () => {
+  const url = editImagen.value.trim();
+  if (url) {
+    editImg.src = dropboxDirecto(url);
+    editImg.onerror = () => { editImg.src = PLACEHOLDER; };
+  } else editImg.src = PLACEHOLDER;
+});
+
+// ============================================ ESTADÍSTICAS ============================================
+function renderStats(canciones) {
+  const lista = canciones || cancionesActuales || [];
+  if (!lista.length) {
+    statsList.innerHTML = '';
+    statsEmpty.classList.remove('hidden');
+    statsTotalListeners.textContent = '0';
+    statsTotalEarnings.textContent  = fmtDinero(0);
+    renderRetiroInfo();
+    return;
+  }
+  statsEmpty.classList.add('hidden');
+  let totalOyentes = 0;
+  statsList.innerHTML = lista.map(c => {
+    const img = c.imagenUrl ? escapeHtml(c.imagenUrl) : PLACEHOLDER;
+    const titulo  = escapeHtml(c.titulo  || 'Sin título');
+    const artista = escapeHtml(c.artista || 'Desconocido');
+    const stats = obtenerStatsDeCancion(c);
+    const listeners = stats.oyentes || 0;
+    const ganancia = listeners * PAGO_POR_OYENTE;
+    totalOyentes += listeners;
+    return `
+      <div class="stats-item">
+        <img src="${img}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
+        <div class="stats-item-info">
+          <span class="stats-item-title" title="${titulo}">${titulo}</span>
+          <span class="stats-item-artist" title="${artista}">${artista}</span>
+        </div>
+        <div class="stats-item-grid">
+          <div class="stats-cell">
+            <span class="stats-cell-label">👥 Oyentes</span>
+            <span class="stats-cell-value">${fmtNumero(listeners)}</span>
+          </div>
+          <div class="stats-cell earn">
+            <span class="stats-cell-label">💰 Ganancias</span>
+            <span class="stats-cell-value">${fmtDinero(ganancia)}</span>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+  const totalGanancias = totalOyentes * PAGO_POR_OYENTE;
+  statsTotalListeners.textContent = fmtNumero(totalOyentes);
+  statsTotalEarnings.textContent  = fmtDinero(totalGanancias);
+  renderRetiroInfo();
+}
+
+function abrirStatsModal() {
+  statsAbierto = true;
+  renderStats(cancionesActuales);
+  statsModal.classList.remove('hidden');
+  statsModal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+function cerrarStatsModal() {
+  statsAbierto = false;
+  if (!statsModal) return;
+  statsModal.classList.add('hidden');
+  statsModal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+statsModal.addEventListener('click', (e) => { if (e.target.dataset.close === '1') cerrarStatsModal(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !statsModal.classList.contains('hidden')) cerrarStatsModal();
+});
+statsBtn.addEventListener('click', () => {
+  cerrarMenu();
+  setTimeout(abrirStatsModal, 120);
+});
+
+// ============================================ MENÚ ============================================
+function abrirMenu() {
+  if (!menuDropdown || !menuBtn) return;
+  menuDropdown.classList.remove('hidden');
+  menuBtn.classList.add('open');
+  menuBtn.setAttribute('aria-expanded', 'true');
+}
+function cerrarMenu() {
+  if (!menuDropdown || !menuBtn) return;
+  menuDropdown.classList.add('hidden');
+  menuBtn.classList.remove('open');
+  menuBtn.setAttribute('aria-expanded', 'false');
+}
+menuBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (menuDropdown.classList.contains('hidden')) abrirMenu();
+  else cerrarMenu();
+});
+document.addEventListener('click', (e) => {
+  if (menuWrap.classList.contains('hidden')) return;
+  if (!menuWrap.contains(e.target)) cerrarMenu();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarMenu(); });
+
+logoutBtn.addEventListener('click', async () => {
+  try {
+    logoutBtn.disabled = true;
+    logoutBtn.textContent = 'Cerrando sesión...';
+    await signOut(auth);
+    cerrarMenu();
+    mostrarStatus('👋 Sesión cerrada correctamente', 'ok');
+  } catch (err) {
+    console.error('Error al cerrar sesión:', err);
+    mostrarStatus('Error al cerrar sesión: ' + err.message, 'error');
+  } finally {
+    logoutBtn.disabled = false;
+    logoutBtn.innerHTML = '🚪 Cerrar sesión';
+  }
+});
+
+// ============================================ GÉNEROS ============================================
+const GENEROS_RAW = [
+  "Regional Mexicano","Reggaetón","Pop","Rock","Hip-Hop / Rap","Música Latina","Cumbia",
+  "Electrónica","R&B / Soul","Indie / Alternativo","Metal","Punk","Reggae","Afrobeat",
+  "Country","Folk","Jazz","Blues","K-Pop","J-Pop","Cristiana / Gospel","Clásica",
+  "Flamenco","Acústica","Instrumental","Soundtrack","Otros",
+  "Art Pop","Dance Pop","Electropop","Synth-pop","Indie Pop","Dream Pop","Bedroom Pop",
+  "Hyperpop","Teen Pop","Bubblegum Pop","Power Pop","C-Pop","Latin Pop","Europop",
+  "Britpop","Sophisti-Pop","Baroque Pop","Sunshine Pop","Chamber Pop","Experimental Pop",
+  "Alternative Rock","Indie Rock","Hard Rock","Soft Rock","Classic Rock","Progressive Rock",
+  "Psychedelic Rock","Garage Rock","Blues Rock","Folk Rock","Southern Rock","Surf Rock",
+  "Glam Rock","Art Rock","Experimental Rock","Post-Rock","Math Rock","Noise Rock",
+  "Space Rock","Gothic Rock","Industrial Rock","Christian Rock","Grunge","Brit Rock",
+  "Emo","Shoegaze","Dream Rock",
+  "Heavy Metal","Thrash Metal","Death Metal","Black Metal","Doom Metal","Power Metal",
+  "Speed Metal","Progressive Metal","Symphonic Metal","Folk Metal","Groove Metal",
+  "Nu Metal","Alternative Metal","Industrial Metal","Gothic Metal","Metalcore",
+  "Deathcore","Grindcore","Sludge Metal","Stoner Metal","Funeral Doom",
+  "Melodic Death Metal","Technical Death Metal","Viking Metal","Pagan Metal",
+  "Post-Metal","Djent",
+  "Punk Rock","Hardcore Punk","Post-Punk","Pop Punk","Skate Punk","Street Punk",
+  "Anarcho-Punk","Crust Punk","D-Beat","Garage Punk","Riot Grrrl","Emo Punk",
+  "Ska Punk","Celtic Punk","Folk Punk","Horror Punk","Psychobilly",
+  "Hip-Hop","Rap","Trap","Drill","Gangsta Rap","Boom Bap","Conscious Hip-Hop",
+  "Underground Hip-Hop","Alternative Hip-Hop","Old School Hip-Hop","West Coast Hip-Hop",
+  "East Coast Hip-Hop","Southern Hip-Hop","Crunk","Dirty South","G-Funk","Cloud Rap",
+  "Emo Rap","Jazz Rap","Experimental Hip-Hop","Hardcore Hip-Hop","Latin Hip-Hop",
+  "Chicano Rap","UK Hip-Hop","UK Drill","Grime","Freestyle Rap","Trap Latino",
+  "R&B","Contemporary R&B","Alternative R&B","Neo Soul","Soul","Classic Soul",
+  "Southern Soul","Motown","Funk","P-Funk","Quiet Storm","New Jack Swing",
+  "Blue-Eyed Soul","Psychedelic Soul","Gospel Soul","Soul Jazz",
+  "Blues","Delta Blues","Chicago Blues","Texas Blues","Electric Blues","Acoustic Blues",
+  "Country Blues","Piedmont Blues","British Blues","Jump Blues","Swamp Blues",
+  "Gospel Blues","Soul Blues",
+  "Jazz","Bebop","Hard Bop","Cool Jazz","Free Jazz","Fusion","Jazz Fusion","Smooth Jazz",
+  "Acid Jazz","Latin Jazz","Afro-Cuban Jazz","Gypsy Jazz","Swing","Big Band","Dixieland",
+  "Ragtime","Modal Jazz","Avant-Garde Jazz","Jazz Funk","Nu Jazz","Vocal Jazz",
+  "Contemporary Jazz",
+  "Electronic","EDM","House","Deep House","Tech House","Progressive House",
+  "Electro House","Future House","Tropical House","Bass House","Acid House",
+  "Chicago House","French House","Minimal House","Techno","Detroit Techno",
+  "Minimal Techno","Industrial Techno","Hard Techno","Acid Techno","Trance",
+  "Progressive Trance","Psytrance","Goa Trance","Uplifting Trance","Hard Trance",
+  "Electro","Ambient","Dark Ambient","Chillout","Downtempo","IDM","Breakbeat",
+  "Drum & Bass","Jungle","Liquid Drum & Bass","Dubstep","Brostep","UK Garage",
+  "Future Bass","Synthwave","Vaporwave","Retrowave","Lo-Fi","Chillwave","Glitch",
+  "Industrial","EBM","Hardcore","Gabber","Hardstyle","Future Rave",
+  "Reggae","Roots Reggae","Dancehall","Dub","Rocksteady","Ska","Lovers Rock",
+  "Ragga","Reggae Fusion","Digital Reggae","Dub Poetry",
+  "Música Latina","Latin Urban","Salsa","Salsa Romántica","Salsa Dura","Son Cubano",
+  "Bachata","Merengue","Cumbia","Cumbia Mexicana","Cumbia Colombiana","Cumbia Villera",
+  "Cumbia Peruana","Cumbia Andina","Vallenato","Bolero","Mambo","Cha-cha-chá","Rumba",
+  "Guaracha","Danzón","Timba","Latin Rock","Latin Soul","Tango","Milonga","Bossa Nova",
+  "Samba","MPB","Forró","Axé","Frevo","Sertanejo",
+  "Mariachi","Ranchera","Norteño","Norteño-Banda","Banda","Banda Sinaloense","Corridos",
+  "Corrido Tradicional","Corrido Tumbado","Corrido Bélico","Corridos Alterados","Tejano",
+  "Grupero","Duranguense","Sierreño","Huapango","Son Jarocho","Son Huasteco",
+  "Música de Tierra Caliente","Música Norteña","Cumbia Norteña","Bolero Ranchero",
+  "Mariachi Moderno",
+  "Country","Country Pop","Country Rock","Traditional Country","Outlaw Country",
+  "Alternative Country","Bluegrass","Americana","Honky Tonk","Country Blues",
+  "Western Swing","Nashville Sound","Red Dirt","Contemporary Country","Country Folk",
+  "Folk","Contemporary Folk","Traditional Folk","Celtic Folk","Irish Folk","Scottish Folk",
+  "English Folk","American Folk","Appalachian","Nordic Folk","Balkan Folk","Slavic Folk",
+  "Gypsy / Romani","Klezmer","Neofolk","World Folk","Folk Fusion",
+  "Música Clásica","Medieval","Renacimiento","Barroco","Clasicismo","Romanticismo",
+  "Impresionismo","Modernismo","Música Contemporánea","Música de Cámara","Sinfónica",
+  "Coral","Ópera","Opereta","Oratorio","Cantata","Concierto","Sonata","Sinfonía",
+  "Música Minimalista","Música Experimental",
+  "Gospel","Christian","Christian Pop","Christian Hip-Hop","Christian Metal","Worship",
+  "Contemporary Christian","Spiritual","Hymns","Islamic Music","Nasheed","Jewish Music",
+  "Buddhist Music","Hindu Devotional","Mantra",
+  "Afrobeat","Afrobeats","Afro-Pop","Amapiano","Highlife","Hiplife","Kizomba","Kuduro",
+  "Kwaito","Gqom","Mbalax","Juju","Fuji","Makossa","Soukous","Congolese Rumba","Benga",
+  "Bikutsi","Chimurenga","Jit","Marrabenta","Mbube","Marabi","Township Jazz","Rai",
+  "Gnawa","Desert Blues","Maloya","Sega","Cape Jazz",
+  "Calypso","Soca","Zouk","Kompa","Son","Mento","Steelpan","Bouyon","Punta",
+  "Pagode","Choro","Tropicália","Maracatu","Baião","Carimbó","Lambada","Música Caipira",
+  "Samba-Reggae","Funk Carioca",
+  "K-Rock","K-Hip-Hop","J-Rock","J-Hip-Hop","City Pop","Enka","Shibuya-kei","Mandopop",
+  "Cantopop","Bollywood","Bhangra","Qawwali","Ghazal","Carnatic","Hindustani Classical",
+  "Raga","Dhrupad","Gamelan","Dangdut","Thai Pop","V-Pop","Pinoy Pop","Persian Pop",
+  "Arabic Pop","Turkish Pop",
+  "Arabic Music","Shaabi","Dabke","Khaleeji","Egyptian Pop","Lebanese Pop","Iraqi Music",
+  "Persian Music","Turkish Music","Kurdish Music","Armenian Music","Israeli Music",
+  "Mizrahi","Andalusian Music","Oud Music","Traditional Middle Eastern",
+  "Hawaiian","Hawaiian Pop","Polynesian","Samoan","Tahitian","Tongan","Maori",
+  "Aboriginal Australian","Melanesian","Micronesian","Pacific Island Music",
+  "New Zealand Folk",
+  "Experimental","Avant-Garde","Noise","Drone","Musique Concrète","Electroacoustic",
+  "Minimalism","Sound Art","Free Improvisation","Experimental Electronic",
+  "Film Score","Soundtrack","Movie Soundtrack","Television Score","Video Game Music",
+  "Anime Music","Orchestral Score","Cinematic","Trailer Music","Ambient Score",
+  "Musical Theatre","Broadway","Stage & Screen",
+  "A Cappella","Vocal Pop","Choral","Choir","Barbershop","Doo-Wop","Beatboxing",
+  "Gregorian Chant","Operatic","Vocal Classical",
+  "Children's Music","Nursery Rhymes","Educational Music","Comedy Music","Novelty",
+  "Parody","Comedy Rock","Comedy Rap","Comedy Pop",
+  "Dance","Dance-Pop","Eurodance","Eurobeat","Disco","Nu-Disco","Garage","Jersey Club",
+  "Baltimore Club","Footwork","Juke",
+  "Acústica","Acústica Pop","Rock Acústico","Folk Acústico","Latino Acústico",
+  "Indie Acústico","Regional Mexicano Acústico","Acústica Instrumental","Unplugged",
+  "Balada Acústica","Bolero Acústico"
+];
+
+const GENEROS = [...new Set(GENEROS_RAW.map(g => g.trim()).filter(Boolean))]
+  .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+const SUBGENEROS_RAW = [
+  "Corridos","Corridos Tumbados","Corridos Bélicos","Corridos Tradicionales","Banda",
+  "Banda Sinaloense","Norteño","Norteño-Banda","Sierreño","Sad Sierreño","Grupero",
+  "Mariachi","Ranchera","Huapango","Duranguense","Tejano","Cumbia Norteña"
+];
+
+const SUBGENEROS = [...new Set(SUBGENEROS_RAW.map(g => g.trim()).filter(Boolean))]
+  .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+const generoHidden  = document.getElementById('genero');
+const genreSelect   = document.getElementById('genreSelect');
+const genreToggle   = document.getElementById('genreToggle');
+const genrePanel    = document.getElementById('genrePanel');
+const genreList     = document.getElementById('genreList');
+const genreSearch   = document.getElementById('genreSearch');
+const genreValue    = document.getElementById('genreValue');
+const genreEmpty    = document.getElementById('genreEmpty');
+
+const subgenreGroup   = document.getElementById('subgenreGroup');
+const subgeneroHidden = document.getElementById('subgenero');
+const subgenreSelect  = document.getElementById('subgenreSelect');
+const subgenreToggle  = document.getElementById('subgenreToggle');
+const subgenrePanel   = document.getElementById('subgenrePanel');
+const subgenreList    = document.getElementById('subgenreList');
+const subgenreSearch  = document.getElementById('subgenreSearch');
+const subgenreValue   = document.getElementById('subgenreValue');
+const subgenreEmpty   = document.getElementById('subgenreEmpty');
+
+let generoSeleccionado = '';
+let subgeneroSeleccionado = '';
+
+const normalizarTexto = (s = '') =>
+  String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+function pintarGeneros(filtro = '') {
+  const q = normalizarTexto(filtro);
+  const lista = q ? GENEROS.filter(g => normalizarTexto(g).includes(q)) : GENEROS;
+  if (!lista.length) { genreList.innerHTML = ''; genreEmpty.classList.remove('hidden'); return; }
+  genreEmpty.classList.add('hidden');
+  genreList.innerHTML = lista.map(g => {
+    const sel = g === generoSeleccionado;
+    return `<button type="button" class="genre-item${sel ? ' selected' : ''}"
+      role="option" aria-selected="${sel}" data-genero="${escapeHtml(g)}">
+      <span>${escapeHtml(g)}</span><span class="check">✓</span></button>`;
+  }).join('');
+}
+function abrirGeneros() {
+  genrePanel.classList.remove('hidden');
+  genreToggle.setAttribute('aria-expanded', 'true');
+  genreSearch.value = '';
+  pintarGeneros('');
+  setTimeout(() => { try { genreSearch.focus(); } catch (e) {} }, 30);
+}
+function cerrarGeneros() {
+  genrePanel.classList.add('hidden');
+  genreToggle.setAttribute('aria-expanded', 'false');
+}
+function seleccionarGenero(valor) {
+  generoSeleccionado = valor || '';
+  generoHidden.value = generoSeleccionado;
+  genreValue.textContent = generoSeleccionado || 'Selecciona un género';
+  genreValue.classList.toggle('placeholder', !generoSeleccionado);
+  cerrarGeneros();
+  if (generoSeleccionado === 'Regional Mexicano') {
+    subgenreGroup?.classList.remove('hidden');
+  } else {
+    subgenreGroup?.classList.add('hidden');
+    subgeneroSeleccionado = '';
+    if (subgeneroHidden) subgeneroHidden.value = '';
+    if (subgenreValue) {
+      subgenreValue.textContent = 'Selecciona un subgénero';
+      subgenreValue.classList.add('placeholder');
+    }
+    cerrarSubgeneros();
+  }
+}
+function pintarSubgeneros(filtro = '') {
+  const q = normalizarTexto(filtro);
+  const lista = q ? SUBGENEROS.filter(g => normalizarTexto(g).includes(q)) : SUBGENEROS;
+  if (!lista.length) { subgenreList.innerHTML = ''; subgenreEmpty.classList.remove('hidden'); return; }
+  subgenreEmpty.classList.add('hidden');
+  subgenreList.innerHTML = lista.map(g => {
+    const sel = g === subgeneroSeleccionado;
+    return `<button type="button" class="genre-item${sel ? ' selected' : ''}"
+      role="option" aria-selected="${sel}" data-subgenero="${escapeHtml(g)}">
+      <span>${escapeHtml(g)}</span><span class="check">✓</span></button>`;
+  }).join('');
+}
+function abrirSubgeneros() {
+  subgenrePanel.classList.remove('hidden');
+  subgenreToggle.setAttribute('aria-expanded', 'true');
+  subgenreSearch.value = '';
+  pintarSubgeneros('');
+  setTimeout(() => { try { subgenreSearch.focus(); } catch (e) {} }, 30);
+}
+function cerrarSubgeneros() {
+  if (!subgenrePanel) return;
+  subgenrePanel.classList.add('hidden');
+  if (subgenreToggle) subgenreToggle.setAttribute('aria-expanded', 'false');
+}
+function seleccionarSubgenero(valor) {
+  subgeneroSeleccionado = valor || '';
+  if (subgeneroHidden) subgeneroHidden.value = subgeneroSeleccionado;
+  if (subgenreValue) {
+    subgenreValue.textContent = subgeneroSeleccionado || 'Selecciona un subgénero';
+    subgenreValue.classList.toggle('placeholder', !subgeneroSeleccionado);
+  }
+  cerrarSubgeneros();
+}
+genreToggle.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (genrePanel.classList.contains('hidden')) abrirGeneros();
+  else cerrarGeneros();
+});
+genreSearch.addEventListener('input', () => pintarGeneros(genreSearch.value));
+genreSearch.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); const p = genreList.querySelector('.genre-item'); if (p) seleccionarGenero(p.dataset.genero); }
+  if (e.key === 'Escape') cerrarGeneros();
+});
+genreList.addEventListener('click', (e) => {
+  const btn = e.target.closest('.genre-item');
+  if (btn) seleccionarGenero(btn.dataset.genero);
+});
+document.addEventListener('click', (e) => {
+  if (genrePanel.classList.contains('hidden')) return;
+  if (genreSelect && !genreSelect.contains(e.target)) cerrarGeneros();
+});
+subgenreToggle.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (subgenrePanel.classList.contains('hidden')) abrirSubgeneros();
+  else cerrarSubgeneros();
+});
+subgenreSearch.addEventListener('input', () => pintarSubgeneros(subgenreSearch.value));
+subgenreSearch.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); const p = subgenreList.querySelector('.genre-item'); if (p) seleccionarSubgenero(p.dataset.subgenero); }
+  if (e.key === 'Escape') cerrarSubgeneros();
+});
+subgenreList.addEventListener('click', (e) => {
+  const btn = e.target.closest('.genre-item');
+  if (btn) seleccionarSubgenero(btn.dataset.subgenero);
+});
+document.addEventListener('click', (e) => {
+  if (subgenrePanel.classList.contains('hidden')) return;
+  if (subgenreSelect && !subgenreSelect.contains(e.target)) cerrarSubgeneros();
+});
+document.getElementById('formCancion').addEventListener('reset', () => {
+  generoSeleccionado = '';
+  generoHidden.value = '';
+  genreValue.textContent = 'Selecciona un género';
+  genreValue.classList.add('placeholder');
+  cerrarGeneros();
+  subgeneroSeleccionado = '';
+  if (subgeneroHidden) subgeneroHidden.value = '';
+  if (subgenreValue) {
+    subgenreValue.textContent = 'Selecciona un subgénero';
+    subgenreValue.classList.add('placeholder');
+  }
+  subgenreGroup?.classList.add('hidden');
+  cerrarSubgeneros();
+  cargarColaboradoresEn(collabContainerForm, []);
+});
+pintarGeneros('');
+pintarSubgeneros('');
+
+// ================================================================
+// 🎵 SUSCRIPCIÓN ($1 MXN / 1 DÍA)
+// ================================================================
+
+function formatearFechaLarga(ts) {
+  if (!ts) return '—';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function estaSuscripcionActiva() {
+  if (!suscripcionActual) return false;
+  if (suscripcionActual.estado === 'cancelada') return false;
+  const venc = suscripcionActual.fechaVencimiento;
+  if (!venc) return false;
+  const fv = venc.toDate ? venc.toDate() : new Date(venc);
+  return fv.getTime() > Date.now();
+}
+
+function mostrarPaywall() {
+  if (!paywall) return;
+  paywall.classList.remove('hidden');
+  paywall.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+  menuWrap?.classList.add('hidden');
+  setTimeout(renderPayPalBoton, 120);
+}
+function ocultarPaywall() {
+  if (!paywall) return;
+  paywall.classList.add('hidden');
+  paywall.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+async function cargarSuscripcion(uid) {
+  try {
+    const snap = await getDoc(doc(db, COLECCION_SUSCRIPCIONES, uid));
+    suscripcionActual = snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  } catch (e) {
+    console.error('[Suscripción] Error al cargar:', e);
+    suscripcionActual = null;
+  }
+  aplicarEstadoSuscripcion();
+}
+
+function aplicarEstadoSuscripcion() {
+  const activa = estaSuscripcionActiva();
+
+  if (activa) {
+    ocultarPaywall();
+    menuWrap?.classList.remove('hidden');
+
+    if (subBox) {
+      subBox.classList.remove('hidden', 'inactiva');
+      if (subEstado)  subEstado.textContent  = '✅ Suscripción activa';
+      if (subDetalle) subDetalle.textContent = 'Vence el ' + formatearFechaLarga(suscripcionActual.fechaVencimiento);
+      if (subBtn) {
+        subBtn.onclick = null;
+        subBtn.textContent = '✅ Activa';
+        subBtn.disabled = true;
+      }
+    }
+  } else {
+    mostrarPaywall();
+    subBox?.classList.add('hidden');
+  }
+
+  renderRetiroInfo();
+}
+
+async function guardarSuscripcion(subscriptionId) {
+  if (!usuarioActual) return;
+
+  const inicio = new Date();
+  const venc   = new Date(inicio.getTime() + DURACION_DIAS * 24 * 60 * 60 * 1000);
+
+  try {
+    await setDoc(doc(db, COLECCION_SUSCRIPCIONES, usuarioActual.uid), {
+      uid: usuarioActual.uid,
+      email: usuarioActual.email,
+      subscriptionId: subscriptionId || '',
+      planId: PLAN_ID,
+      precio: PRECIO_PLAN,
+      moneda: 'MXN',
+      fechaInicio: serverTimestamp(),
+      fechaVencimiento: venc,
+      estado: 'activa'
+    });
+
+    await cargarSuscripcion(usuarioActual.uid);
+    mostrarStatus('🎉 ¡Suscripción activada! Tienes acceso completo por 24 horas', 'ok');
+  } catch (e) {
+    console.error('[Suscripción] Error al guardar:', e);
+    mostrarStatus('Error al guardar suscripción: ' + e.message, 'error');
+  }
+}
+
+function renderPayPalBoton() {
+  if (paypalRenderizado) return;
+  if (typeof window.paypal === 'undefined') {
+    setTimeout(renderPayPalBoton, 300);
+    return;
+  }
+
+  const container = document.getElementById('paypal-button-container-P-68D98156KX953822UNK7KYIQ');
+  if (!container || container.dataset.rendered === '1') return;
+  container.dataset.rendered = '1';
+  container.innerHTML = '';
+
+  try {
+    window.paypal.Buttons({
+      style: { shape: 'pill', color: 'blue', layout: 'vertical', label: 'subscribe' },
+      createSubscription: function (data, actions) {
+        return actions.subscription.create({ plan_id: PLAN_ID });
+      },
+      onApprove: async function (data) {
+        await guardarSuscripcion(data.subscriptionID);
+      },
+      onError: function (err) {
+        console.error('[PayPal] Error:', err);
+        mostrarStatus('Error con PayPal: ' + (err?.message || 'Intenta de nuevo'), 'error');
+      }
+    }).render('#paypal-button-container-P-68D98156KX953822UNK7KYIQ');
+    paypalRenderizado = true;
+  } catch (e) {
+    console.error('[PayPal] Render falló:', e);
+  }
+}
+
+paywallLogout?.addEventListener('click', async () => {
+  try {
+    paywallLogout.disabled = true;
+    paywallLogout.textContent = 'Cerrando sesión...';
+    await signOut(auth);
+  } catch (e) {
+    console.error('Error al cerrar sesión:', e);
+  } finally {
+    paywallLogout.disabled = false;
+    paywallLogout.textContent = '🚪 Cerrar sesión';
+  }
+});
+
+// ============ RETIROS ============
+function calcularTotalGanancias() {
+  let total = 0;
+  (cancionesActuales || []).forEach(c => {
+    const stats = obtenerStatsDeCancion(c);
+    total += (stats.oyentes || 0) * PAGO_POR_OYENTE;
+  });
+  return total;
+}
+function retiroDisponible() {
+  if (!estaSuscripcionActiva()) return { disponible: false, razon: 'Necesitas una suscripción activa' };
+  if (!suscripcionActual?.ultimoRetiro) return { disponible: true, proximo: 'Disponible ahora' };
+  const ult = suscripcionActual.ultimoRetiro;
+  const fechaUlt = ult.toDate ? ult.toDate() : new Date(ult);
+  const prox = new Date(fechaUlt);
+  prox.setMonth(prox.getMonth() + MESES_ENTRE_RETIROS);
+  if (prox.getTime() <= Date.now()) return { disponible: true, proximo: 'Disponible ahora' };
+  return { disponible: false, proximo: 'Próximo retiro: ' + formatearFechaLarga(prox) };
+}
+function renderRetiroInfo() {
+  if (!retiroBtn || !retiroInfo) return;
+
+  if (!estaSuscripcionActiva()) {
+    retiroInfo.textContent = 'Requiere suscripción activa';
+    retiroBtn.disabled = true;
+    retiroBtn.textContent = 'Solicitar retiro';
+    return;
+  }
+  const estado = retiroDisponible();
+  const total = calcularTotalGanancias();
+  retiroInfo.textContent = `${estado.proximo} · Saldo: ${fmtDinero(total)}`;
+  if (estado.disponible && total > 0) {
+    retiroBtn.disabled = false;
+    retiroBtn.textContent = `Solicitar retiro (${fmtDinero(total)})`;
+  } else {
+    retiroBtn.disabled = true;
+    retiroBtn.textContent = 'Solicitar retiro';
+  }
+}
+async function solicitarRetiro() {
+  if (!usuarioActual || !estaSuscripcionActiva()) return;
+
+  const estado = retiroDisponible();
+  if (!estado.disponible) { mostrarStatus(estado.proximo || 'Aún no puedes retirar', 'error'); return; }
+  const total = calcularTotalGanancias();
+  if (total <= 0) { mostrarStatus('No tienes ganancias para retirar todavía', 'error'); return; }
+  if (!confirm(`¿Solicitar retiro de ${fmtDinero(total)}?\nSe procesará en un plazo de 5-7 días hábiles.`)) return;
+
+  retiroBtn.disabled = true;
+  retiroBtn.innerHTML = '<span class="loader"></span>Enviando...';
+  try {
+    await addDoc(collection(db, 'retiros', usuarioActual.uid, 'solicitudes'), {
+      uid: usuarioActual.uid, email: usuarioActual.email,
+      monto: total, moneda: 'MXN', estado: 'pendiente',
+      metodo: 'PayPal', fecha: serverTimestamp()
+    });
+    await updateDoc(doc(db, COLECCION_SUSCRIPCIONES, usuarioActual.uid), {
+      ultimoRetiro: serverTimestamp()
+    });
+    suscripcionActual.ultimoRetiro = { seconds: Date.now() / 1000 };
+    mostrarStatus('✅ Solicitud de retiro enviada correctamente', 'ok');
+  } catch (e) {
+    console.error('[Retiro] Error:', e);
+    mostrarStatus('Error al solicitar retiro: ' + e.message, 'error');
+  } finally {
+    renderRetiroInfo();
+  }
+}
+retiroBtn?.addEventListener('click', solicitarRetiro);
+
+// ============ Observador auth para suscripción ============
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    await cargarSuscripcion(user.uid);
+    renderPayPalBoton();
+  } else {
+    ocultarPaywall();
+    suscripcionActual = null;
+    subBox?.classList.add('hidden');
+    if (retiroBtn)  retiroBtn.disabled = true;
+    if (retiroInfo) retiroInfo.textContent = '—';
+  }
+});
+
+statsBtn?.addEventListener('click', () => setTimeout(renderRetiroInfo, 250));
