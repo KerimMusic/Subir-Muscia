@@ -115,9 +115,10 @@ const collabContainerEdit = document.getElementById('collaboratorsEditContainer'
 const addCollabBtnForm    = document.getElementById('addCollaboratorBtn');
 const addCollabBtnEdit    = document.getElementById('addCollaboratorBtnEdit');
 
-// Paywall
 const paywall         = document.getElementById('paywall');
 const paywallLogout   = document.getElementById('paywallLogout');
+const limiteBanner    = document.getElementById('limiteBanner');
+const upgradeBtn      = document.getElementById('upgradeBtn');
 
 let usuarioActual = null;
 let unsubscribeHistorial = null;
@@ -131,11 +132,15 @@ const PLACEHOLDER = 'https://via.placeholder.com/64/333/666?text=%E2%99%AB';
 const COLECCION_OYENTES = 'oyentes_canciones';
 const PAGO_POR_OYENTE = 0.20;
 
-// Suscripción
-const PRECIO_SUSCRIPCION = 550;
+// ================== PLANES ==================
+const PLAN_ID_PRO   = 'P-88D20959NU409831ENK66MMI';
+const PLAN_ID_BASIC = 'P-6AG16533PP0259939NK7AD7I';
+const PRECIO_PRO    = 550;
+const PRECIO_BASIC  = 1;
+const LIMITE_BASICO = 1;
+
 const MESES_ENTRE_RETIROS = 3;
 const COLECCION_SUSCRIPCIONES = 'suscripciones';
-const PLAN_ID = 'P-88D20959NU409831ENK66MMI';
 
 const subBox     = document.getElementById('subBox');
 const subEstado  = document.getElementById('subEstado');
@@ -196,18 +201,15 @@ function crearFilaColaborador(valor = '') {
   row.querySelector('.btn-remove-collab').addEventListener('click', () => row.remove());
   return row;
 }
-
 function agregarColaboradorAlContenedor(contenedor) {
   if (!contenedor) return;
   contenedor.appendChild(crearFilaColaborador(''));
 }
-
 function obtenerColaboradoresDe(contenedor) {
   if (!contenedor) return [];
   return Array.from(contenedor.querySelectorAll('.collaborator-input'))
     .map(inp => inp.value.trim()).filter(v => v !== '');
 }
-
 function cargarColaboradoresEn(contenedor, colaboradores) {
   if (!contenedor) return;
   contenedor.innerHTML = '';
@@ -215,7 +217,6 @@ function cargarColaboradoresEn(contenedor, colaboradores) {
   if (lista.length === 0) contenedor.appendChild(crearFilaColaborador(''));
   else lista.forEach(n => contenedor.appendChild(crearFilaColaborador(n)));
 }
-
 addCollabBtnForm?.addEventListener('click', () => {
   agregarColaboradorAlContenedor(collabContainerForm);
   const inputs = collabContainerForm.querySelectorAll('.collaborator-input');
@@ -226,7 +227,6 @@ addCollabBtnEdit?.addEventListener('click', () => {
   const inputs = collabContainerEdit.querySelectorAll('.collaborator-input');
   inputs[inputs.length - 1]?.focus();
 });
-
 cargarColaboradoresEn(collabContainerForm, []);
 cargarColaboradoresEn(collabContainerEdit, []);
 
@@ -245,7 +245,6 @@ function extraerOyentes(data) {
   }
   return 0;
 }
-
 function obtenerStatsDeCancion(cancion) {
   if (!cancion) return { oyentes: 0, docId: null };
   const candidatos = [cancion.titulo, cancion.title, cancion.nombre, cancion.id];
@@ -262,11 +261,7 @@ loginBtn.addEventListener('click', async () => {
   try {
     loginBtn.disabled = true;
     loginBtn.innerHTML = '<span class="loader"></span>Iniciando sesión...';
-
-    if (esWebView()) {
-      await signInWithRedirect(auth, provider);
-      return;
-    }
+    if (esWebView()) { await signInWithRedirect(auth, provider); return; }
     await signInWithPopup(auth, provider);
   } catch (e) {
     console.error('[Auth] Error login:', e);
@@ -274,16 +269,13 @@ loginBtn.addEventListener('click', async () => {
       e.code === 'auth/popup-blocked' ||
       e.code === 'auth/operation-not-supported-in-this-environment' ||
       e.code === 'auth/web-storage-unsupported';
-
     if (necesitaFallback) {
       try { await signInWithRedirect(auth, provider); return; }
       catch (e2) {
         console.error('[Auth] Fallback redirect falló:', e2);
         mostrarStatus('Error al iniciar sesión: ' + e2.message, 'error');
       }
-    } else {
-      mostrarStatus('Error al iniciar sesión: ' + e.message, 'error');
-    }
+    } else mostrarStatus('Error al iniciar sesión: ' + e.message, 'error');
     loginBtn.disabled = false;
     loginBtn.innerHTML = LOGIN_BTN_HTML;
   }
@@ -291,7 +283,6 @@ loginBtn.addEventListener('click', async () => {
 
 onAuthStateChanged(auth, (user) => {
   usuarioActual = user;
-
   if (user) {
     loginBtn.classList.add('hidden');
     userBox.classList.remove('hidden');
@@ -309,19 +300,16 @@ onAuthStateChanged(auth, (user) => {
     form.classList.add('hidden');
     historySection.classList.add('hidden');
     menuWrap.classList.add('hidden');
+    limiteBanner?.classList.add('hidden');
     cerrarMenu();
-
     if (unsubscribeHistorial) { unsubscribeHistorial(); unsubscribeHistorial = null; }
     if (unsubscribeOyentes)   { unsubscribeOyentes();   unsubscribeOyentes = null; }
-
     historyList.innerHTML = '';
     historyCount.textContent = '0';
     historyEmpty.classList.add('hidden');
     cancionesActuales = [];
     statsOyentes = {};
-    cerrarPlayer();
-    cerrarEditModal();
-    cerrarStatsModal();
+    cerrarPlayer(); cerrarEditModal(); cerrarStatsModal();
   }
 });
 
@@ -329,24 +317,17 @@ onAuthStateChanged(auth, (user) => {
 ['artista', 'titulo', 'imagen', 'album'].forEach(id => {
   document.getElementById(id).addEventListener('input', actualizarPreview);
 });
-
 function actualizarPreview() {
   const artista = document.getElementById('artista').value.trim();
   const titulo  = document.getElementById('titulo').value.trim();
   const imagen  = document.getElementById('imagen').value.trim();
   const album   = document.getElementById('album').value.trim();
-
-  if (!artista && !titulo && !imagen && !album) {
-    preview.classList.remove('show');
-    return;
-  }
+  if (!artista && !titulo && !imagen && !album) { preview.classList.remove('show'); return; }
   preview.classList.add('show');
   previewTitulo.textContent  = titulo || '—';
   previewArtista.textContent = artista || '—';
-
   const albumSpan = document.querySelector('.preview-info .Album');
   if (albumSpan) albumSpan.textContent = album || 'Reggeton 1';
-
   if (imagen) {
     previewImg.src = dropboxDirecto(imagen);
     previewImg.onerror = () => { previewImg.src = PLACEHOLDER; };
@@ -358,13 +339,14 @@ function escucharHistorial(uid) {
   if (unsubscribeHistorial) unsubscribeHistorial();
   historyList.innerHTML = '<p class="history-empty">Cargando canciones...</p>';
   historyEmpty.classList.add('hidden');
-
   const ref = collection(db, 'historial_usuarios', uid, 'canciones');
   unsubscribeHistorial = onSnapshot(ref, (snap) => {
     const canciones = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     canciones.sort((a, b) => (b.fecha?.seconds || 0) - (a.fecha?.seconds || 0));
     renderHistorial(canciones);
     if (statsAbierto) renderStats(canciones);
+    actualizarBannerLimite();
+    aplicarEstadoSuscripcion(); // refresca textos con conteo actualizado
   }, (err) => {
     console.error('Error historial:', err);
     historyList.innerHTML = '';
@@ -418,7 +400,6 @@ async function sincronizarOyentesAlEditar(tituloAntiguo, tituloNuevo) {
     }
     const snapNuevo   = await getDoc(doc(db, COLECCION_OYENTES, tituloNuevo));
     const existeNuevo = snapNuevo.exists();
-
     if (contenidoAntiguo) {
       if (existeNuevo) {
         const datosNuevos = snapNuevo.data() || {};
@@ -524,9 +505,15 @@ form.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!usuarioActual) { mostrarStatus('Debes iniciar sesión primero', 'error'); return; }
 
-  if (!estaSuscripcionActiva()) {
-    mostrarStatus('Necesitas una suscripción activa para subir música', 'error');
-    mostrarPaywall();
+  const permiso = puedeSubirCancion();
+  if (!permiso.ok) {
+    if (permiso.motivo === 'sin_suscripcion') {
+      mostrarStatus('Necesitas una suscripción activa para subir música', 'error');
+      mostrarPaywall();
+    } else if (permiso.motivo === 'limite_basico_alcanzado') {
+      mostrarStatus('Ya usaste tu única canción del plan Basic. Actualiza a Pro para subir más.', 'error');
+      setTimeout(mostrarPaywall, 900);
+    }
     return;
   }
 
@@ -559,14 +546,12 @@ form.addEventListener('submit', async (e) => {
   try {
     submitBtn.innerHTML = '<span class="loader"></span>Guardando...';
     mostrarStatus('Guardando en la base de datos...', 'loading');
-
     const uid = usuarioActual.uid;
     await addDoc(collection(db, 'historial_usuarios', uid, 'canciones'), {
       artista, titulo, album, genero, subgenero, colaboradores,
       audioUrl, imagenUrl, origen: 'dropbox',
       uid, email: usuarioActual.email, fecha: serverTimestamp()
     });
-
     await asegurarRegistroOyentes(titulo);
     mostrarStatus('✅ Canción subida correctamente', 'ok');
 
@@ -588,14 +573,12 @@ form.addEventListener('submit', async (e) => {
 // ============================================ REPRODUCTOR ============================================
 const previewAudio = new Audio();
 previewAudio.preload = 'metadata';
-
 function fmtTiempo(seg) {
   if (!isFinite(seg) || seg < 0) return '0:00';
   const m = Math.floor(seg / 60);
   const s = Math.floor(seg % 60);
   return m + ':' + String(s).padStart(2, '0');
 }
-
 function abrirPlayer(cancion) {
   if (!cancion) return;
   playerImg.src = cancion.imagenUrl || PLACEHOLDER;
@@ -613,7 +596,6 @@ function abrirPlayer(cancion) {
   playerModal.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
 }
-
 function cerrarPlayer() {
   previewAudio.pause();
   previewAudio.currentTime = 0;
@@ -625,12 +607,10 @@ function cerrarPlayer() {
   document.body.style.overflow = '';
   if (playerPlay) playerPlay.textContent = '▶';
 }
-
 playerModal.addEventListener('click', (e) => { if (e.target.dataset.close === '1') cerrarPlayer(); });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !playerModal.classList.contains('hidden')) cerrarPlayer();
 });
-
 playerPlay.addEventListener('click', async () => {
   if (!previewAudio.src) return;
   try {
@@ -690,7 +670,6 @@ function abrirEditModal(cancion) {
   editModal.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
 }
-
 function cerrarEditModal() {
   editModal.classList.add('hidden');
   editModal.setAttribute('aria-hidden', 'true');
@@ -699,12 +678,10 @@ function cerrarEditModal() {
   editForm.reset();
   cargarColaboradoresEn(collabContainerEdit, []);
 }
-
 editModal.addEventListener('click', (e) => { if (e.target.dataset.close === '1') cerrarEditModal(); });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !editModal.classList.contains('hidden')) cerrarEditModal();
 });
-
 editForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!usuarioActual || !editandoId) {
@@ -717,7 +694,6 @@ editForm.addEventListener('submit', async (e) => {
   const audioRaw  = editAudio.value.trim();
   const imagenRaw = editImagen.value.trim();
   const colaboradores = obtenerColaboradoresDe(collabContainerEdit);
-
   if (!artista || !titulo || !audioRaw) {
     mostrarStatus('Completa artista, título y audio', 'error');
     return;
@@ -726,7 +702,6 @@ editForm.addEventListener('submit', async (e) => {
   const imagenUrl = imagenRaw ? dropboxDirecto(imagenRaw) : '';
   editSubmitBtn.disabled = true;
   editSubmitBtn.innerHTML = '<span class="loader"></span>Guardando cambios...';
-
   try {
     const uid = usuarioActual.uid;
     const cancionAntigua = cancionesActuales.find(c => c.id === editandoId);
@@ -746,7 +721,6 @@ editForm.addEventListener('submit', async (e) => {
     editSubmitBtn.textContent = 'TEREMINAR';
   }
 });
-
 editImagen.addEventListener('input', () => {
   const url = editImagen.value.trim();
   if (url) {
@@ -758,6 +732,8 @@ editImagen.addEventListener('input', () => {
 // ============================================ ESTADÍSTICAS ============================================
 function renderStats(canciones) {
   const lista = canciones || cancionesActuales || [];
+  const esBasic = esPlanBasico();
+
   if (!lista.length) {
     statsList.innerHTML = '';
     statsEmpty.classList.remove('hidden');
@@ -776,6 +752,17 @@ function renderStats(canciones) {
     const listeners = stats.oyentes || 0;
     const ganancia = listeners * PAGO_POR_OYENTE;
     totalOyentes += listeners;
+
+    const celdaGanancia = esBasic
+      ? `<div class="stats-cell">
+           <span class="stats-cell-label">💰 Ganancias</span>
+           <span class="stats-cell-value" title="Requiere plan Pro">🔒 Pro</span>
+         </div>`
+      : `<div class="stats-cell earn">
+           <span class="stats-cell-label">💰 Ganancias</span>
+           <span class="stats-cell-value">${fmtDinero(ganancia)}</span>
+         </div>`;
+
     return `
       <div class="stats-item">
         <img src="${img}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
@@ -788,16 +775,14 @@ function renderStats(canciones) {
             <span class="stats-cell-label">👥 Oyentes</span>
             <span class="stats-cell-value">${fmtNumero(listeners)}</span>
           </div>
-          <div class="stats-cell earn">
-            <span class="stats-cell-label">💰 Ganancias</span>
-            <span class="stats-cell-value">${fmtDinero(ganancia)}</span>
-          </div>
+          ${celdaGanancia}
         </div>
       </div>`;
   }).join('');
+
   const totalGanancias = totalOyentes * PAGO_POR_OYENTE;
   statsTotalListeners.textContent = fmtNumero(totalOyentes);
-  statsTotalEarnings.textContent  = fmtDinero(totalGanancias);
+  statsTotalEarnings.textContent  = esBasic ? '🔒 Plan Pro' : fmtDinero(totalGanancias);
   renderRetiroInfo();
 }
 
@@ -808,7 +793,6 @@ function abrirStatsModal() {
   statsModal.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
 }
-
 function cerrarStatsModal() {
   statsAbierto = false;
   if (!statsModal) return;
@@ -816,7 +800,6 @@ function cerrarStatsModal() {
   statsModal.setAttribute('aria-hidden', 'true');
   document.body.style.overflow = '';
 }
-
 statsModal.addEventListener('click', (e) => { if (e.target.dataset.close === '1') cerrarStatsModal(); });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !statsModal.classList.contains('hidden')) cerrarStatsModal();
@@ -1083,7 +1066,6 @@ function seleccionarSubgenero(valor) {
   }
   cerrarSubgeneros();
 }
-
 genreToggle.addEventListener('click', (e) => {
   e.stopPropagation();
   if (genrePanel.classList.contains('hidden')) abrirGeneros();
@@ -1102,7 +1084,6 @@ document.addEventListener('click', (e) => {
   if (genrePanel.classList.contains('hidden')) return;
   if (genreSelect && !genreSelect.contains(e.target)) cerrarGeneros();
 });
-
 subgenreToggle.addEventListener('click', (e) => {
   e.stopPropagation();
   if (subgenrePanel.classList.contains('hidden')) abrirSubgeneros();
@@ -1121,7 +1102,6 @@ document.addEventListener('click', (e) => {
   if (subgenrePanel.classList.contains('hidden')) return;
   if (subgenreSelect && !subgenreSelect.contains(e.target)) cerrarSubgeneros();
 });
-
 document.getElementById('formCancion').addEventListener('reset', () => {
   generoSeleccionado = '';
   generoHidden.value = '';
@@ -1138,12 +1118,11 @@ document.getElementById('formCancion').addEventListener('reset', () => {
   cerrarSubgeneros();
   cargarColaboradoresEn(collabContainerForm, []);
 });
-
 pintarGeneros('');
 pintarSubgeneros('');
 
 // ================================================================
-// 🎵 SUSCRIPCIÓN + PAYWALL
+// 🎵 SUSCRIPCIÓN + PLANES
 // ================================================================
 
 function formatearFechaLarga(ts) {
@@ -1162,15 +1141,41 @@ function estaSuscripcionActiva() {
   return fv.getTime() > Date.now();
 }
 
+function tipoPlanActual() {
+  if (!suscripcionActual) return null;
+  return suscripcionActual.tipo || 'pro';
+}
+function esPlanBasico() { return tipoPlanActual() === 'basic'; }
+function esPlanPro()    { return tipoPlanActual() === 'pro'; }
+
+function puedeSubirCancion() {
+  if (!estaSuscripcionActiva()) return { ok: false, motivo: 'sin_suscripcion' };
+  if (esPlanPro()) return { ok: true };
+  const subidas = (cancionesActuales || []).length;
+  if (subidas >= LIMITE_BASICO) return { ok: false, motivo: 'limite_basico_alcanzado' };
+  return { ok: true };
+}
+
+function actualizarBannerLimite() {
+  if (!limiteBanner) return;
+  const activa = estaSuscripcionActiva();
+  const esBasic = esPlanBasico();
+  const subidas = (cancionesActuales || []).length;
+  if (activa && esBasic && subidas >= LIMITE_BASICO) {
+    limiteBanner.classList.remove('hidden');
+  } else {
+    limiteBanner.classList.add('hidden');
+  }
+}
+
 function mostrarPaywall() {
   if (!paywall) return;
   paywall.classList.remove('hidden');
   paywall.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
   menuWrap?.classList.add('hidden');
-  setTimeout(renderPayPal, 120);
+  setTimeout(renderPayPalBotones, 120);
 }
-
 function ocultarPaywall() {
   if (!paywall) return;
   paywall.classList.add('hidden');
@@ -1193,44 +1198,62 @@ function aplicarEstadoSuscripcion() {
   const activa = estaSuscripcionActiva();
 
   if (activa) {
-    // ✅ Suscripción activa → desbloquear todo
     ocultarPaywall();
     menuWrap?.classList.remove('hidden');
 
-    // Actualizar subBox
+    const esBasic = esPlanBasico();
+    const subidas = (cancionesActuales || []).length;
+    const icono   = esBasic ? '🎧' : '🚀';
+    const nombre  = esBasic ? 'OmegaBeats Basic' : 'Artista Pro';
+
     if (subBox) {
       subBox.classList.remove('hidden', 'inactiva');
-      if (subEstado)  subEstado.textContent  = '✅ Suscripción activa';
-      if (subDetalle) subDetalle.textContent = 'Vence el ' + formatearFechaLarga(suscripcionActual.fechaVencimiento);
+      if (subEstado)  subEstado.textContent  = `${icono} Plan ${nombre} activo`;
+      if (subDetalle) {
+        if (esBasic) {
+          subDetalle.textContent = `Canciones: ${subidas}/${LIMITE_BASICO} · Vence el ${formatearFechaLarga(suscripcionActual.fechaVencimiento)}`;
+        } else {
+          subDetalle.textContent = `Canciones ilimitadas · Vence el ${formatearFechaLarga(suscripcionActual.fechaVencimiento)}`;
+        }
+      }
       if (subBtn) {
-        subBtn.textContent = '✅ Activa';
-        subBtn.disabled = true;
+        subBtn.onclick = null;
+        if (esBasic) {
+          subBtn.textContent = 'Actualizar a Pro 🚀';
+          subBtn.disabled = false;
+          subBtn.onclick = (e) => { e.preventDefault(); mostrarPaywall(); };
+        } else {
+          subBtn.textContent = '✅ Activa';
+          subBtn.disabled = true;
+        }
       }
     }
   } else {
-    // ⛔ Sin suscripción → BLOQUEAR TODO con el paywall
     mostrarPaywall();
     subBox?.classList.add('hidden');
   }
 
+  actualizarBannerLimite();
   renderRetiroInfo();
 }
 
-// ---------- Guardar suscripción ----------
-async function guardarSuscripcion(subscriptionId) {
+async function guardarSuscripcion(subscriptionId, tipo = 'pro') {
   if (!usuarioActual) return;
 
   const inicio = new Date();
   const venc   = new Date(inicio);
   venc.setFullYear(venc.getFullYear() + 1);
 
+  const esBasic = tipo === 'basic';
+
   try {
     await setDoc(doc(db, COLECCION_SUSCRIPCIONES, usuarioActual.uid), {
       uid: usuarioActual.uid,
       email: usuarioActual.email,
       subscriptionId: subscriptionId || '',
-      planId: PLAN_ID,
-      precio: PRECIO_SUSCRIPCION,
+      planId: esBasic ? PLAN_ID_BASIC : PLAN_ID_PRO,
+      tipo: esBasic ? 'basic' : 'pro',
+      precio: esBasic ? PRECIO_BASIC : PRECIO_PRO,
       moneda: 'MXN',
       fechaInicio: serverTimestamp(),
       fechaVencimiento: venc,
@@ -1238,48 +1261,73 @@ async function guardarSuscripcion(subscriptionId) {
     });
 
     await cargarSuscripcion(usuarioActual.uid);
-    mostrarStatus('🎉 ¡Suscripción activada! Ya puedes subir música', 'ok');
 
+    mostrarStatus(
+      esBasic
+        ? '🎧 ¡Plan OmegaBeats Basic activado! Ya puedes subir 1 canción'
+        : '🎉 ¡Plan Artista Pro activado! Ya puedes subir música ilimitada',
+      'ok'
+    );
   } catch (e) {
     console.error('[Suscripción] Error al guardar:', e);
     mostrarStatus('Error al guardar suscripción: ' + e.message, 'error');
   }
 }
 
-// ---------- PayPal ----------
-function renderPayPal() {
+function renderPayPalBotones() {
   if (paypalRenderizado) return;
   if (typeof window.paypal === 'undefined') {
-    setTimeout(renderPayPal, 300);
+    setTimeout(renderPayPalBotones, 300);
     return;
   }
 
-  const container = document.getElementById('paypal-button-container-P-88D20959NU409831ENK66MMI');
-  if (!container || container.dataset.rendered === '1') return;
-  container.dataset.rendered = '1';
-  container.innerHTML = '';
-
-  try {
-    window.paypal.Buttons({
-      style: { shape: 'pill', color: 'blue', layout: 'vertical', label: 'subscribe' },
-      createSubscription: function (data, actions) {
-        return actions.subscription.create({ plan_id: PLAN_ID });
-      },
-      onApprove: async function (data) {
-        await guardarSuscripcion(data.subscriptionID);
-      },
-      onError: function (err) {
-        console.error('[PayPal] Error:', err);
-        mostrarStatus('Error con PayPal: ' + (err?.message || 'Intenta de nuevo'), 'error');
-      }
-    }).render('#paypal-button-container-P-88D20959NU409831ENK66MMI');
-    paypalRenderizado = true;
-  } catch (e) {
-    console.error('[PayPal] Render falló:', e);
+  // BOTÓN BASIC
+  const contBasic = document.getElementById('paypal-button-basic');
+  if (contBasic && contBasic.dataset.rendered !== '1') {
+    contBasic.dataset.rendered = '1';
+    contBasic.innerHTML = '';
+    try {
+      window.paypal.Buttons({
+        style: { shape: 'pill', color: 'blue', layout: 'vertical', label: 'subscribe' },
+        createSubscription: function (data, actions) {
+          return actions.subscription.create({ plan_id: PLAN_ID_BASIC });
+        },
+        onApprove: async function (data) {
+          await guardarSuscripcion(data.subscriptionID, 'basic');
+        },
+        onError: function (err) {
+          console.error('[PayPal Basic] Error:', err);
+          mostrarStatus('Error con PayPal: ' + (err?.message || 'Intenta de nuevo'), 'error');
+        }
+      }).render('#paypal-button-basic');
+    } catch (e) { console.error('[PayPal Basic] Render falló:', e); }
   }
+
+  // BOTÓN PRO
+  const contPro = document.getElementById('paypal-button-pro');
+  if (contPro && contPro.dataset.rendered !== '1') {
+    contPro.dataset.rendered = '1';
+    contPro.innerHTML = '';
+    try {
+      window.paypal.Buttons({
+        style: { shape: 'pill', color: 'black', layout: 'vertical', label: 'subscribe' },
+        createSubscription: function (data, actions) {
+          return actions.subscription.create({ plan_id: PLAN_ID_PRO });
+        },
+        onApprove: async function (data) {
+          await guardarSuscripcion(data.subscriptionID, 'pro');
+        },
+        onError: function (err) {
+          console.error('[PayPal Pro] Error:', err);
+          mostrarStatus('Error con PayPal: ' + (err?.message || 'Intenta de nuevo'), 'error');
+        }
+      }).render('#paypal-button-pro');
+    } catch (e) { console.error('[PayPal Pro] Render falló:', e); }
+  }
+
+  paypalRenderizado = true;
 }
 
-// ---------- Logout desde paywall ----------
 paywallLogout?.addEventListener('click', async () => {
   try {
     paywallLogout.disabled = true;
@@ -1293,7 +1341,11 @@ paywallLogout?.addEventListener('click', async () => {
   }
 });
 
-// ---------- Retiros ----------
+upgradeBtn?.addEventListener('click', () => {
+  mostrarPaywall();
+});
+
+// ============ RETIROS ============
 function calcularTotalGanancias() {
   let total = 0;
   (cancionesActuales || []).forEach(c => {
@@ -1302,9 +1354,9 @@ function calcularTotalGanancias() {
   });
   return total;
 }
-
 function retiroDisponible() {
   if (!estaSuscripcionActiva()) return { disponible: false, razon: 'Necesitas una suscripción activa' };
+  if (esPlanBasico())            return { disponible: false, razon: 'Requiere plan Pro' };
   if (!suscripcionActual?.ultimoRetiro) return { disponible: true, proximo: 'Disponible ahora' };
   const ult = suscripcionActual.ultimoRetiro;
   const fechaUlt = ult.toDate ? ult.toDate() : new Date(ult);
@@ -1313,13 +1365,19 @@ function retiroDisponible() {
   if (prox.getTime() <= Date.now()) return { disponible: true, proximo: 'Disponible ahora' };
   return { disponible: false, proximo: 'Próximo retiro: ' + formatearFechaLarga(prox) };
 }
-
 function renderRetiroInfo() {
   if (!retiroBtn || !retiroInfo) return;
+
   if (!estaSuscripcionActiva()) {
     retiroInfo.textContent = 'Requiere suscripción activa';
     retiroBtn.disabled = true;
     retiroBtn.textContent = 'Solicitar retiro';
+    return;
+  }
+  if (esPlanBasico()) {
+    retiroInfo.textContent = '🔒 Requiere plan Pro';
+    retiroBtn.disabled = true;
+    retiroBtn.textContent = '🔒 Actualiza a Pro';
     return;
   }
   const estado = retiroDisponible();
@@ -1333,9 +1391,10 @@ function renderRetiroInfo() {
     retiroBtn.textContent = 'Solicitar retiro';
   }
 }
-
 async function solicitarRetiro() {
   if (!usuarioActual || !estaSuscripcionActiva()) return;
+  if (esPlanBasico()) { mostrarStatus('Requiere plan Pro para retirar', 'error'); return; }
+
   const estado = retiroDisponible();
   if (!estado.disponible) { mostrarStatus(estado.proximo || 'Aún no puedes retirar', 'error'); return; }
   const total = calcularTotalGanancias();
@@ -1344,7 +1403,6 @@ async function solicitarRetiro() {
 
   retiroBtn.disabled = true;
   retiroBtn.innerHTML = '<span class="loader"></span>Enviando...';
-
   try {
     await addDoc(collection(db, 'retiros', usuarioActual.uid, 'solicitudes'), {
       uid: usuarioActual.uid, email: usuarioActual.email,
@@ -1363,22 +1421,21 @@ async function solicitarRetiro() {
     renderRetiroInfo();
   }
 }
-
 retiroBtn?.addEventListener('click', solicitarRetiro);
 
-// ---------- Observador auth para suscripción ----------
+// ============ Observador auth para suscripción ============
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     await cargarSuscripcion(user.uid);
-    renderPayPal();
+    renderPayPalBotones();
   } else {
     ocultarPaywall();
     suscripcionActual = null;
     subBox?.classList.add('hidden');
+    limiteBanner?.classList.add('hidden');
     if (retiroBtn)  retiroBtn.disabled = true;
     if (retiroInfo) retiroInfo.textContent = '—';
   }
 });
 
-// Refrescar info de retiro al abrir stats
 statsBtn?.addEventListener('click', () => setTimeout(renderRetiroInfo, 250));
