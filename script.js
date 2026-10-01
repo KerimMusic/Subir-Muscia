@@ -1,15 +1,31 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect,
-  getRedirectResult, onAuthStateChanged, signOut,
-  setPersistence, browserLocalPersistence
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  onAuthStateChanged,
+  signOut,
+  setPersistence,
+  browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
-  getFirestore, collection, addDoc, serverTimestamp, onSnapshot,
-  deleteDoc, doc, updateDoc, getDoc, setDoc
+  getFirestore,
+  collection,
+  addDoc,
+  serverTimestamp,
+  onSnapshot,
+  deleteDoc,
+  doc,
+  updateDoc,
+  getDoc,
+  setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// ============================================ FIREBASE ============================================
+// ============================================
+// ✅ TU CONFIGURACIÓN REAL DE FIREBASE
+// ============================================
 const firebaseConfig = {
   apiKey: "AIzaSyDMabE70hIApcNU5RY3_WEEIF-BWUzO0K4",
   authDomain: "kerim-music-a9c46.firebaseapp.com",
@@ -19,13 +35,16 @@ const firebaseConfig = {
   appId: "1:470731440209:web:f6eba4784027a5d8c57870",
   measurementId: "G-LBHTKL8KDK"
 };
+// ============================================
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-// ============================================ WEBVIEW ============================================
+// ============================================================
+// ✅ COMPATIBILIDAD CON WEBVIEW
+// ============================================================
 setPersistence(auth, browserLocalPersistence).catch(err => {
   console.warn('[WebView] No se pudo establecer persistencia:', err);
 });
@@ -50,7 +69,9 @@ const LOGIN_BTN_HTML = `
 
 getRedirectResult(auth)
   .then(result => {
-    if (result && result.user) mostrarStatus('✅ Sesión iniciada correctamente', 'ok');
+    if (result && result.user) {
+      mostrarStatus('✅ Sesión iniciada correctamente', 'ok');
+    }
   })
   .catch(err => {
     if (err && err.code && err.code !== 'auth/no-auth-event') {
@@ -59,7 +80,11 @@ getRedirectResult(auth)
     }
   });
 
-// ============================================ DOM ============================================
+// ============================================================
+// FIN BLOQUE WEBVIEW
+// ============================================================
+
+// Elementos del DOM
 const loginBtn   = document.getElementById('loginBtn');
 const form       = document.getElementById('formCancion');
 const userBox    = document.getElementById('userBox');
@@ -71,17 +96,20 @@ const previewImg = document.getElementById('previewImg');
 const previewTitulo  = document.getElementById('previewTitulo');
 const previewArtista = document.getElementById('previewArtista');
 
+// Historial
 const historySection = document.getElementById('historySection');
 const historyList    = document.getElementById('historyList');
 const historyCount   = document.getElementById('historyCount');
 const historyEmpty   = document.getElementById('historyEmpty');
 
+// Menú hamburguesa
 const menuWrap     = document.getElementById('menuWrap');
 const menuBtn      = document.getElementById('menuBtn');
 const menuDropdown = document.getElementById('menuDropdown');
 const logoutBtn    = document.getElementById('logoutBtn');
 const statsBtn     = document.getElementById('statsBtn');
 
+// Modal reproductor
 const playerModal    = document.getElementById('playerModal');
 const playerImg      = document.getElementById('playerImg');
 const playerTitle    = document.getElementById('playerTitle');
@@ -94,6 +122,7 @@ const playerVol      = document.getElementById('playerVol');
 const playerCurrent  = document.getElementById('playerCurrent');
 const playerDuration = document.getElementById('playerDuration');
 
+// Modal editar
 const editModal    = document.getElementById('editModal');
 const editForm     = document.getElementById('editForm');
 const editImg      = document.getElementById('editImg');
@@ -104,19 +133,18 @@ const editAudio    = document.getElementById('editAudio');
 const editImagen   = document.getElementById('editImagen');
 const editSubmitBtn = document.getElementById('editSubmitBtn');
 
+// Modal estadísticas
 const statsModal          = document.getElementById('statsModal');
 const statsList           = document.getElementById('statsList');
 const statsEmpty          = document.getElementById('statsEmpty');
 const statsTotalListeners = document.getElementById('statsTotalListeners');
 const statsTotalEarnings  = document.getElementById('statsTotalEarnings');
 
+// 🆕 Colaboradores
 const collabContainerForm = document.getElementById('collaboratorsContainer');
 const collabContainerEdit = document.getElementById('collaboratorsEditContainer');
 const addCollabBtnForm    = document.getElementById('addCollaboratorBtn');
 const addCollabBtnEdit    = document.getElementById('addCollaboratorBtnEdit');
-
-const paywall       = document.getElementById('paywall');
-const paywallLogout = document.getElementById('paywallLogout');
 
 let usuarioActual = null;
 let unsubscribeHistorial = null;
@@ -124,34 +152,26 @@ let unsubscribeOyentes   = null;
 let cancionesActuales = [];
 let editandoId = null;
 let statsAbierto = false;
+
+// Mapa de estadísticas: { tituloNormalizado: { docId, oyentes } }
 let statsOyentes = {};
 
 const PLACEHOLDER = 'https://via.placeholder.com/64/333/666?text=%E2%99%AB';
+
 const COLECCION_OYENTES = 'oyentes_canciones';
-const PAGO_POR_OYENTE = 0.20;
 
-// ================== PAGO ÚNICO $1 MXN / 24 HORAS ==================
-const PRECIO_PLAN  = 1;
-const DURACION_DIAS = 1;
+// 💵 Tarifa por oyente
+const PAGO_POR_OYENTE = 0.20; // MXN
 
-const MESES_ENTRE_RETIROS = 3;
-const COLECCION_SUSCRIPCIONES = 'suscripciones';
-
-const subBox     = document.getElementById('subBox');
-const subEstado  = document.getElementById('subEstado');
-const subDetalle = document.getElementById('subDetalle');
-const subBtn     = document.getElementById('subBtn');
-const retiroBtn  = document.getElementById('retiroBtn');
-const retiroInfo = document.getElementById('retiroInfo');
-
-let suscripcionActual = null;
-let paypalRenderizado = false;
-
-// ============================================ UTILIDADES ============================================
+// ===================
+// Utilidades
+// ===================
 function mostrarStatus(msg, tipo = 'ok') {
   status.textContent = msg;
   status.className = 'status ' + tipo;
-  if (tipo === 'ok') setTimeout(() => { status.className = 'status'; }, 4000);
+  if (tipo === 'ok') {
+    setTimeout(() => { status.className = 'status'; }, 4000);
+  }
 }
 
 function dropboxDirecto(url) {
@@ -159,30 +179,51 @@ function dropboxDirecto(url) {
   url = url.trim();
   return url
     .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
-    .replace('?dl=0', '').replace('?dl=1', '')
-    .replace('&dl=0', '').replace('&dl=1', '')
+    .replace('?dl=0', '')
+    .replace('?dl=1', '')
+    .replace('&dl=0', '')
+    .replace('&dl=1', '')
     .replace('?raw=1', '');
 }
 
 function escapeHtml(str = '') {
   return String(str).replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
   }[c]));
 }
 
-function fmtNumero(n) { return (Number(n) || 0).toLocaleString('es-MX'); }
+function fmtNumero(n) {
+  const v = Number(n) || 0;
+  return v.toLocaleString('es-MX');
+}
+
 function fmtDinero(n) {
-  return '$' + (Number(n) || 0).toLocaleString('es-MX', {
-    minimumFractionDigits: 2, maximumFractionDigits: 2
+  const v = Number(n) || 0;
+  return '$' + v.toLocaleString('es-MX', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   }) + ' MXN';
 }
 
+// Normaliza un título para comparar de forma robusta
 function normalizarTitulo(t) {
-  return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase().replace(/\s+/g, ' ').trim();
+  return String(t || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
-// ============================================ COLABORADORES ============================================
+// ==========================================================
+// 👥 COLABORADORES (NUEVA FUNCIÓN)
+// ==========================================================
+
+// Crea una fila de input para un colaborador
 function crearFilaColaborador(valor = '') {
   const row = document.createElement('div');
   row.className = 'collaborator-row';
@@ -191,86 +232,158 @@ function crearFilaColaborador(valor = '') {
            placeholder="Ej: Nombre del colaborador"
            value="${escapeHtml(valor)}">
     <button type="button" class="btn-remove-collab"
-            title="Eliminar colaborador" aria-label="Eliminar">✕</button>
+            title="Eliminar colaborador"
+            aria-label="Eliminar colaborador">✕</button>
   `;
-  row.querySelector('.btn-remove-collab').addEventListener('click', () => row.remove());
+  row.querySelector('.btn-remove-collab').addEventListener('click', () => {
+    row.remove();
+  });
   return row;
 }
+
+// Agrega una fila vacía al contenedor
 function agregarColaboradorAlContenedor(contenedor) {
   if (!contenedor) return;
   contenedor.appendChild(crearFilaColaborador(''));
 }
+
+// Obtiene todos los colaboradores del contenedor (sin vacíos)
 function obtenerColaboradoresDe(contenedor) {
   if (!contenedor) return [];
   return Array.from(contenedor.querySelectorAll('.collaborator-input'))
-    .map(inp => inp.value.trim()).filter(v => v !== '');
+    .map(inp => inp.value.trim())
+    .filter(v => v !== '');
 }
+
+// Carga colaboradores en el contenedor.
+// Si la lista está vacía, deja una fila vacía por defecto.
 function cargarColaboradoresEn(contenedor, colaboradores) {
   if (!contenedor) return;
   contenedor.innerHTML = '';
   const lista = Array.isArray(colaboradores) ? colaboradores.filter(Boolean) : [];
-  if (lista.length === 0) contenedor.appendChild(crearFilaColaborador(''));
-  else lista.forEach(n => contenedor.appendChild(crearFilaColaborador(n)));
+  if (lista.length === 0) {
+    contenedor.appendChild(crearFilaColaborador(''));
+  } else {
+    lista.forEach(nombre => contenedor.appendChild(crearFilaColaborador(nombre)));
+  }
 }
+
+// Botón (+) del formulario principal
 addCollabBtnForm?.addEventListener('click', () => {
   agregarColaboradorAlContenedor(collabContainerForm);
   const inputs = collabContainerForm.querySelectorAll('.collaborator-input');
   inputs[inputs.length - 1]?.focus();
 });
+
+// Botón (+) del modal de editar
 addCollabBtnEdit?.addEventListener('click', () => {
   agregarColaboradorAlContenedor(collabContainerEdit);
   const inputs = collabContainerEdit.querySelectorAll('.collaborator-input');
   inputs[inputs.length - 1]?.focus();
 });
+
+// Inicializar con una fila vacía en el formulario principal
 cargarColaboradoresEn(collabContainerForm, []);
 cargarColaboradoresEn(collabContainerEdit, []);
 
-// ============================================ OYENTES ============================================
+// ==========================================================
+// 🔧 EXTRAER OYENTES
+// Soporta dos formatos:
+//   1) Número directo:  data.oyentes = 42
+//   2) Mapa/objeto:     data.oyentes = { uid1: fecha1, uid2: fecha2, ... }
+//      → en este caso se cuenta cuántas claves tiene (oyentes únicos)
+// ==========================================================
 function extraerOyentes(data) {
   if (!data) return 0;
-  const posibles = [data.oyentes, data.Oyentes, data.oyente, data.listeners,
-    data.Listeners, data.listener, data.oyentes_totales, data.totalOyentes,
-    data.total_oyentes, data.listenerCount, data.listener_count];
+
+  const posibles = [
+    data.oyentes,
+    data.Oyentes,
+    data.oyente,
+    data.listeners,
+    data.Listeners,
+    data.listener,
+    data.oyentes_totales,
+    data.totalOyentes,
+    data.total_oyentes,
+    data.listenerCount,
+    data.listener_count
+  ];
+
   for (const v of posibles) {
     if (v === undefined || v === null || v === '') continue;
-    if (typeof v === 'object' && !Array.isArray(v)) return Object.keys(v).length;
-    if (Array.isArray(v)) return v.length;
+
+    if (typeof v === 'object' && !Array.isArray(v)) {
+      return Object.keys(v).length;
+    }
+    if (Array.isArray(v)) {
+      return v.length;
+    }
+
     const n = Number(v);
     if (!isNaN(n)) return n;
   }
+
   return 0;
 }
+
+// ==========================================================
+// 🔧 OBTENER STATS: busca por varios campos de la canción
+// ==========================================================
 function obtenerStatsDeCancion(cancion) {
   if (!cancion) return { oyentes: 0, docId: null };
-  const candidatos = [cancion.titulo, cancion.title, cancion.nombre, cancion.id];
+
+  const candidatos = [
+    cancion.titulo,
+    cancion.title,
+    cancion.nombre,
+    cancion.id
+  ];
+
   for (const c of candidatos) {
     if (!c) continue;
-    const s = statsOyentes[normalizarTitulo(c)];
+    const key = normalizarTitulo(c);
+    const s = statsOyentes[key];
     if (s) return s;
   }
+
   return { oyentes: 0, docId: null };
 }
 
-// ============================================ AUTH LOGIN ============================================
+// ===================
+// Autenticación
+// ===================
 loginBtn.addEventListener('click', async () => {
   try {
     loginBtn.disabled = true;
     loginBtn.innerHTML = '<span class="loader"></span>Iniciando sesión...';
-    if (esWebView()) { await signInWithRedirect(auth, provider); return; }
+
+    if (esWebView()) {
+      await signInWithRedirect(auth, provider);
+      return;
+    }
+
     await signInWithPopup(auth, provider);
+
   } catch (e) {
     console.error('[Auth] Error login:', e);
     const necesitaFallback =
       e.code === 'auth/popup-blocked' ||
       e.code === 'auth/operation-not-supported-in-this-environment' ||
       e.code === 'auth/web-storage-unsupported';
+
     if (necesitaFallback) {
-      try { await signInWithRedirect(auth, provider); return; }
-      catch (e2) {
+      try {
+        await signInWithRedirect(auth, provider);
+        return;
+      } catch (e2) {
         console.error('[Auth] Fallback redirect falló:', e2);
         mostrarStatus('Error al iniciar sesión: ' + e2.message, 'error');
       }
-    } else mostrarStatus('Error al iniciar sesión: ' + e.message, 'error');
+    } else {
+      mostrarStatus('Error al iniciar sesión: ' + e.message, 'error');
+    }
+
     loginBtn.disabled = false;
     loginBtn.innerHTML = LOGIN_BTN_HTML;
   }
@@ -278,6 +391,7 @@ loginBtn.addEventListener('click', async () => {
 
 onAuthStateChanged(auth, (user) => {
   usuarioActual = user;
+
   if (user) {
     loginBtn.classList.add('hidden');
     userBox.classList.remove('hidden');
@@ -296,48 +410,84 @@ onAuthStateChanged(auth, (user) => {
     historySection.classList.add('hidden');
     menuWrap.classList.add('hidden');
     cerrarMenu();
-    if (unsubscribeHistorial) { unsubscribeHistorial(); unsubscribeHistorial = null; }
-    if (unsubscribeOyentes)   { unsubscribeOyentes();   unsubscribeOyentes = null; }
+
+    if (unsubscribeHistorial) {
+      unsubscribeHistorial();
+      unsubscribeHistorial = null;
+    }
+    if (unsubscribeOyentes) {
+      unsubscribeOyentes();
+      unsubscribeOyentes = null;
+    }
+
     historyList.innerHTML = '';
     historyCount.textContent = '0';
     historyEmpty.classList.add('hidden');
     cancionesActuales = [];
     statsOyentes = {};
-    cerrarPlayer(); cerrarEditModal(); cerrarStatsModal();
+    cerrarPlayer();
+    cerrarEditModal();
+    cerrarStatsModal();
   }
 });
 
-// ============================================ PREVIEW ============================================
+// ===================
+// Vista previa dinámica (formulario)
+// ===================
 ['artista', 'titulo', 'imagen', 'album'].forEach(id => {
   document.getElementById(id).addEventListener('input', actualizarPreview);
 });
+
 function actualizarPreview() {
   const artista = document.getElementById('artista').value.trim();
   const titulo  = document.getElementById('titulo').value.trim();
   const imagen  = document.getElementById('imagen').value.trim();
   const album   = document.getElementById('album').value.trim();
-  if (!artista && !titulo && !imagen && !album) { preview.classList.remove('show'); return; }
+
+  if (!artista && !titulo && !imagen && !album) {
+    preview.classList.remove('show');
+    return;
+  }
+
   preview.classList.add('show');
   previewTitulo.textContent  = titulo || '—';
   previewArtista.textContent = artista || '—';
+
   const albumSpan = document.querySelector('.preview-info .Album');
-  if (albumSpan) albumSpan.textContent = album || 'Reggeton 1';
+  if (albumSpan) {
+    albumSpan.textContent = album || 'Reggeton 1';
+  }
+
   if (imagen) {
     previewImg.src = dropboxDirecto(imagen);
     previewImg.onerror = () => { previewImg.src = PLACEHOLDER; };
-  } else previewImg.src = PLACEHOLDER;
+  } else {
+    previewImg.src = PLACEHOLDER;
+  }
 }
 
-// ============================================ HISTORIAL ============================================
+// ===================
+// HISTORIAL
+// ===================
 function escucharHistorial(uid) {
   if (unsubscribeHistorial) unsubscribeHistorial();
+
   historyList.innerHTML = '<p class="history-empty">Cargando canciones...</p>';
   historyEmpty.classList.add('hidden');
+
   const ref = collection(db, 'historial_usuarios', uid, 'canciones');
+
   unsubscribeHistorial = onSnapshot(ref, (snap) => {
     const canciones = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    canciones.sort((a, b) => (b.fecha?.seconds || 0) - (a.fecha?.seconds || 0));
+
+    canciones.sort((a, b) => {
+      const fa = a.fecha?.seconds || 0;
+      const fb = b.fecha?.seconds || 0;
+      return fb - fa;
+    });
+
     renderHistorial(canciones);
+
     if (statsAbierto) renderStats(canciones);
   }, (err) => {
     console.error('Error historial:', err);
@@ -346,108 +496,183 @@ function escucharHistorial(uid) {
   });
 }
 
+// ===================
+// OYENTES_CANCIONES (SOLO LECTURA)
+// ===================
 function escucharOyentesCanciones() {
   if (unsubscribeOyentes) unsubscribeOyentes();
+
   const ref = collection(db, COLECCION_OYENTES);
+
   unsubscribeOyentes = onSnapshot(ref, (snap) => {
     const mapa = {};
+
     snap.docs.forEach(d => {
       const data = d.data() || {};
-      const stats = { docId: d.id, oyentes: extraerOyentes(data) };
-      const candidatos = [d.id, data.titulo, data.title, data.nombre, data.cancion, data.song];
+      const oyentes = extraerOyentes(data);
+
+      const stats = { docId: d.id, oyentes };
+
+      const candidatos = [
+        d.id,
+        data.titulo,
+        data.title,
+        data.nombre,
+        data.cancion,
+        data.song
+      ];
+
       candidatos.forEach(c => {
         if (!c) return;
         const key = normalizarTitulo(c);
         if (key && !mapa[key]) mapa[key] = stats;
       });
     });
+
     statsOyentes = mapa;
+
     if (statsAbierto) renderStats(cancionesActuales);
-  }, (err) => console.error('Error oyentes:', err));
+  }, (err) => {
+    console.error('Error al escuchar oyentes_canciones:', err);
+  });
 }
 
+// Asegura que exista el registro en oyentes_canciones (solo si NO existe)
 async function asegurarRegistroOyentes(titulo) {
   if (!titulo) return;
-  if (statsOyentes[normalizarTitulo(titulo)]) return;
+
+  const key = normalizarTitulo(titulo);
+  if (statsOyentes[key]) return;
+
   try {
     const docRef = doc(db, COLECCION_OYENTES, titulo);
     const snap = await getDoc(docRef);
+
     if (snap.exists()) return;
+
     await setDoc(docRef, { oyentes: 0 });
-  } catch (e) { console.warn('No asegurarRegistroOyentes:', e); }
+
+  } catch (e) {
+    console.warn('No se pudo asegurar registro en oyentes_canciones:', e);
+  }
 }
 
+// ==========================================================
+// 🆕 SINCRONIZAR OYENTES AL EDITAR UNA CANCIÓN
+// ==========================================================
 async function sincronizarOyentesAlEditar(tituloAntiguo, tituloNuevo) {
   if (!tituloNuevo) return;
+
   const keyAntiguo = normalizarTitulo(tituloAntiguo);
   const keyNuevo   = normalizarTitulo(tituloNuevo);
-  if (keyAntiguo === keyNuevo) { await asegurarRegistroOyentes(tituloNuevo); return; }
+
+  if (keyAntiguo === keyNuevo) {
+    await asegurarRegistroOyentes(tituloNuevo);
+    return;
+  }
+
   try {
     const statsAntiguas = statsOyentes[keyAntiguo];
     const docIdAntiguo  = statsAntiguas?.docId || tituloAntiguo;
+
     let contenidoAntiguo = null;
     if (docIdAntiguo) {
-      const s = await getDoc(doc(db, COLECCION_OYENTES, docIdAntiguo));
-      if (s.exists()) contenidoAntiguo = s.data();
+      const snapAntiguo = await getDoc(doc(db, COLECCION_OYENTES, docIdAntiguo));
+      if (snapAntiguo.exists()) {
+        contenidoAntiguo = snapAntiguo.data();
+      }
     }
+
     const snapNuevo   = await getDoc(doc(db, COLECCION_OYENTES, tituloNuevo));
     const existeNuevo = snapNuevo.exists();
+
     if (contenidoAntiguo) {
       if (existeNuevo) {
-        const datosNuevos = snapNuevo.data() || {};
-        const oA = contenidoAntiguo.oyentes || {};
-        const oN = datosNuevos.oyentes || {};
+        const datosNuevos     = snapNuevo.data() || {};
+        const oyentesAntiguos = contenidoAntiguo.oyentes || {};
+        const oyentesNuevos   = datosNuevos.oyentes     || {};
+
         let oyentesFinales;
-        if (oA && typeof oA === 'object' && !Array.isArray(oA) &&
-            oN && typeof oN === 'object' && !Array.isArray(oN)) {
-          oyentesFinales = { ...oA, ...oN };
-        } else if (Array.isArray(oA) && Array.isArray(oN)) {
-          oyentesFinales = Array.from(new Set([...oA, ...oN]));
-        } else oyentesFinales = oN || oA || {};
-        await setDoc(doc(db, COLECCION_OYENTES, tituloNuevo), { ...datosNuevos, oyentes: oyentesFinales });
+
+        const ambosSonMapas =
+          oyentesAntiguos && typeof oyentesAntiguos === 'object' && !Array.isArray(oyentesAntiguos) &&
+          oyentesNuevos   && typeof oyentesNuevos   === 'object' && !Array.isArray(oyentesNuevos);
+
+        if (ambosSonMapas) {
+          oyentesFinales = { ...oyentesAntiguos, ...oyentesNuevos };
+        } else if (Array.isArray(oyentesAntiguos) && Array.isArray(oyentesNuevos)) {
+          oyentesFinales = Array.from(new Set([...oyentesAntiguos, ...oyentesNuevos]));
+        } else {
+          oyentesFinales = oyentesNuevos || oyentesAntiguos || {};
+        }
+
+        await setDoc(doc(db, COLECCION_OYENTES, tituloNuevo), {
+          ...datosNuevos,
+          oyentes: oyentesFinales
+        });
       } else {
         await setDoc(doc(db, COLECCION_OYENTES, tituloNuevo), contenidoAntiguo);
       }
     } else if (!existeNuevo) {
       await setDoc(doc(db, COLECCION_OYENTES, tituloNuevo), { oyentes: {} });
     }
+
     if (docIdAntiguo && docIdAntiguo !== tituloNuevo) {
       await deleteDoc(doc(db, COLECCION_OYENTES, docIdAntiguo));
     }
-  } catch (e) { console.warn('No sincronizarOyentesAlEditar:', e); }
+
+  } catch (e) {
+    console.warn('No se pudo sincronizar oyentes_canciones al editar:', e);
+  }
 }
 
+// Elimina el registro de oyentes_canciones asociado a una canción
 async function eliminarRegistroOyentes(cancion) {
   if (!cancion || !cancion.titulo) return;
+
   const stats = obtenerStatsDeCancion(cancion);
   const docId = stats.docId || cancion.titulo;
-  try { await deleteDoc(doc(db, COLECCION_OYENTES, docId)); }
-  catch (e) { console.warn('No eliminarRegistroOyentes:', e); }
+
+  try {
+    await deleteDoc(doc(db, COLECCION_OYENTES, docId));
+  } catch (e) {
+    console.warn('No se pudo eliminar de oyentes_canciones:', e);
+  }
 }
 
 function renderHistorial(canciones) {
   cancionesActuales = canciones;
   historyCount.textContent = canciones.length;
+
   if (!canciones.length) {
     historyList.innerHTML = '';
     historyEmpty.classList.remove('hidden');
     return;
   }
+
   historyEmpty.classList.add('hidden');
+
   historyList.innerHTML = canciones.map(c => {
     const img = c.imagenUrl ? escapeHtml(c.imagenUrl) : PLACEHOLDER;
     const titulo  = escapeHtml(c.titulo  || 'Sin título');
     const artista = escapeHtml(c.artista || 'Desconocido');
+
     return `
       <div class="history-item" data-id="${escapeHtml(c.id)}">
-        <img src="${img}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
+        <img src="${img}" alt="" loading="lazy"
+             onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
         <div class="history-info">
           <strong title="${titulo}">${titulo}</strong>
           <small title="${artista}">${artista}</small>
         </div>
-        <button type="button" class="btn-edit" data-id="${escapeHtml(c.id)}" title="Editar">✏️</button>
-        <button type="button" class="btn-delete" data-id="${escapeHtml(c.id)}" title="Eliminar">🗑️</button>
-      </div>`;
+        <button type="button" class="btn-edit" data-id="${escapeHtml(c.id)}" title="Editar canción">
+          ✏️
+        </button>
+        <button type="button" class="btn-delete" data-id="${escapeHtml(c.id)}" title="Eliminar canción">
+          🗑️
+        </button>
+      </div>
+    `;
   }).join('');
 }
 
@@ -461,45 +686,66 @@ historyList.addEventListener('click', (e) => {
     eliminarCancion(id, deleteBtn, titulo, cancion);
     return;
   }
+
   const editBtn = e.target.closest('.btn-edit');
   if (editBtn) {
-    const cancion = cancionesActuales.find(c => c.id === editBtn.dataset.id);
+    const id = editBtn.dataset.id;
+    const cancion = cancionesActuales.find(c => c.id === id);
     if (cancion) abrirEditModal(cancion);
     return;
   }
+
   const item = e.target.closest('.history-item');
   if (!item) return;
-  const cancion = cancionesActuales.find(c => c.id === item.dataset.id);
+
+  const id = item.dataset.id;
+  const cancion = cancionesActuales.find(c => c.id === id);
   if (cancion) abrirPlayer(cancion);
 });
 
 async function eliminarCancion(id, boton, titulo, cancion) {
-  if (!usuarioActual) { mostrarStatus('Debes iniciar sesión primero', 'error'); return; }
-  if (!confirm(`¿Seguro que quieres eliminar "${titulo}"?\nEsta acción no se puede deshacer.`)) return;
+  if (!usuarioActual) {
+    mostrarStatus('Debes iniciar sesión primero', 'error');
+    return;
+  }
+
+  const confirmado = confirm(`¿Seguro que quieres eliminar "${titulo}"?\nEsta acción no se puede deshacer.`);
+  if (!confirmado) return;
+
   try {
-    boton.disabled = true; boton.textContent = '⏳';
+    boton.disabled = true;
+    boton.textContent = '⏳';
+
     await deleteDoc(doc(db, 'historial_usuarios', usuarioActual.uid, 'canciones', id));
-    if (cancion) await eliminarRegistroOyentes(cancion);
-    else {
-      try { await deleteDoc(doc(db, COLECCION_OYENTES, titulo)); }
-      catch (e) { console.warn('Fallback eliminar oyentes:', e); }
+
+    if (cancion) {
+      await eliminarRegistroOyentes(cancion);
+    } else {
+      try {
+        await deleteDoc(doc(db, COLECCION_OYENTES, titulo));
+      } catch (e) {
+        console.warn('Fallback eliminar oyentes_canciones:', e);
+      }
     }
+
     mostrarStatus('🗑️ Canción eliminada correctamente', 'ok');
+
   } catch (err) {
     console.error('Error al eliminar:', err);
     mostrarStatus('Error al eliminar: ' + err.message, 'error');
-    boton.disabled = false; boton.textContent = '🗑️';
+    boton.disabled = false;
+    boton.textContent = '🗑️';
   }
 }
 
-// ============================================ GUARDAR CANCIÓN ============================================
+// ===================
+// Guardar canción
+// ===================
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  if (!usuarioActual) { mostrarStatus('Debes iniciar sesión primero', 'error'); return; }
 
-  if (!estaSuscripcionActiva()) {
-    mostrarStatus('Necesitas una suscripción activa para subir música', 'error');
-    mostrarPaywall();
+  if (!usuarioActual) {
+    mostrarStatus('Debes iniciar sesión primero', 'error');
     return;
   }
 
@@ -510,7 +756,7 @@ form.addEventListener('submit', async (e) => {
   const subgenero = (document.getElementById('subgenero')?.value || '').trim();
   const audioRaw  = document.getElementById('audio').value.trim();
   const imagenRaw = document.getElementById('imagen').value.trim();
-  const colaboradores = obtenerColaboradoresDe(collabContainerForm);
+  const colaboradores = obtenerColaboradoresDe(collabContainerForm); // 🆕
 
   if (!artista || !titulo || !audioRaw) {
     mostrarStatus('Completa artista, título y audio', 'error');
@@ -527,27 +773,45 @@ form.addEventListener('submit', async (e) => {
   try {
     const res = await fetch(audioUrl, { method: 'HEAD' });
     if (!res.ok) throw new Error('El link de audio no responde correctamente');
-  } catch (err) { console.warn('Validación de audio:', err); }
+  } catch (err) {
+    console.warn('Validación de audio:', err);
+  }
 
   try {
     submitBtn.innerHTML = '<span class="loader"></span>Guardando...';
     mostrarStatus('Guardando en la base de datos...', 'loading');
+
     const uid = usuarioActual.uid;
+
     await addDoc(collection(db, 'historial_usuarios', uid, 'canciones'), {
-      artista, titulo, album, genero, subgenero, colaboradores,
-      audioUrl, imagenUrl, origen: 'dropbox',
-      uid, email: usuarioActual.email, fecha: serverTimestamp()
+      artista:   artista,
+      titulo:    titulo,
+      album:     album,
+      genero:    genero,
+      subgenero: subgenero,
+      colaboradores: colaboradores, // 🆕
+      audioUrl:  audioUrl,
+      imagenUrl: imagenUrl,
+      origen:    'dropbox',
+      uid:       uid,
+      email:     usuarioActual.email,
+      fecha:     serverTimestamp()
     });
+
     await asegurarRegistroOyentes(titulo);
+
     mostrarStatus('✅ Canción subida correctamente', 'ok');
 
     form.reset();
     preview.classList.remove('show');
-    cargarColaboradoresEn(collabContainerForm, []);
+    cargarColaboradoresEn(collabContainerForm, []); // 🆕
+
     const albumSpan = document.querySelector('.preview-info .Album');
     if (albumSpan) albumSpan.textContent = 'Reggeton 1';
+
     submitBtn.disabled = false;
     submitBtn.textContent = 'Subir canción';
+
   } catch (err) {
     console.error(err);
     mostrarStatus('Error al guardar: ' + err.message, 'error');
@@ -556,32 +820,42 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
-// ============================================ REPRODUCTOR ============================================
+// ================================================================
+// MODAL REPRODUCTOR
+// ================================================================
 const previewAudio = new Audio();
 previewAudio.preload = 'metadata';
+
 function fmtTiempo(seg) {
   if (!isFinite(seg) || seg < 0) return '0:00';
   const m = Math.floor(seg / 60);
   const s = Math.floor(seg % 60);
   return m + ':' + String(s).padStart(2, '0');
 }
+
 function abrirPlayer(cancion) {
   if (!cancion) return;
+
   playerImg.src = cancion.imagenUrl || PLACEHOLDER;
   playerImg.onerror = () => { playerImg.onerror = null; playerImg.src = PLACEHOLDER; };
+
   playerTitle.textContent  = cancion.titulo  || 'Sin título';
   playerArtist.textContent = cancion.artista || 'Desconocido';
+
   playerSeek.value = 0;
   playerCurrent.textContent = '0:00';
   playerDuration.textContent = '0:00';
   playerPlay.textContent = '▶';
+
   previewAudio.pause();
   previewAudio.src = cancion.audioUrl || '';
   previewAudio.currentTime = 0;
+
   playerModal.classList.remove('hidden');
   playerModal.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
 }
+
 function cerrarPlayer() {
   previewAudio.pause();
   previewAudio.currentTime = 0;
@@ -593,45 +867,70 @@ function cerrarPlayer() {
   document.body.style.overflow = '';
   if (playerPlay) playerPlay.textContent = '▶';
 }
-playerModal.addEventListener('click', (e) => { if (e.target.dataset.close === '1') cerrarPlayer(); });
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !playerModal.classList.contains('hidden')) cerrarPlayer();
+
+playerModal.addEventListener('click', (e) => {
+  if (e.target.dataset.close === '1') cerrarPlayer();
 });
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !playerModal.classList.contains('hidden')) {
+    cerrarPlayer();
+  }
+});
+
 playerPlay.addEventListener('click', async () => {
   if (!previewAudio.src) return;
   try {
-    if (previewAudio.paused) { await previewAudio.play(); playerPlay.textContent = '⏸'; }
-    else { previewAudio.pause(); playerPlay.textContent = '▶'; }
-  } catch (err) { console.warn('No se pudo reproducir:', err); }
+    if (previewAudio.paused) {
+      await previewAudio.play();
+      playerPlay.textContent = '⏸';
+    } else {
+      previewAudio.pause();
+      playerPlay.textContent = '▶';
+    }
+  } catch (err) {
+    console.warn('No se pudo reproducir:', err);
+  }
 });
+
 playerRewind.addEventListener('click', () => {
   previewAudio.currentTime = Math.max(0, previewAudio.currentTime - 10);
 });
 playerForward.addEventListener('click', () => {
-  previewAudio.currentTime = Math.min(previewAudio.duration || 0, previewAudio.currentTime + 10);
+  previewAudio.currentTime = Math.min(
+    previewAudio.duration || 0,
+    previewAudio.currentTime + 10
+  );
 });
+
 previewAudio.addEventListener('loadedmetadata', () => {
   playerDuration.textContent = fmtTiempo(previewAudio.duration);
 });
+
 previewAudio.addEventListener('timeupdate', () => {
   if (!previewAudio.duration) return;
-  playerSeek.value = (previewAudio.currentTime / previewAudio.duration) * 1000;
+  const pct = (previewAudio.currentTime / previewAudio.duration) * 1000;
+  playerSeek.value = pct;
   playerCurrent.textContent = fmtTiempo(previewAudio.currentTime);
 });
+
 playerSeek.addEventListener('input', () => {
   if (!previewAudio.duration) return;
   previewAudio.currentTime = (playerSeek.value / 1000) * previewAudio.duration;
 });
+
 previewAudio.addEventListener('ended', () => {
   playerPlay.textContent = '▶';
   previewAudio.currentTime = 0;
   playerSeek.value = 0;
   playerCurrent.textContent = '0:00';
 });
+
 playerVol.addEventListener('input', () => {
   previewAudio.volume = parseFloat(playerVol.value);
 });
 previewAudio.volume = parseFloat(playerVol.value);
+
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && !previewAudio.paused) {
     previewAudio.pause();
@@ -639,66 +938,105 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-// ============================================ EDITAR ============================================
+// ================================================================
+// MODAL EDITAR
+// ================================================================
 function abrirEditModal(cancion) {
   if (!cancion) return;
+
   editandoId = cancion.id;
+
   editArtista.value = cancion.artista || '';
   editTitulo.value  = cancion.titulo  || '';
   editAlbum.value   = cancion.album   || '';
-  const revertir = (url) => url ? url.replace('dl.dropboxusercontent.com', 'www.dropbox.com') : '';
-  editAudio.value  = revertir(cancion.audioUrl || '');
-  editImagen.value = revertir(cancion.imagenUrl || '');
+
+  const revertirDropbox = (url) => {
+    if (!url) return '';
+    return url.replace('dl.dropboxusercontent.com', 'www.dropbox.com');
+  };
+
+  editAudio.value   = revertirDropbox(cancion.audioUrl || '');
+  editImagen.value  = revertirDropbox(cancion.imagenUrl || '');
+
+  // 🆕 Cargar colaboradores existentes
   cargarColaboradoresEn(collabContainerEdit, cancion.colaboradores || []);
+
   editImg.src = cancion.imagenUrl || PLACEHOLDER;
   editImg.onerror = () => { editImg.onerror = null; editImg.src = PLACEHOLDER; };
+
   editModal.classList.remove('hidden');
   editModal.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
 }
+
 function cerrarEditModal() {
   editModal.classList.add('hidden');
   editModal.setAttribute('aria-hidden', 'true');
   document.body.style.overflow = '';
   editandoId = null;
   editForm.reset();
-  cargarColaboradoresEn(collabContainerEdit, []);
+  cargarColaboradoresEn(collabContainerEdit, []); // 🆕
 }
-editModal.addEventListener('click', (e) => { if (e.target.dataset.close === '1') cerrarEditModal(); });
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !editModal.classList.contains('hidden')) cerrarEditModal();
+
+editModal.addEventListener('click', (e) => {
+  if (e.target.dataset.close === '1') cerrarEditModal();
 });
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !editModal.classList.contains('hidden')) {
+    cerrarEditModal();
+  }
+});
+
 editForm.addEventListener('submit', async (e) => {
   e.preventDefault();
+
   if (!usuarioActual || !editandoId) {
     mostrarStatus('Error: No hay sesión o canción seleccionada', 'error');
     return;
   }
+
   const artista   = editArtista.value.trim();
   const titulo    = editTitulo.value.trim();
   const album     = editAlbum.value.trim();
   const audioRaw  = editAudio.value.trim();
   const imagenRaw = editImagen.value.trim();
-  const colaboradores = obtenerColaboradoresDe(collabContainerEdit);
+  const colaboradores = obtenerColaboradoresDe(collabContainerEdit); // 🆕
+
   if (!artista || !titulo || !audioRaw) {
     mostrarStatus('Completa artista, título y audio', 'error');
     return;
   }
+
   const audioUrl  = dropboxDirecto(audioRaw);
   const imagenUrl = imagenRaw ? dropboxDirecto(imagenRaw) : '';
+
   editSubmitBtn.disabled = true;
   editSubmitBtn.innerHTML = '<span class="loader"></span>Guardando cambios...';
+
   try {
     const uid = usuarioActual.uid;
+
     const cancionAntigua = cancionesActuales.find(c => c.id === editandoId);
     const tituloAntiguo  = cancionAntigua?.titulo || '';
-    await updateDoc(doc(db, 'historial_usuarios', uid, 'canciones', editandoId), {
-      artista, titulo, album, colaboradores, audioUrl, imagenUrl,
+
+    const docRef = doc(db, 'historial_usuarios', uid, 'canciones', editandoId);
+
+    await updateDoc(docRef, {
+      artista:   artista,
+      titulo:    titulo,
+      album:     album,
+      colaboradores: colaboradores, // 🆕
+      audioUrl:  audioUrl,
+      imagenUrl: imagenUrl,
       fechaEdicion: serverTimestamp()
     });
+
     await sincronizarOyentesAlEditar(tituloAntiguo, titulo);
+
     mostrarStatus('✅ Canción actualizada correctamente', 'ok');
     cerrarEditModal();
+
   } catch (err) {
     console.error('Error al editar:', err);
     mostrarStatus('Error al guardar cambios: ' + err.message, 'error');
@@ -707,38 +1045,50 @@ editForm.addEventListener('submit', async (e) => {
     editSubmitBtn.textContent = 'TEREMINAR';
   }
 });
+
 editImagen.addEventListener('input', () => {
   const url = editImagen.value.trim();
   if (url) {
     editImg.src = dropboxDirecto(url);
     editImg.onerror = () => { editImg.src = PLACEHOLDER; };
-  } else editImg.src = PLACEHOLDER;
+  } else {
+    editImg.src = PLACEHOLDER;
+  }
 });
 
-// ============================================ ESTADÍSTICAS ============================================
+// ================================================================
+// MODAL ESTADÍSTICAS — Oyentes + Ganancias ($0.20 MXN por oyente)
+// ================================================================
 function renderStats(canciones) {
   const lista = canciones || cancionesActuales || [];
+
   if (!lista.length) {
     statsList.innerHTML = '';
     statsEmpty.classList.remove('hidden');
     statsTotalListeners.textContent = '0';
     statsTotalEarnings.textContent  = fmtDinero(0);
-    renderRetiroInfo();
     return;
   }
+
   statsEmpty.classList.add('hidden');
+
   let totalOyentes = 0;
+
   statsList.innerHTML = lista.map(c => {
-    const img = c.imagenUrl ? escapeHtml(c.imagenUrl) : PLACEHOLDER;
+    const img     = c.imagenUrl ? escapeHtml(c.imagenUrl) : PLACEHOLDER;
     const titulo  = escapeHtml(c.titulo  || 'Sin título');
     const artista = escapeHtml(c.artista || 'Desconocido');
-    const stats = obtenerStatsDeCancion(c);
+
+    const stats     = obtenerStatsDeCancion(c);
     const listeners = stats.oyentes || 0;
-    const ganancia = listeners * PAGO_POR_OYENTE;
+    const ganancia  = listeners * PAGO_POR_OYENTE;
+
     totalOyentes += listeners;
+
     return `
       <div class="stats-item">
-        <img src="${img}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
+        <img src="${img}" alt="" loading="lazy"
+             onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
         <div class="stats-item-info">
           <span class="stats-item-title" title="${titulo}">${titulo}</span>
           <span class="stats-item-artist" title="${artista}">${artista}</span>
@@ -753,12 +1103,14 @@ function renderStats(canciones) {
             <span class="stats-cell-value">${fmtDinero(ganancia)}</span>
           </div>
         </div>
-      </div>`;
+      </div>
+    `;
   }).join('');
+
   const totalGanancias = totalOyentes * PAGO_POR_OYENTE;
+
   statsTotalListeners.textContent = fmtNumero(totalOyentes);
   statsTotalEarnings.textContent  = fmtDinero(totalGanancias);
-  renderRetiroInfo();
 }
 
 function abrirStatsModal() {
@@ -768,6 +1120,7 @@ function abrirStatsModal() {
   statsModal.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
 }
+
 function cerrarStatsModal() {
   statsAbierto = false;
   if (!statsModal) return;
@@ -775,46 +1128,67 @@ function cerrarStatsModal() {
   statsModal.setAttribute('aria-hidden', 'true');
   document.body.style.overflow = '';
 }
-statsModal.addEventListener('click', (e) => { if (e.target.dataset.close === '1') cerrarStatsModal(); });
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !statsModal.classList.contains('hidden')) cerrarStatsModal();
+
+statsModal.addEventListener('click', (e) => {
+  if (e.target.dataset.close === '1') cerrarStatsModal();
 });
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !statsModal.classList.contains('hidden')) {
+    cerrarStatsModal();
+  }
+});
+
 statsBtn.addEventListener('click', () => {
   cerrarMenu();
   setTimeout(abrirStatsModal, 120);
 });
 
-// ============================================ MENÚ ============================================
+// ================================================================
+// MENÚ HAMBURGUESA + CERRAR SESIÓN
+// ================================================================
 function abrirMenu() {
   if (!menuDropdown || !menuBtn) return;
   menuDropdown.classList.remove('hidden');
   menuBtn.classList.add('open');
   menuBtn.setAttribute('aria-expanded', 'true');
 }
+
 function cerrarMenu() {
   if (!menuDropdown || !menuBtn) return;
   menuDropdown.classList.add('hidden');
   menuBtn.classList.remove('open');
   menuBtn.setAttribute('aria-expanded', 'false');
 }
+
 menuBtn.addEventListener('click', (e) => {
   e.stopPropagation();
-  if (menuDropdown.classList.contains('hidden')) abrirMenu();
-  else cerrarMenu();
+  if (menuDropdown.classList.contains('hidden')) {
+    abrirMenu();
+  } else {
+    cerrarMenu();
+  }
 });
+
 document.addEventListener('click', (e) => {
   if (menuWrap.classList.contains('hidden')) return;
   if (!menuWrap.contains(e.target)) cerrarMenu();
 });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarMenu(); });
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') cerrarMenu();
+});
 
 logoutBtn.addEventListener('click', async () => {
   try {
     logoutBtn.disabled = true;
     logoutBtn.textContent = 'Cerrando sesión...';
+
     await signOut(auth);
+
     cerrarMenu();
     mostrarStatus('👋 Sesión cerrada correctamente', 'ok');
+
   } catch (err) {
     console.error('Error al cerrar sesión:', err);
     mostrarStatus('Error al cerrar sesión: ' + err.message, 'error');
@@ -824,123 +1198,229 @@ logoutBtn.addEventListener('click', async () => {
   }
 });
 
-// ============================================ GÉNEROS ============================================
+// ================================================================
+// SELECTOR DE GÉNERO MUSICAL CON BUSCADOR
+// ================================================================
 const GENEROS_RAW = [
-  "Regional Mexicano","Reggaetón","Pop","Rock","Hip-Hop / Rap","Música Latina","Cumbia",
-  "Electrónica","R&B / Soul","Indie / Alternativo","Metal","Punk","Reggae","Afrobeat",
-  "Country","Folk","Jazz","Blues","K-Pop","J-Pop","Cristiana / Gospel","Clásica",
-  "Flamenco","Acústica","Instrumental","Soundtrack","Otros",
-  "Art Pop","Dance Pop","Electropop","Synth-pop","Indie Pop","Dream Pop","Bedroom Pop",
-  "Hyperpop","Teen Pop","Bubblegum Pop","Power Pop","C-Pop","Latin Pop","Europop",
-  "Britpop","Sophisti-Pop","Baroque Pop","Sunshine Pop","Chamber Pop","Experimental Pop",
-  "Alternative Rock","Indie Rock","Hard Rock","Soft Rock","Classic Rock","Progressive Rock",
-  "Psychedelic Rock","Garage Rock","Blues Rock","Folk Rock","Southern Rock","Surf Rock",
-  "Glam Rock","Art Rock","Experimental Rock","Post-Rock","Math Rock","Noise Rock",
-  "Space Rock","Gothic Rock","Industrial Rock","Christian Rock","Grunge","Brit Rock",
-  "Emo","Shoegaze","Dream Rock",
-  "Heavy Metal","Thrash Metal","Death Metal","Black Metal","Doom Metal","Power Metal",
-  "Speed Metal","Progressive Metal","Symphonic Metal","Folk Metal","Groove Metal",
-  "Nu Metal","Alternative Metal","Industrial Metal","Gothic Metal","Metalcore",
-  "Deathcore","Grindcore","Sludge Metal","Stoner Metal","Funeral Doom",
-  "Melodic Death Metal","Technical Death Metal","Viking Metal","Pagan Metal",
-  "Post-Metal","Djent",
-  "Punk Rock","Hardcore Punk","Post-Punk","Pop Punk","Skate Punk","Street Punk",
-  "Anarcho-Punk","Crust Punk","D-Beat","Garage Punk","Riot Grrrl","Emo Punk",
-  "Ska Punk","Celtic Punk","Folk Punk","Horror Punk","Psychobilly",
-  "Hip-Hop","Rap","Trap","Drill","Gangsta Rap","Boom Bap","Conscious Hip-Hop",
-  "Underground Hip-Hop","Alternative Hip-Hop","Old School Hip-Hop","West Coast Hip-Hop",
-  "East Coast Hip-Hop","Southern Hip-Hop","Crunk","Dirty South","G-Funk","Cloud Rap",
-  "Emo Rap","Jazz Rap","Experimental Hip-Hop","Hardcore Hip-Hop","Latin Hip-Hop",
-  "Chicano Rap","UK Hip-Hop","UK Drill","Grime","Freestyle Rap","Trap Latino",
-  "R&B","Contemporary R&B","Alternative R&B","Neo Soul","Soul","Classic Soul",
-  "Southern Soul","Motown","Funk","P-Funk","Quiet Storm","New Jack Swing",
-  "Blue-Eyed Soul","Psychedelic Soul","Gospel Soul","Soul Jazz",
-  "Blues","Delta Blues","Chicago Blues","Texas Blues","Electric Blues","Acoustic Blues",
-  "Country Blues","Piedmont Blues","British Blues","Jump Blues","Swamp Blues",
-  "Gospel Blues","Soul Blues",
-  "Jazz","Bebop","Hard Bop","Cool Jazz","Free Jazz","Fusion","Jazz Fusion","Smooth Jazz",
-  "Acid Jazz","Latin Jazz","Afro-Cuban Jazz","Gypsy Jazz","Swing","Big Band","Dixieland",
-  "Ragtime","Modal Jazz","Avant-Garde Jazz","Jazz Funk","Nu Jazz","Vocal Jazz",
-  "Contemporary Jazz",
-  "Electronic","EDM","House","Deep House","Tech House","Progressive House",
-  "Electro House","Future House","Tropical House","Bass House","Acid House",
-  "Chicago House","French House","Minimal House","Techno","Detroit Techno",
-  "Minimal Techno","Industrial Techno","Hard Techno","Acid Techno","Trance",
-  "Progressive Trance","Psytrance","Goa Trance","Uplifting Trance","Hard Trance",
-  "Electro","Ambient","Dark Ambient","Chillout","Downtempo","IDM","Breakbeat",
-  "Drum & Bass","Jungle","Liquid Drum & Bass","Dubstep","Brostep","UK Garage",
-  "Future Bass","Synthwave","Vaporwave","Retrowave","Lo-Fi","Chillwave","Glitch",
-  "Industrial","EBM","Hardcore","Gabber","Hardstyle","Future Rave",
-  "Reggae","Roots Reggae","Dancehall","Dub","Rocksteady","Ska","Lovers Rock",
-  "Ragga","Reggae Fusion","Digital Reggae","Dub Poetry",
-  "Música Latina","Latin Urban","Salsa","Salsa Romántica","Salsa Dura","Son Cubano",
-  "Bachata","Merengue","Cumbia","Cumbia Mexicana","Cumbia Colombiana","Cumbia Villera",
-  "Cumbia Peruana","Cumbia Andina","Vallenato","Bolero","Mambo","Cha-cha-chá","Rumba",
-  "Guaracha","Danzón","Timba","Latin Rock","Latin Soul","Tango","Milonga","Bossa Nova",
-  "Samba","MPB","Forró","Axé","Frevo","Sertanejo",
-  "Mariachi","Ranchera","Norteño","Norteño-Banda","Banda","Banda Sinaloense","Corridos",
-  "Corrido Tradicional","Corrido Tumbado","Corrido Bélico","Corridos Alterados","Tejano",
-  "Grupero","Duranguense","Sierreño","Huapango","Son Jarocho","Son Huasteco",
-  "Música de Tierra Caliente","Música Norteña","Cumbia Norteña","Bolero Ranchero",
-  "Mariachi Moderno",
-  "Country","Country Pop","Country Rock","Traditional Country","Outlaw Country",
-  "Alternative Country","Bluegrass","Americana","Honky Tonk","Country Blues",
-  "Western Swing","Nashville Sound","Red Dirt","Contemporary Country","Country Folk",
-  "Folk","Contemporary Folk","Traditional Folk","Celtic Folk","Irish Folk","Scottish Folk",
-  "English Folk","American Folk","Appalachian","Nordic Folk","Balkan Folk","Slavic Folk",
-  "Gypsy / Romani","Klezmer","Neofolk","World Folk","Folk Fusion",
-  "Música Clásica","Medieval","Renacimiento","Barroco","Clasicismo","Romanticismo",
-  "Impresionismo","Modernismo","Música Contemporánea","Música de Cámara","Sinfónica",
-  "Coral","Ópera","Opereta","Oratorio","Cantata","Concierto","Sonata","Sinfonía",
-  "Música Minimalista","Música Experimental",
-  "Gospel","Christian","Christian Pop","Christian Hip-Hop","Christian Metal","Worship",
-  "Contemporary Christian","Spiritual","Hymns","Islamic Music","Nasheed","Jewish Music",
-  "Buddhist Music","Hindu Devotional","Mantra",
-  "Afrobeat","Afrobeats","Afro-Pop","Amapiano","Highlife","Hiplife","Kizomba","Kuduro",
-  "Kwaito","Gqom","Mbalax","Juju","Fuji","Makossa","Soukous","Congolese Rumba","Benga",
-  "Bikutsi","Chimurenga","Jit","Marrabenta","Mbube","Marabi","Township Jazz","Rai",
-  "Gnawa","Desert Blues","Maloya","Sega","Cape Jazz",
-  "Calypso","Soca","Zouk","Kompa","Son","Mento","Steelpan","Bouyon","Punta",
-  "Pagode","Choro","Tropicália","Maracatu","Baião","Carimbó","Lambada","Música Caipira",
-  "Samba-Reggae","Funk Carioca",
-  "K-Rock","K-Hip-Hop","J-Rock","J-Hip-Hop","City Pop","Enka","Shibuya-kei","Mandopop",
-  "Cantopop","Bollywood","Bhangra","Qawwali","Ghazal","Carnatic","Hindustani Classical",
-  "Raga","Dhrupad","Gamelan","Dangdut","Thai Pop","V-Pop","Pinoy Pop","Persian Pop",
-  "Arabic Pop","Turkish Pop",
-  "Arabic Music","Shaabi","Dabke","Khaleeji","Egyptian Pop","Lebanese Pop","Iraqi Music",
-  "Persian Music","Turkish Music","Kurdish Music","Armenian Music","Israeli Music",
-  "Mizrahi","Andalusian Music","Oud Music","Traditional Middle Eastern",
-  "Hawaiian","Hawaiian Pop","Polynesian","Samoan","Tahitian","Tongan","Maori",
-  "Aboriginal Australian","Melanesian","Micronesian","Pacific Island Music",
+  // ===== CATEGORÍAS PRINCIPALES =====
+  "Regional Mexicano",
+  "Reggaetón",
+  "Pop",
+  "Rock",
+  "Hip-Hop / Rap",
+  "Música Latina",
+  "Cumbia",
+  "Electrónica",
+  "R&B / Soul",
+  "Indie / Alternativo",
+  "Metal",
+  "Punk",
+  "Reggae",
+  "Afrobeat",
+  "Country",
+  "Folk",
+  "Jazz",
+  "Blues",
+  "K-Pop",
+  "J-Pop",
+  "Cristiana / Gospel",
+  "Clásica",
+  "Flamenco",
+  "Acústica",
+  "Instrumental",
+  "Soundtrack",
+  "Otros",
+
+  // ===== POP =====
+  "Art Pop", "Dance Pop", "Electropop", "Synth-pop", "Indie Pop", "Dream Pop",
+  "Bedroom Pop", "Hyperpop", "Teen Pop", "Bubblegum Pop", "Power Pop",
+  "C-Pop", "Latin Pop", "Europop", "Britpop", "Sophisti-Pop", "Baroque Pop",
+  "Sunshine Pop", "Chamber Pop", "Experimental Pop",
+
+  // ===== ROCK =====
+  "Alternative Rock", "Indie Rock", "Hard Rock", "Soft Rock", "Classic Rock",
+  "Progressive Rock", "Psychedelic Rock", "Garage Rock", "Blues Rock", "Folk Rock",
+  "Southern Rock", "Surf Rock", "Glam Rock", "Art Rock", "Experimental Rock", "Post-Rock",
+  "Math Rock", "Noise Rock", "Space Rock", "Gothic Rock", "Industrial Rock",
+  "Christian Rock", "Grunge", "Brit Rock", "Emo", "Shoegaze", "Dream Rock",
+
+  // ===== METAL =====
+  "Heavy Metal", "Thrash Metal", "Death Metal", "Black Metal", "Doom Metal", "Power Metal",
+  "Speed Metal", "Progressive Metal", "Symphonic Metal", "Folk Metal", "Groove Metal",
+  "Nu Metal", "Alternative Metal", "Industrial Metal", "Gothic Metal", "Metalcore",
+  "Deathcore", "Grindcore", "Sludge Metal", "Stoner Metal", "Funeral Doom",
+  "Melodic Death Metal", "Technical Death Metal", "Viking Metal", "Pagan Metal",
+  "Post-Metal", "Djent",
+
+  // ===== PUNK =====
+  "Punk Rock", "Hardcore Punk", "Post-Punk", "Pop Punk", "Skate Punk", "Street Punk",
+  "Anarcho-Punk", "Crust Punk", "D-Beat", "Garage Punk", "Riot Grrrl", "Emo Punk",
+  "Ska Punk", "Celtic Punk", "Folk Punk", "Horror Punk", "Psychobilly",
+
+  // ===== HIP-HOP / RAP =====
+  "Hip-Hop", "Rap", "Trap", "Drill", "Gangsta Rap", "Boom Bap", "Conscious Hip-Hop",
+  "Underground Hip-Hop", "Alternative Hip-Hop", "Old School Hip-Hop", "West Coast Hip-Hop",
+  "East Coast Hip-Hop", "Southern Hip-Hop", "Crunk", "Dirty South", "G-Funk", "Cloud Rap",
+  "Emo Rap", "Jazz Rap", "Experimental Hip-Hop", "Hardcore Hip-Hop", "Latin Hip-Hop",
+  "Chicano Rap", "UK Hip-Hop", "UK Drill", "Grime", "Freestyle Rap", "Trap Latino",
+
+  // ===== R&B / SOUL =====
+  "R&B", "Contemporary R&B", "Alternative R&B", "Neo Soul", "Soul", "Classic Soul",
+  "Southern Soul", "Motown", "Funk", "P-Funk", "Quiet Storm", "New Jack Swing",
+  "Blue-Eyed Soul", "Psychedelic Soul", "Gospel Soul", "Soul Jazz",
+
+  // ===== BLUES =====
+  "Blues", "Delta Blues", "Chicago Blues", "Texas Blues", "Electric Blues",
+  "Acoustic Blues", "Country Blues", "Piedmont Blues", "British Blues", "Jump Blues",
+  "Swamp Blues", "Gospel Blues", "Soul Blues",
+
+  // ===== JAZZ =====
+  "Jazz", "Bebop", "Hard Bop", "Cool Jazz", "Free Jazz", "Fusion", "Jazz Fusion",
+  "Smooth Jazz", "Acid Jazz", "Latin Jazz", "Afro-Cuban Jazz", "Gypsy Jazz", "Swing",
+  "Big Band", "Dixieland", "Ragtime", "Modal Jazz", "Avant-Garde Jazz", "Jazz Funk",
+  "Nu Jazz", "Vocal Jazz", "Contemporary Jazz",
+
+  // ===== ELECTRÓNICA =====
+  "Electronic", "EDM", "House", "Deep House", "Tech House", "Progressive House",
+  "Electro House", "Future House", "Tropical House", "Bass House", "Acid House",
+  "Chicago House", "French House", "Minimal House", "Techno", "Detroit Techno",
+  "Minimal Techno", "Industrial Techno", "Hard Techno", "Acid Techno", "Trance",
+  "Progressive Trance", "Psytrance", "Goa Trance", "Uplifting Trance", "Hard Trance",
+  "Electro", "Ambient", "Dark Ambient", "Chillout", "Downtempo", "IDM", "Breakbeat",
+  "Drum & Bass", "Jungle", "Liquid Drum & Bass", "Dubstep", "Brostep", "UK Garage",
+  "Future Bass", "Synthwave", "Vaporwave", "Retrowave", "Lo-Fi", "Chillwave", "Glitch",
+  "Industrial", "EBM", "Hardcore", "Gabber", "Hardstyle", "Future Rave",
+
+  // ===== REGGAE =====
+  "Reggae", "Roots Reggae", "Dancehall", "Dub", "Rocksteady", "Ska", "Lovers Rock",
+  "Ragga", "Reggae Fusion", "Digital Reggae", "Dub Poetry",
+
+  // ===== MÚSICA LATINA =====
+  "Música Latina", "Latin Urban", "Salsa", "Salsa Romántica", "Salsa Dura",
+  "Son Cubano", "Bachata", "Merengue", "Cumbia", "Cumbia Mexicana", "Cumbia Colombiana",
+  "Cumbia Villera", "Cumbia Peruana", "Cumbia Andina", "Vallenato", "Bolero", "Mambo",
+  "Cha-cha-chá", "Rumba", "Guaracha", "Danzón", "Timba", "Latin Rock", "Latin Soul",
+  "Tango", "Milonga", "Bossa Nova", "Samba", "MPB", "Forró", "Axé",
+  "Frevo", "Sertanejo",
+
+  // ===== REGIONAL MEXICANO =====
+  "Mariachi", "Ranchera", "Norteño", "Norteño-Banda", "Banda", "Banda Sinaloense",
+  "Corridos", "Corrido Tradicional", "Corrido Tumbado", "Corrido Bélico",
+  "Corridos Alterados", "Tejano", "Grupero", "Duranguense", "Sierreño", "Huapango",
+  "Son Jarocho", "Son Huasteco", "Música de Tierra Caliente", "Música Norteña",
+  "Cumbia Norteña", "Bolero Ranchero", "Mariachi Moderno",
+
+  // ===== COUNTRY =====
+  "Country", "Country Pop", "Country Rock", "Traditional Country", "Outlaw Country",
+  "Alternative Country", "Bluegrass", "Americana", "Honky Tonk", "Country Blues",
+  "Western Swing", "Nashville Sound", "Red Dirt", "Contemporary Country", "Country Folk",
+
+  // ===== FOLK =====
+  "Folk", "Contemporary Folk", "Traditional Folk", "Celtic Folk", "Irish Folk",
+  "Scottish Folk", "English Folk", "American Folk", "Appalachian", "Nordic Folk",
+  "Balkan Folk", "Slavic Folk", "Gypsy / Romani", "Klezmer", "Neofolk", "World Folk",
+  "Folk Fusion",
+
+  // ===== CLÁSICA =====
+  "Música Clásica", "Medieval", "Renacimiento", "Barroco", "Clasicismo", "Romanticismo",
+  "Impresionismo", "Modernismo", "Música Contemporánea", "Música de Cámara", "Sinfónica",
+  "Coral", "Ópera", "Opereta", "Oratorio", "Cantata", "Concierto", "Sonata", "Sinfonía",
+  "Música Minimalista", "Música Experimental",
+
+  // ===== CRISTIANA / GOSPEL =====
+  "Gospel", "Christian", "Christian Pop", "Christian Hip-Hop", "Christian Metal",
+  "Worship", "Contemporary Christian", "Spiritual", "Hymns", "Islamic Music", "Nasheed",
+  "Jewish Music", "Buddhist Music", "Hindu Devotional", "Mantra",
+
+  // ===== AFRO =====
+  "Afrobeat", "Afrobeats", "Afro-Pop", "Amapiano", "Highlife", "Hiplife", "Kizomba",
+  "Kuduro", "Kwaito", "Gqom", "Mbalax", "Juju", "Fuji", "Makossa", "Soukous",
+  "Congolese Rumba", "Benga", "Bikutsi", "Chimurenga", "Jit", "Marrabenta", "Mbube",
+  "Marabi", "Township Jazz", "Rai", "Gnawa", "Desert Blues", "Maloya", "Sega", "Cape Jazz",
+
+  // ===== CARIBEÑA =====
+  "Calypso", "Soca", "Zouk", "Kompa", "Son", "Mento", "Steelpan", "Bouyon", "Punta",
+
+  // ===== BRASILEÑA =====
+  "Pagode", "Choro", "Tropicália", "Maracatu", "Baião", "Carimbó", "Lambada",
+  "Música Caipira", "Samba-Reggae", "Funk Carioca",
+
+  // ===== ASIÁTICA =====
+  "K-Rock", "K-Hip-Hop", "J-Rock", "J-Hip-Hop", "City Pop", "Enka", "Shibuya-kei",
+  "Mandopop", "Cantopop", "Bollywood", "Bhangra", "Qawwali", "Ghazal", "Carnatic",
+  "Hindustani Classical", "Raga", "Dhrupad", "Gamelan", "Dangdut", "Thai Pop", "V-Pop",
+  "Pinoy Pop", "Persian Pop", "Arabic Pop", "Turkish Pop",
+
+  // ===== ÁRABE / MEDIO ORIENTE =====
+  "Arabic Music", "Shaabi", "Dabke", "Khaleeji", "Egyptian Pop", "Lebanese Pop",
+  "Iraqi Music", "Persian Music", "Turkish Music", "Kurdish Music", "Armenian Music",
+  "Israeli Music", "Mizrahi", "Andalusian Music", "Oud Music", "Traditional Middle Eastern",
+
+  // ===== OCEÁNICA =====
+  "Hawaiian", "Hawaiian Pop", "Polynesian", "Samoan", "Tahitian", "Tongan", "Maori",
+  "Aboriginal Australian", "Melanesian", "Micronesian", "Pacific Island Music",
   "New Zealand Folk",
-  "Experimental","Avant-Garde","Noise","Drone","Musique Concrète","Electroacoustic",
-  "Minimalism","Sound Art","Free Improvisation","Experimental Electronic",
-  "Film Score","Soundtrack","Movie Soundtrack","Television Score","Video Game Music",
-  "Anime Music","Orchestral Score","Cinematic","Trailer Music","Ambient Score",
-  "Musical Theatre","Broadway","Stage & Screen",
-  "A Cappella","Vocal Pop","Choral","Choir","Barbershop","Doo-Wop","Beatboxing",
-  "Gregorian Chant","Operatic","Vocal Classical",
-  "Children's Music","Nursery Rhymes","Educational Music","Comedy Music","Novelty",
-  "Parody","Comedy Rock","Comedy Rap","Comedy Pop",
-  "Dance","Dance-Pop","Eurodance","Eurobeat","Disco","Nu-Disco","Garage","Jersey Club",
-  "Baltimore Club","Footwork","Juke",
-  "Acústica","Acústica Pop","Rock Acústico","Folk Acústico","Latino Acústico",
-  "Indie Acústico","Regional Mexicano Acústico","Acústica Instrumental","Unplugged",
-  "Balada Acústica","Bolero Acústico"
+
+  // ===== EXPERIMENTAL =====
+  "Experimental", "Avant-Garde", "Noise", "Drone", "Musique Concrète",
+  "Electroacoustic", "Minimalism", "Sound Art", "Free Improvisation",
+  "Experimental Electronic",
+
+  // ===== CINE / TV / VIDEOJUEGOS =====
+  "Film Score", "Soundtrack", "Movie Soundtrack", "Television Score", "Video Game Music",
+  "Anime Music", "Orchestral Score", "Cinematic", "Trailer Music", "Ambient Score",
+  "Musical Theatre", "Broadway", "Stage & Screen",
+
+  // ===== VOCAL =====
+  "A Cappella", "Vocal Pop", "Choral", "Choir", "Barbershop", "Doo-Wop", "Beatboxing",
+  "Gregorian Chant", "Operatic", "Vocal Classical",
+
+  // ===== INFANTIL / HUMOR =====
+  "Children's Music", "Nursery Rhymes", "Educational Music", "Comedy Music", "Novelty",
+  "Parody", "Comedy Rock", "Comedy Rap", "Comedy Pop",
+
+  // ===== BAILE / CLUB =====
+  "Dance", "Dance-Pop", "Eurodance", "Eurobeat", "Disco", "Nu-Disco", "Garage",
+  "Jersey Club", "Baltimore Club", "Footwork", "Juke",
+
+  // ===== ACÚSTICA =====
+  "Acústica", "Acústica Pop", "Rock Acústico", "Folk Acústico", "Latino Acústico",
+  "Indie Acústico", "Regional Mexicano Acústico", "Acústica Instrumental",
+  "Unplugged", "Balada Acústica", "Bolero Acústico"
 ];
 
 const GENEROS = [...new Set(GENEROS_RAW.map(g => g.trim()).filter(Boolean))]
   .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
 
+// ================================================================
+// SUBGÉNEROS DE "REGIONAL MEXICANO"
+// ================================================================
 const SUBGENEROS_RAW = [
-  "Corridos","Corridos Tumbados","Corridos Bélicos","Corridos Tradicionales","Banda",
-  "Banda Sinaloense","Norteño","Norteño-Banda","Sierreño","Sad Sierreño","Grupero",
-  "Mariachi","Ranchera","Huapango","Duranguense","Tejano","Cumbia Norteña"
+  "Corridos",
+  "Corridos Tumbados",
+  "Corridos Bélicos",
+  "Corridos Tradicionales",
+  "Banda",
+  "Banda Sinaloense",
+  "Norteño",
+  "Norteño-Banda",
+  "Sierreño",
+  "Sad Sierreño",
+  "Grupero",
+  "Mariachi",
+  "Ranchera",
+  "Huapango",
+  "Duranguense",
+  "Tejano",
+  "Cumbia Norteña"
 ];
 
 const SUBGENEROS = [...new Set(SUBGENEROS_RAW.map(g => g.trim()).filter(Boolean))]
   .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
 
+// ================================================================
+// ELEMENTOS DEL DOM — GÉNERO
+// ================================================================
 const generoHidden  = document.getElementById('genero');
 const genreSelect   = document.getElementById('genreSelect');
 const genreToggle   = document.getElementById('genreToggle');
@@ -950,15 +1430,16 @@ const genreSearch   = document.getElementById('genreSearch');
 const genreValue    = document.getElementById('genreValue');
 const genreEmpty    = document.getElementById('genreEmpty');
 
-const subgenreGroup   = document.getElementById('subgenreGroup');
+// Elementos del DOM — SUBGÉNERO
+const subgenreGroup  = document.getElementById('subgenreGroup');
 const subgeneroHidden = document.getElementById('subgenero');
-const subgenreSelect  = document.getElementById('subgenreSelect');
-const subgenreToggle  = document.getElementById('subgenreToggle');
-const subgenrePanel   = document.getElementById('subgenrePanel');
-const subgenreList    = document.getElementById('subgenreList');
-const subgenreSearch  = document.getElementById('subgenreSearch');
-const subgenreValue   = document.getElementById('subgenreValue');
-const subgenreEmpty   = document.getElementById('subgenreEmpty');
+const subgenreSelect = document.getElementById('subgenreSelect');
+const subgenreToggle = document.getElementById('subgenreToggle');
+const subgenrePanel  = document.getElementById('subgenrePanel');
+const subgenreList   = document.getElementById('subgenreList');
+const subgenreSearch = document.getElementById('subgenreSearch');
+const subgenreValue  = document.getElementById('subgenreValue');
+const subgenreEmpty  = document.getElementById('subgenreEmpty');
 
 let generoSeleccionado = '';
 let subgeneroSeleccionado = '';
@@ -966,18 +1447,32 @@ let subgeneroSeleccionado = '';
 const normalizarTexto = (s = '') =>
   String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
+// ================================================================
+// RENDERIZADO DE GÉNEROS
+// ================================================================
 function pintarGeneros(filtro = '') {
   const q = normalizarTexto(filtro);
   const lista = q ? GENEROS.filter(g => normalizarTexto(g).includes(q)) : GENEROS;
-  if (!lista.length) { genreList.innerHTML = ''; genreEmpty.classList.remove('hidden'); return; }
+
+  if (!lista.length) {
+    genreList.innerHTML = '';
+    genreEmpty.classList.remove('hidden');
+    return;
+  }
+
   genreEmpty.classList.add('hidden');
+
   genreList.innerHTML = lista.map(g => {
     const sel = g === generoSeleccionado;
     return `<button type="button" class="genre-item${sel ? ' selected' : ''}"
-      role="option" aria-selected="${sel}" data-genero="${escapeHtml(g)}">
-      <span>${escapeHtml(g)}</span><span class="check">✓</span></button>`;
+              role="option" aria-selected="${sel}"
+              data-genero="${escapeHtml(g)}">
+              <span>${escapeHtml(g)}</span>
+              <span class="check">✓</span>
+            </button>`;
   }).join('');
 }
+
 function abrirGeneros() {
   genrePanel.classList.remove('hidden');
   genreToggle.setAttribute('aria-expanded', 'true');
@@ -985,41 +1480,59 @@ function abrirGeneros() {
   pintarGeneros('');
   setTimeout(() => { try { genreSearch.focus(); } catch (e) {} }, 30);
 }
+
 function cerrarGeneros() {
   genrePanel.classList.add('hidden');
   genreToggle.setAttribute('aria-expanded', 'false');
 }
+
 function seleccionarGenero(valor) {
   generoSeleccionado = valor || '';
   generoHidden.value = generoSeleccionado;
   genreValue.textContent = generoSeleccionado || 'Selecciona un género';
   genreValue.classList.toggle('placeholder', !generoSeleccionado);
   cerrarGeneros();
+
   if (generoSeleccionado === 'Regional Mexicano') {
-    subgenreGroup?.classList.remove('hidden');
+    if (subgenreGroup) subgenreGroup.classList.remove('hidden');
   } else {
-    subgenreGroup?.classList.add('hidden');
+    if (subgenreGroup) subgenreGroup.classList.add('hidden');
     subgeneroSeleccionado = '';
     if (subgeneroHidden) subgeneroHidden.value = '';
     if (subgenreValue) {
       subgenreValue.textContent = 'Selecciona un subgénero';
       subgenreValue.classList.add('placeholder');
     }
-    cerrarSubgeneros();
+    if (typeof cerrarSubgeneros === 'function') cerrarSubgeneros();
   }
 }
+
+// ================================================================
+// RENDERIZADO DE SUBGÉNEROS
+// ================================================================
 function pintarSubgeneros(filtro = '') {
   const q = normalizarTexto(filtro);
   const lista = q ? SUBGENEROS.filter(g => normalizarTexto(g).includes(q)) : SUBGENEROS;
-  if (!lista.length) { subgenreList.innerHTML = ''; subgenreEmpty.classList.remove('hidden'); return; }
+
+  if (!lista.length) {
+    subgenreList.innerHTML = '';
+    subgenreEmpty.classList.remove('hidden');
+    return;
+  }
+
   subgenreEmpty.classList.add('hidden');
+
   subgenreList.innerHTML = lista.map(g => {
     const sel = g === subgeneroSeleccionado;
     return `<button type="button" class="genre-item${sel ? ' selected' : ''}"
-      role="option" aria-selected="${sel}" data-subgenero="${escapeHtml(g)}">
-      <span>${escapeHtml(g)}</span><span class="check">✓</span></button>`;
+              role="option" aria-selected="${sel}"
+              data-subgenero="${escapeHtml(g)}">
+              <span>${escapeHtml(g)}</span>
+              <span class="check">✓</span>
+            </button>`;
   }).join('');
 }
+
 function abrirSubgeneros() {
   subgenrePanel.classList.remove('hidden');
   subgenreToggle.setAttribute('aria-expanded', 'true');
@@ -1027,11 +1540,13 @@ function abrirSubgeneros() {
   pintarSubgeneros('');
   setTimeout(() => { try { subgenreSearch.focus(); } catch (e) {} }, 30);
 }
+
 function cerrarSubgeneros() {
   if (!subgenrePanel) return;
   subgenrePanel.classList.add('hidden');
   if (subgenreToggle) subgenreToggle.setAttribute('aria-expanded', 'false');
 }
+
 function seleccionarSubgenero(valor) {
   subgeneroSeleccionado = valor || '';
   if (subgeneroHidden) subgeneroHidden.value = subgeneroSeleccionado;
@@ -1041,303 +1556,102 @@ function seleccionarSubgenero(valor) {
   }
   cerrarSubgeneros();
 }
+
+// ================================================================
+// EVENTOS — GÉNERO
+// ================================================================
 genreToggle.addEventListener('click', (e) => {
   e.stopPropagation();
   if (genrePanel.classList.contains('hidden')) abrirGeneros();
   else cerrarGeneros();
 });
+
 genreSearch.addEventListener('input', () => pintarGeneros(genreSearch.value));
+
 genreSearch.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') { e.preventDefault(); const p = genreList.querySelector('.genre-item'); if (p) seleccionarGenero(p.dataset.genero); }
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const primero = genreList.querySelector('.genre-item');
+    if (primero) seleccionarGenero(primero.dataset.genero);
+  }
   if (e.key === 'Escape') cerrarGeneros();
 });
+
 genreList.addEventListener('click', (e) => {
   const btn = e.target.closest('.genre-item');
-  if (btn) seleccionarGenero(btn.dataset.genero);
+  if (!btn) return;
+  seleccionarGenero(btn.dataset.genero);
 });
+
 document.addEventListener('click', (e) => {
   if (genrePanel.classList.contains('hidden')) return;
   if (genreSelect && !genreSelect.contains(e.target)) cerrarGeneros();
 });
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !genrePanel.classList.contains('hidden')) cerrarGeneros();
+});
+
+// ================================================================
+// EVENTOS — SUBGÉNERO
+// ================================================================
 subgenreToggle.addEventListener('click', (e) => {
   e.stopPropagation();
   if (subgenrePanel.classList.contains('hidden')) abrirSubgeneros();
   else cerrarSubgeneros();
 });
+
 subgenreSearch.addEventListener('input', () => pintarSubgeneros(subgenreSearch.value));
+
 subgenreSearch.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') { e.preventDefault(); const p = subgenreList.querySelector('.genre-item'); if (p) seleccionarSubgenero(p.dataset.subgenero); }
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const primero = subgenreList.querySelector('.genre-item');
+    if (primero) seleccionarSubgenero(primero.dataset.subgenero);
+  }
   if (e.key === 'Escape') cerrarSubgeneros();
 });
+
 subgenreList.addEventListener('click', (e) => {
   const btn = e.target.closest('.genre-item');
-  if (btn) seleccionarSubgenero(btn.dataset.subgenero);
+  if (!btn) return;
+  seleccionarSubgenero(btn.dataset.subgenero);
 });
+
 document.addEventListener('click', (e) => {
   if (subgenrePanel.classList.contains('hidden')) return;
   if (subgenreSelect && !subgenreSelect.contains(e.target)) cerrarSubgeneros();
 });
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !subgenrePanel.classList.contains('hidden')) cerrarSubgeneros();
+});
+
+// ================================================================
+// RESET DEL FORMULARIO
+// ================================================================
 document.getElementById('formCancion').addEventListener('reset', () => {
   generoSeleccionado = '';
   generoHidden.value = '';
   genreValue.textContent = 'Selecciona un género';
   genreValue.classList.add('placeholder');
   cerrarGeneros();
+
   subgeneroSeleccionado = '';
   if (subgeneroHidden) subgeneroHidden.value = '';
   if (subgenreValue) {
     subgenreValue.textContent = 'Selecciona un subgénero';
     subgenreValue.classList.add('placeholder');
   }
-  subgenreGroup?.classList.add('hidden');
+  if (subgenreGroup) subgenreGroup.classList.add('hidden');
   cerrarSubgeneros();
+
+  // 🆕 Resetear colaboradores
   cargarColaboradoresEn(collabContainerForm, []);
 });
+
+// ================================================================
+// INICIALIZAR
+// ================================================================
 pintarGeneros('');
 pintarSubgeneros('');
-
-// ================================================================
-// 🎵 PAGO ÚNICO $1 MXN / 24 HORAS
-// ================================================================
-
-function formatearFechaLarga(ts) {
-  if (!ts) return '—';
-  const d = ts.toDate ? ts.toDate() : new Date(ts);
-  if (isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
-
-function estaSuscripcionActiva() {
-  if (!suscripcionActual) return false;
-  if (suscripcionActual.estado === 'cancelada') return false;
-  const venc = suscripcionActual.fechaVencimiento;
-  if (!venc) return false;
-  const fv = venc.toDate ? venc.toDate() : new Date(venc);
-  return fv.getTime() > Date.now();
-}
-
-function mostrarPaywall() {
-  if (!paywall) return;
-  paywall.classList.remove('hidden');
-  paywall.setAttribute('aria-hidden', 'false');
-  document.body.style.overflow = 'hidden';
-  menuWrap?.classList.add('hidden');
-  setTimeout(renderPayPalBoton, 120);
-}
-function ocultarPaywall() {
-  if (!paywall) return;
-  paywall.classList.add('hidden');
-  paywall.setAttribute('aria-hidden', 'true');
-  document.body.style.overflow = '';
-}
-
-async function cargarSuscripcion(uid) {
-  try {
-    const snap = await getDoc(doc(db, COLECCION_SUSCRIPCIONES, uid));
-    suscripcionActual = snap.exists() ? { id: snap.id, ...snap.data() } : null;
-  } catch (e) {
-    console.error('[Acceso] Error al cargar:', e);
-    suscripcionActual = null;
-  }
-  aplicarEstadoSuscripcion();
-}
-
-function aplicarEstadoSuscripcion() {
-  const activa = estaSuscripcionActiva();
-
-  if (activa) {
-    ocultarPaywall();
-    menuWrap?.classList.remove('hidden');
-
-    if (subBox) {
-      subBox.classList.remove('hidden', 'inactiva');
-      if (subEstado)  subEstado.textContent  = '✅ Acceso activo';
-      if (subDetalle) subDetalle.textContent = 'Vence el ' + formatearFechaLarga(suscripcionActual.fechaVencimiento);
-      if (subBtn) {
-        subBtn.onclick = null;
-        subBtn.textContent = '✅ Activo';
-        subBtn.disabled = true;
-      }
-    }
-  } else {
-    mostrarPaywall();
-    subBox?.classList.add('hidden');
-  }
-
-  renderRetiroInfo();
-}
-
-async function guardarSuscripcion(orderId) {
-  if (!usuarioActual) return;
-
-  const inicio = new Date();
-  const venc   = new Date(inicio.getTime() + DURACION_DIAS * 24 * 60 * 60 * 1000);
-
-  try {
-    await setDoc(doc(db, COLECCION_SUSCRIPCIONES, usuarioActual.uid), {
-      uid: usuarioActual.uid,
-      email: usuarioActual.email,
-      orderId: orderId || '',
-      precio: PRECIO_PLAN,
-      moneda: 'MXN',
-      fechaInicio: serverTimestamp(),
-      fechaVencimiento: venc,
-      estado: 'activa'
-    });
-
-    await cargarSuscripcion(usuarioActual.uid);
-    mostrarStatus('🎉 ¡Pago exitoso! Tienes acceso completo por 24 horas', 'ok');
-  } catch (e) {
-    console.error('[Acceso] Error al guardar:', e);
-    mostrarStatus('Error al guardar acceso: ' + e.message, 'error');
-  }
-}
-
-function renderPayPalBoton() {
-  if (paypalRenderizado) return;
-  if (typeof window.paypal === 'undefined') {
-    setTimeout(renderPayPalBoton, 300);
-    return;
-  }
-
-  const container = document.getElementById('paypal-button-container');
-  if (!container || container.dataset.rendered === '1') return;
-  container.dataset.rendered = '1';
-  container.innerHTML = '';
-
-  try {
-    window.paypal.Buttons({
-      style: { shape: 'pill', color: 'blue', layout: 'vertical', label: 'pay' },
-      createOrder: function (data, actions) {
-        return actions.order.create({
-          purchase_units: [{
-            description: 'Kerim Music - Acceso 24 horas',
-            amount: { value: '1.00', currency_code: 'MXN' }
-          }]
-        });
-      },
-      onApprove: async function (data, actions) {
-        try {
-          const details = await actions.order.capture();
-          const orderId = details.id || data.orderID || '';
-          await guardarSuscripcion(orderId);
-        } catch (err) {
-          console.error('[PayPal] Error al capturar pago:', err);
-          mostrarStatus('Error al procesar el pago. Contacta a soporte.', 'error');
-        }
-      },
-      onCancel: function () {
-        console.log('[PayPal] Pago cancelado por el usuario');
-      },
-      onError: function (err) {
-        console.error('[PayPal] Error:', err);
-        mostrarStatus('Error con PayPal: ' + (err?.message || 'Intenta de nuevo'), 'error');
-      }
-    }).render('#paypal-button-container');
-    paypalRenderizado = true;
-  } catch (e) {
-    console.error('[PayPal] Render falló:', e);
-  }
-}
-
-paywallLogout?.addEventListener('click', async () => {
-  try {
-    paywallLogout.disabled = true;
-    paywallLogout.textContent = 'Cerrando sesión...';
-    await signOut(auth);
-  } catch (e) {
-    console.error('Error al cerrar sesión:', e);
-  } finally {
-    paywallLogout.disabled = false;
-    paywallLogout.textContent = '🚪 Cerrar sesión';
-  }
-});
-
-// ============ RETIROS ============
-function calcularTotalGanancias() {
-  let total = 0;
-  (cancionesActuales || []).forEach(c => {
-    const stats = obtenerStatsDeCancion(c);
-    total += (stats.oyentes || 0) * PAGO_POR_OYENTE;
-  });
-  return total;
-}
-function retiroDisponible() {
-  if (!estaSuscripcionActiva()) return { disponible: false, razon: 'Necesitas una suscripción activa' };
-  if (!suscripcionActual?.ultimoRetiro) return { disponible: true, proximo: 'Disponible ahora' };
-  const ult = suscripcionActual.ultimoRetiro;
-  const fechaUlt = ult.toDate ? ult.toDate() : new Date(ult);
-  const prox = new Date(fechaUlt);
-  prox.setMonth(prox.getMonth() + MESES_ENTRE_RETIROS);
-  if (prox.getTime() <= Date.now()) return { disponible: true, proximo: 'Disponible ahora' };
-  return { disponible: false, proximo: 'Próximo retiro: ' + formatearFechaLarga(prox) };
-}
-function renderRetiroInfo() {
-  if (!retiroBtn || !retiroInfo) return;
-
-  if (!estaSuscripcionActiva()) {
-    retiroInfo.textContent = 'Requiere suscripción activa';
-    retiroBtn.disabled = true;
-    retiroBtn.textContent = 'Solicitar retiro';
-    return;
-  }
-  const estado = retiroDisponible();
-  const total = calcularTotalGanancias();
-  retiroInfo.textContent = `${estado.proximo} · Saldo: ${fmtDinero(total)}`;
-  if (estado.disponible && total > 0) {
-    retiroBtn.disabled = false;
-    retiroBtn.textContent = `Solicitar retiro (${fmtDinero(total)})`;
-  } else {
-    retiroBtn.disabled = true;
-    retiroBtn.textContent = 'Solicitar retiro';
-  }
-}
-async function solicitarRetiro() {
-  if (!usuarioActual || !estaSuscripcionActiva()) return;
-
-  const estado = retiroDisponible();
-  if (!estado.disponible) { mostrarStatus(estado.proximo || 'Aún no puedes retirar', 'error'); return; }
-  const total = calcularTotalGanancias();
-  if (total <= 0) { mostrarStatus('No tienes ganancias para retirar todavía', 'error'); return; }
-  if (!confirm(`¿Solicitar retiro de ${fmtDinero(total)}?\nSe procesará en un plazo de 5-7 días hábiles.`)) return;
-
-  retiroBtn.disabled = true;
-  retiroBtn.innerHTML = '<span class="loader"></span>Enviando...';
-  try {
-    await addDoc(collection(db, 'retiros', usuarioActual.uid, 'solicitudes'), {
-      uid: usuarioActual.uid, email: usuarioActual.email,
-      monto: total, moneda: 'MXN', estado: 'pendiente',
-      metodo: 'PayPal', fecha: serverTimestamp()
-    });
-    await updateDoc(doc(db, COLECCION_SUSCRIPCIONES, usuarioActual.uid), {
-      ultimoRetiro: serverTimestamp()
-    });
-    suscripcionActual.ultimoRetiro = { seconds: Date.now() / 1000 };
-    mostrarStatus('✅ Solicitud de retiro enviada correctamente', 'ok');
-  } catch (e) {
-    console.error('[Retiro] Error:', e);
-    mostrarStatus('Error al solicitar retiro: ' + e.message, 'error');
-  } finally {
-    renderRetiroInfo();
-  }
-}
-retiroBtn?.addEventListener('click', solicitarRetiro);
-
-// ============ Observador auth ============
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    await cargarSuscripcion(user.uid);
-    renderPayPalBoton();
-  } else {
-    ocultarPaywall();
-    suscripcionActual = null;
-    subBox?.classList.add('hidden');
-    if (retiroBtn)  retiroBtn.disabled = true;
-    if (retiroInfo) retiroInfo.textContent = '—';
-    paypalRenderizado = false;
-    const c = document.getElementById('paypal-button-container');
-    if (c) { c.dataset.rendered = ''; c.innerHTML = ''; }
-  }
-});
-
-statsBtn?.addEventListener('click', () => setTimeout(renderRetiroInfo, 250));
