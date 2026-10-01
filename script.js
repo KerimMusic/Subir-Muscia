@@ -130,10 +130,10 @@ const PLACEHOLDER = 'https://via.placeholder.com/64/333/666?text=%E2%99%AB';
 const COLECCION_OYENTES = 'oyentes_canciones';
 const PAGO_POR_OYENTE = 0.20;
 
-// ================== PLAN ÚNICO ==================
+// ================== PLAN ÚNICO $1 MXN / 1 DÍA ==================
 const PLAN_ID      = 'P-8M095356XM2937120NK7BNAA';
-const PRECIO_PLAN  = 1;          // 1 MXN
-const DURACION_DIAS = 1;         // 1 día
+const PRECIO_PLAN  = 1;
+const DURACION_DIAS = 1;
 
 const MESES_ENTRE_RETIROS = 3;
 const COLECCION_SUSCRIPCIONES = 'suscripciones';
@@ -1098,7 +1098,7 @@ pintarGeneros('');
 pintarSubgeneros('');
 
 // ================================================================
-// 🎵 SUSCRIPCIÓN (PLAN ÚNICO $1 MXN / 1 DÍA)
+// 🎵 SUSCRIPCIÓN ($1 MXN / 1 DÍA)
 // ================================================================
 
 function formatearFechaLarga(ts) {
