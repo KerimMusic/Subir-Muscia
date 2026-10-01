@@ -41,6 +41,15 @@
       Iniciar sesión con Google
     </button>
 
+    <!-- 🔒 BLOQUEO DE SUBIDA SIN SUSCRIPCIÓN ACTIVA -->
+    <div id="formLocked" class="form-locked hidden">
+      <div class="lock-icon" aria-hidden="true">🔒</div>
+      <h3 id="lockTitle">Necesitas una suscripción activa para subir música.</h3>
+      <p id="lockMessage">Activa tu suscripción para comenzar a subir tu música.</p>
+      <button id="verPlanesBtn" class="ob-btn-primario" type="button">Ver suscripciones</button>
+    </div>
+
+    <!-- El formulario ahora está OCULTO por defecto -->
     <form id="formCancion" class="hidden">
       <div class="form-group">
         <label for="artista">1. Nombre del artista</label>
@@ -262,19 +271,7 @@
     </div>
   </div>
 
-  <div id="modal-telefono" class="ob-modal">
-    <div class="ob-modal-box">
-      <span class="ob-cerrar" data-cerrar="modal-telefono">×</span>
-      <h2>Registra tu WhatsApp</h2>
-      <p>Lo usaremos para comunicarnos contigo sobre tu pago y suscripción.</p>
-      <label>Número de teléfono (10 dígitos)</label>
-      <input id="ob-tel" type="tel" inputmode="numeric" maxlength="10" placeholder="5512345678">
-      <label>Confirma tu número</label>
-      <input id="ob-tel2" type="tel" inputmode="numeric" maxlength="10" placeholder="5512345678">
-      <p id="ob-tel-error" class="ob-error"></p>
-      <button id="ob-guardar-tel" class="ob-btn-primario">Continuar al pago</button>
-    </div>
-  </div>
+  <!-- ⚠️ modal-telefono ELIMINADO -->
 
   <div id="modal-pago" class="ob-modal">
     <div class="ob-modal-box">
