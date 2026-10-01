@@ -1659,3 +1659,59 @@ button:disabled {
   .stats-cell-label { display: none; }
   .stats-cell-value { font-size: 12px; }
 }
+/* ═══════════════════════════════════════════════════════════
+   SISTEMA DE SUSCRIPCIONES
+   ═══════════════════════════════════════════════════════════ */
+.ob-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:20px;overflow-y:auto}
+.ob-modal.abierto{display:flex}
+.ob-modal-box{background:#141420;color:#fff;border-radius:16px;padding:28px;max-width:520px;width:100%;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.6);max-height:90vh;overflow-y:auto;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.ob-modal-box.ob-ancho{max-width:820px}
+.ob-cerrar{position:absolute;top:12px;right:18px;font-size:28px;line-height:1;cursor:pointer;color:#888;transition:color .2s}
+.ob-cerrar:hover{color:#fff}
+.ob-modal-box h2{margin:0 0 16px;font-size:22px}
+.ob-modal-box h3{margin:20px 0 10px;font-size:16px}
+.ob-modal-box p{line-height:1.5}
+.ob-modal-box label{display:block;margin:12px 0 6px;font-size:14px;color:#bbb}
+.ob-modal-box input[type=tel],.ob-modal-box input[type=file]{width:100%;padding:12px;border-radius:10px;border:1px solid #333;background:#0e0e18;color:#fff;font-size:16px;box-sizing:border-box}
+.ob-modal-box input[type=tel]:focus{outline:none;border-color:#00d47e}
+.ob-planes{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px}
+@media(max-width:520px){.ob-planes{grid-template-columns:1fr}}
+.ob-plan{border:2px solid #2a2a3a;border-radius:14px;padding:20px;text-align:center;transition:border-color .2s,transform .2s}
+.ob-plan:hover{transform:translateY(-2px)}
+.ob-plan.ob-destacado{border-color:#00d47e;background:rgba(0,212,126,.06)}
+.ob-plan h3{margin:0 0 8px}
+.ob-precio{font-size:26px;font-weight:700;color:#00d47e;margin:8px 0}
+.ob-precio small{font-size:12px;color:#999}
+.ob-desc{font-size:13px;color:#999;margin:0 0 14px}
+.ob-btn-plan,.ob-btn-primario,.ob-btn-whats,.ob-btn-susc{cursor:pointer;border:none;border-radius:10px;padding:12px 18px;font-size:15px;font-weight:600;text-decoration:none;display:inline-block;text-align:center;width:100%;box-sizing:border-box;transition:background .2s,opacity .2s}
+.ob-btn-plan{background:#00d47e;color:#000}
+.ob-btn-plan:hover{background:#00b86c}
+.ob-btn-primario{background:#00d47e;color:#000;margin-top:14px}
+.ob-btn-primario:hover{background:#00b86c}
+.ob-btn-primario:disabled{background:#444;color:#888;cursor:not-allowed}
+.ob-btn-whats{background:#25d366;color:#fff;margin-top:10px}
+.ob-btn-whats:hover{background:#1fb855}
+.ob-btn-susc{position:fixed;bottom:20px;right:20px;width:auto;background:#00d47e;color:#000;z-index:900;box-shadow:0 8px 24px rgba(0,212,126,.35)}
+.ob-bancos{background:#0e0e18;border:1px solid #2a2a3a;border-radius:12px;padding:16px;font-size:15px;line-height:1.7;margin-top:10px}
+.ob-bancos .dato{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed #222}
+.ob-bancos .dato:last-child{border:none}
+.ob-resumen{background:#0e0e18;border-radius:12px;padding:12px 16px;margin-bottom:14px}
+.ob-resumen p{margin:4px 0}
+.ob-error{color:#ff5c5c;font-size:13px;min-height:18px;margin:6px 0 0}
+.ob-msg{color:#00d47e;font-size:14px;margin-top:10px;min-height:20px}
+.ob-msg.error{color:#ff5c5c}
+.ob-tabla{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+.ob-tabla th,.ob-tabla td{padding:8px;border-bottom:1px solid #2a2a3a;text-align:left}
+.ob-tabla th{color:#999;font-weight:500}
+.ob-estado{padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase}
+.ob-estado.pendiente{background:#5a4b00;color:#ffd76a}
+.ob-estado.activa{background:#0a3a22;color:#4ade80}
+.ob-estado.rechazada{background:#4a1414;color:#ff7a7a}
+.ob-estado.expirada{background:#333;color:#aaa}
+.ob-acciones button{cursor:pointer;border:none;border-radius:6px;padding:6px 10px;margin:2px;font-size:12px;font-weight:600}
+.ob-aprobar{background:#00d47e;color:#000}
+.ob-rechazar{background:#ff5c5c;color:#fff}
+.ob-ver{background:#2a2a3a;color:#fff}
+.ob-hist-item{background:#0e0e18;border:1px solid #2a2a3a;border-radius:10px;padding:12px;margin-top:10px;font-size:13px;line-height:1.6}
+.ob-aviso{background:#3a2a00;color:#ffd76a;border:1px solid #5a4b00;border-radius:10px;padding:12px;margin:10px 0;font-size:14px}
+.ob-modal-box hr{border:none;border-top:1px solid #2a2a3a;margin:20px 0}
