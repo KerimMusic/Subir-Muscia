@@ -5,12 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Subir Canción - Kerim Music</title>
   <link rel="stylesheet" href="styles.css">
-  <!-- PayPal SDK -->
-  <script src="https://www.paypal.com/sdk/js?client-id=AWMpHEjbn9JV-yZg1TGxTTYzH2EmXGdPFzcuN7U_fephJuTCp1QH96JIoyawwweolPzxe6R2b8OwdghD&vault=true&intent=subscription" data-sdk-integration-source="button-factory"></script>
+  <!-- PayPal SDK (LIVE) -->
+  <script src="https://www.paypal.com/sdk/js?client-id=BAAXzQxIIth9t_-caVlVOOUB1v2Yr3anF8mmdYRJzek9PhUFHpNPV6hYHmsDdQUjKH85Ok2n6JmbwxaLL0&vault=true&intent=subscription" data-sdk-integration-source="button-factory"></script>
 </head>
 <body>
 
-  <!-- ============ MENÚ HAMBURGUESA ============ -->
   <div id="menuWrap" class="menu-wrap hidden">
     <button id="menuBtn" class="menu-btn" type="button" aria-label="Abrir menú" aria-expanded="false">
       <span></span><span></span><span></span>
@@ -32,7 +31,6 @@
       <span id="userEmail">Cargando...</span>
     </div>
 
-    <!-- ESTADO DE SUSCRIPCIÓN -->
     <div id="subBox" class="sub-box hidden">
       <div class="sub-info">
         <span class="sub-icon">🎵</span>
@@ -53,12 +51,6 @@
       </svg>
       Iniciar sesión con Google
     </button>
-
-    <!-- AVISO LÍMITE BASIC -->
-    <div id="limiteBanner" class="limite-banner hidden">
-      <span>⚠️ Has usado tu única canción del plan <strong>Basic</strong>.</span>
-      <button type="button" id="upgradeBtn" class="btn-upgrade">Actualizar a Pro 🚀</button>
-    </div>
 
     <form id="formCancion" class="hidden">
       <div class="form-group">
@@ -158,7 +150,6 @@
       <p id="historyEmpty" class="history-empty hidden">Todavía no has subido ninguna canción.</p>
     </section>
 
-    <!-- MODAL REPRODUCTOR -->
     <div id="playerModal" class="player-modal hidden" aria-hidden="true">
       <div class="player-backdrop" data-close="1"></div>
       <div class="player-card" role="dialog" aria-modal="true">
@@ -186,7 +177,6 @@
       </div>
     </div>
 
-    <!-- MODAL EDITAR -->
     <div id="editModal" class="edit-modal hidden" aria-hidden="true">
       <div class="edit-backdrop" data-close="1"></div>
       <div class="edit-card" role="dialog" aria-modal="true">
@@ -228,7 +218,6 @@
       </div>
     </div>
 
-    <!-- MODAL ESTADÍSTICAS -->
     <div id="statsModal" class="stats-modal hidden" aria-hidden="true">
       <div class="stats-backdrop" data-close="1"></div>
       <div class="stats-card" role="dialog" aria-modal="true">
@@ -265,7 +254,7 @@
 
   </div>
 
-  <!-- ============ PAYWALL CON DOS PLANES ============ -->
+  <!-- ============ PAYWALL (PLAN ÚNICO $1 MXN / 1 DÍA) ============ -->
   <div id="paywall" class="paywall hidden" aria-hidden="true">
     <div class="paywall-card">
       <div class="paywall-brand">
@@ -273,41 +262,20 @@
         <p>PLATAFORMA PARA ARTISTAS</p>
       </div>
 
-      <h2 class="paywall-title">Elige tu plan</h2>
-      <p class="paywall-subtitle">Activa una suscripción para empezar a subir tu música.</p>
+      <h2 class="paywall-title">Activa tu suscripción</h2>
+      <p class="paywall-subtitle">Acceso completo a la plataforma por 24 horas.</p>
 
-      <div class="plans-grid">
-        <!-- PLAN BASIC -->
-        <div class="plan-card plan-basic">
-          <h3 class="plan-name">🎧 OmegaBeats Basic</h3>
-          <p class="plan-price">$1 <span>MXN</span></p>
-          <p class="plan-desc">Sube 1 canción y comienza a compartir tu música con nuestra comunidad.</p>
+      <p class="paywall-price">$1 <span>MXN / día</span></p>
 
-          <ul class="plan-benefits">
-            <li class="ok">✅ Sube 1 canción</li>
-            <li class="no">❌ Estadísticas</li>
-            <li class="no">❌ Retiros de ganancias</li>
-          </ul>
+      <ul class="paywall-benefits">
+        <li>🎵 Sube toda la música que quieras</li>
+        <li>📊 Estadísticas de tus canciones</li>
+        <li>📈 Comportamiento diario de tus temas</li>
+        <li>💰 Consulta tus ganancias generadas</li>
+        <li>⏱️ Acceso completo por 24 horas</li>
+      </ul>
 
-          <div id="paypal-button-basic" class="plan-paypal"></div>
-        </div>
-
-        <!-- PLAN PRO -->
-        <div class="plan-card plan-pro">
-          <span class="plan-badge">⭐ RECOMENDADO</span>
-          <h3 class="plan-name">🚀 Artista Pro</h3>
-          <p class="plan-price">$550 <span>MXN / año</span></p>
-          <p class="plan-desc">Música ilimitada, estadísticas completas y retiros cada 3 meses.</p>
-
-          <ul class="plan-benefits">
-            <li class="ok">✅ Canciones ilimitadas</li>
-            <li class="ok">✅ Estadísticas de tus temas</li>
-            <li class="ok">✅ Retiros de ganancias</li>
-          </ul>
-
-          <div id="paypal-button-pro" class="plan-paypal"></div>
-        </div>
-      </div>
+      <div id="paypal-button-container-P-8M095356XM2937120NK7BNAA" class="paywall-paypal"></div>
 
       <p class="paywall-hint">🔒 Pago seguro procesado por PayPal</p>
 
