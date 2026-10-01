@@ -1,6 +1,4 @@
-/* ============================================
-   RESET Y BASE
-   ============================================ */
+/* ============================================ RESET Y BASE ============================================ */
 * {
   margin: 0; padding: 0; box-sizing: border-box;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -429,28 +427,6 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .btn-sub:hover:not(:disabled) { background: #222; }
 .btn-sub:disabled { opacity: .5; cursor: default; }
 
-/* ============================================ LIMITE BANNER ============================================ */
-.limite-banner {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; background: #fff8e8; border: 1.5px solid #e0b000;
-  border-radius: 10px; padding: 12px 14px; margin-bottom: 16px;
-  font-size: 13px; font-weight: 600; color: #000;
-  animation: fadeIn 0.25s ease;
-}
-.limite-banner span { flex: 1; min-width: 0; }
-
-.btn-upgrade {
-  width: auto; margin: 0; padding: 8px 14px;
-  font-size: 12px; font-weight: 700; letter-spacing: 0.3px;
-  border-radius: 8px; background: #000; color: #fff; border: none;
-  white-space: nowrap; flex-shrink: 0; cursor: pointer; box-shadow: none;
-  transition: background 0.2s;
-}
-.btn-upgrade:hover:not(:disabled) {
-  background: #222; transform: none;
-  box-shadow: 0 4px 12px rgba(0,0,0,.15);
-}
-
 /* ============================================ PAYWALL ============================================ */
 .paywall {
   position: fixed; inset: 0; z-index: 9999;
@@ -460,14 +436,14 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .paywall.hidden { display: none !important; }
 
 .paywall-card {
-  width: 100%; max-width: 680px;
+  width: 100%; max-width: 460px;
   background: #fff; border: 1.5px solid #e0e0e0; border-radius: 20px;
   padding: 32px 28px 24px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
   text-align: center; animation: playerIn .35s ease;
 }
 
-.paywall-brand { margin-bottom: 22px; }
+.paywall-brand { margin-bottom: 24px; }
 .paywall-brand h1 {
   font-size: 26px; font-weight: 700; color: #000;
   letter-spacing: -0.5px; margin-bottom: 4px;
@@ -478,94 +454,38 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 }
 
 .paywall-title {
-  font-size: 22px; font-weight: 700; color: #000;
-  margin-bottom: 6px; letter-spacing: -0.3px;
+  font-size: 20px; font-weight: 700; color: #000;
+  margin-bottom: 8px; letter-spacing: -0.3px;
 }
 .paywall-subtitle {
-  font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 22px;
+  font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 20px;
 }
 
-/* --- GRID DE PLANES --- */
-.plans-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  margin-bottom: 20px;
+.paywall-price {
+  font-size: 40px; font-weight: 800; color: #000;
+  letter-spacing: -1.5px; margin-bottom: 22px; line-height: 1;
+}
+.paywall-price span {
+  display: block; font-size: 12px; font-weight: 700; color: #777;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  margin-top: 6px;
+}
+
+.paywall-benefits {
+  list-style: none; background: #fafafa;
+  border: 1.5px solid #e8e8e8; border-radius: 12px;
+  padding: 16px 18px; margin-bottom: 22px;
+  display: flex; flex-direction: column; gap: 11px;
   text-align: left;
 }
-
-.plan-card {
-  position: relative;
-  background: #fafafa;
-  border: 1.5px solid #e8e8e8;
-  border-radius: 14px;
-  padding: 20px 16px 16px;
-  display: flex;
-  flex-direction: column;
-}
-.plan-card.plan-pro {
-  background: #000;
-  border-color: #000;
-  color: #fff;
+.paywall-benefits li {
+  font-size: 14px; font-weight: 500; color: #000; line-height: 1.4;
 }
 
-.plan-badge {
-  position: absolute;
-  top: -10px; right: 10px;
-  background: #ffd400; color: #000;
-  font-size: 9px; font-weight: 800;
-  letter-spacing: 0.5px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  text-transform: uppercase;
-}
-
-.plan-name {
-  font-size: 13px; font-weight: 800;
-  margin-bottom: 10px; letter-spacing: -0.2px; color: #000;
-}
-.plan-pro .plan-name { color: #fff; }
-
-.plan-price {
-  font-size: 28px; font-weight: 800;
-  letter-spacing: -0.8px; color: #000;
-  line-height: 1; margin-bottom: 6px;
-}
-.plan-price span {
-  font-size: 10px; font-weight: 700;
-  color: #777; letter-spacing: 0.8px;
-  text-transform: uppercase;
-  display: inline; margin-left: 2px;
-}
-.plan-pro .plan-price { color: #fff; }
-.plan-pro .plan-price span { color: #bbb; }
-
-.plan-desc {
-  font-size: 11px; color: #666;
-  line-height: 1.4; margin-bottom: 12px;
-  min-height: 42px;
-}
-.plan-pro .plan-desc { color: #ccc; }
-
-.plan-benefits {
-  list-style: none; display: flex; flex-direction: column;
-  gap: 6px; margin-bottom: 14px; padding: 0;
-  font-size: 11px; line-height: 1.3;
-}
-.plan-benefits li { font-weight: 600; }
-.plan-benefits li.ok { color: #0a7d3a; }
-.plan-benefits li.no { color: #999; }
-.plan-pro .plan-benefits li.ok { color: #4ade80; }
-.plan-pro .plan-benefits li.no { color: #888; }
-
-.plan-paypal {
-  margin-top: auto;
-  min-height: 44px;
-}
+.paywall-paypal { margin-bottom: 14px; min-height: 50px; }
 
 .paywall-hint {
-  font-size: 11px; color: #888;
-  line-height: 1.4; margin-bottom: 16px;
+  font-size: 11px; color: #888; line-height: 1.4; margin-bottom: 16px;
 }
 
 .paywall-logout {
@@ -579,6 +499,14 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .paywall-logout:hover:not(:disabled) {
   background: #fff; color: #000; border-color: #000;
   transform: none; box-shadow: none;
+}
+
+@media (max-width: 420px) {
+  .paywall-card { padding: 26px 18px 20px; }
+  .paywall-brand h1 { font-size: 22px; }
+  .paywall-title { font-size: 18px; }
+  .paywall-price { font-size: 34px; }
+  .paywall-benefits li { font-size: 13px; }
 }
 
 /* ============================================ RETIRO ============================================ */
@@ -600,15 +528,3 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 }
 .btn-retiro:hover:not(:disabled) { background: #086b30; transform: translateY(-1px); }
 .btn-retiro:disabled { background: #d0d0d0; color: #666; cursor: not-allowed; opacity: .7; }
-
-/* ============================================ RESPONSIVE PAYWALL ============================================ */
-@media (max-width: 620px) {
-  .paywall-card { padding: 26px 18px 20px; max-width: 100%; }
-  .paywall-brand h1 { font-size: 22px; }
-  .paywall-title { font-size: 18px; }
-  .plans-grid { grid-template-columns: 1fr; gap: 12px; }
-  .plan-card { padding: 16px 14px; }
-  .plan-price { font-size: 22px; }
-  .plan-name { font-size: 12px; }
-  .plan-desc { min-height: auto; }
-}
