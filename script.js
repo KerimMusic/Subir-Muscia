@@ -130,8 +130,7 @@ const PLACEHOLDER = 'https://via.placeholder.com/64/333/666?text=%E2%99%AB';
 const COLECCION_OYENTES = 'oyentes_canciones';
 const PAGO_POR_OYENTE = 0.20;
 
-// ================== PLAN ÚNICO $1 MXN / 1 DÍA ==================
-const PLAN_ID      = 'P-68D98156KX953822UNK7KYIQ';
+// ================== PAGO ÚNICO $1 MXN / 24 HORAS ==================
 const PRECIO_PLAN  = 1;
 const DURACION_DIAS = 1;
 
@@ -1098,7 +1097,7 @@ pintarGeneros('');
 pintarSubgeneros('');
 
 // ================================================================
-// 🎵 SUSCRIPCIÓN ($1 MXN / 1 DÍA)
+// 🎵 PAGO ÚNICO $1 MXN / 24 HORAS
 // ================================================================
 
 function formatearFechaLarga(ts) {
@@ -1137,7 +1136,7 @@ async function cargarSuscripcion(uid) {
     const snap = await getDoc(doc(db, COLECCION_SUSCRIPCIONES, uid));
     suscripcionActual = snap.exists() ? { id: snap.id, ...snap.data() } : null;
   } catch (e) {
-    console.error('[Suscripción] Error al cargar:', e);
+    console.error('[Acceso] Error al cargar:', e);
     suscripcionActual = null;
   }
   aplicarEstadoSuscripcion();
@@ -1152,11 +1151,11 @@ function aplicarEstadoSuscripcion() {
 
     if (subBox) {
       subBox.classList.remove('hidden', 'inactiva');
-      if (subEstado)  subEstado.textContent  = '✅ Suscripción activa';
+      if (subEstado)  subEstado.textContent  = '✅ Acceso activo';
       if (subDetalle) subDetalle.textContent = 'Vence el ' + formatearFechaLarga(suscripcionActual.fechaVencimiento);
       if (subBtn) {
         subBtn.onclick = null;
-        subBtn.textContent = '✅ Activa';
+        subBtn.textContent = '✅ Activo';
         subBtn.disabled = true;
       }
     }
@@ -1168,7 +1167,7 @@ function aplicarEstadoSuscripcion() {
   renderRetiroInfo();
 }
 
-async function guardarSuscripcion(subscriptionId) {
+async function guardarSuscripcion(orderId) {
   if (!usuarioActual) return;
 
   const inicio = new Date();
@@ -1178,8 +1177,7 @@ async function guardarSuscripcion(subscriptionId) {
     await setDoc(doc(db, COLECCION_SUSCRIPCIONES, usuarioActual.uid), {
       uid: usuarioActual.uid,
       email: usuarioActual.email,
-      subscriptionId: subscriptionId || '',
-      planId: PLAN_ID,
+      orderId: orderId || '',
       precio: PRECIO_PLAN,
       moneda: 'MXN',
       fechaInicio: serverTimestamp(),
@@ -1188,10 +1186,10 @@ async function guardarSuscripcion(subscriptionId) {
     });
 
     await cargarSuscripcion(usuarioActual.uid);
-    mostrarStatus('🎉 ¡Suscripción activada! Tienes acceso completo por 24 horas', 'ok');
+    mostrarStatus('🎉 ¡Pago exitoso! Tienes acceso completo por 24 horas', 'ok');
   } catch (e) {
-    console.error('[Suscripción] Error al guardar:', e);
-    mostrarStatus('Error al guardar suscripción: ' + e.message, 'error');
+    console.error('[Acceso] Error al guardar:', e);
+    mostrarStatus('Error al guardar acceso: ' + e.message, 'error');
   }
 }
 
@@ -1202,25 +1200,40 @@ function renderPayPalBoton() {
     return;
   }
 
-  const container = document.getElementById('paypal-button-container-P-68D98156KX953822UNK7KYIQ');
+  const container = document.getElementById('paypal-button-container');
   if (!container || container.dataset.rendered === '1') return;
   container.dataset.rendered = '1';
   container.innerHTML = '';
 
   try {
     window.paypal.Buttons({
-      style: { shape: 'pill', color: 'blue', layout: 'vertical', label: 'subscribe' },
-      createSubscription: function (data, actions) {
-        return actions.subscription.create({ plan_id: PLAN_ID });
+      style: { shape: 'pill', color: 'blue', layout: 'vertical', label: 'pay' },
+      createOrder: function (data, actions) {
+        return actions.order.create({
+          purchase_units: [{
+            description: 'Kerim Music - Acceso 24 horas',
+            amount: { value: '1.00', currency_code: 'MXN' }
+          }]
+        });
       },
-      onApprove: async function (data) {
-        await guardarSuscripcion(data.subscriptionID);
+      onApprove: async function (data, actions) {
+        try {
+          const details = await actions.order.capture();
+          const orderId = details.id || data.orderID || '';
+          await guardarSuscripcion(orderId);
+        } catch (err) {
+          console.error('[PayPal] Error al capturar pago:', err);
+          mostrarStatus('Error al procesar el pago. Contacta a soporte.', 'error');
+        }
+      },
+      onCancel: function () {
+        console.log('[PayPal] Pago cancelado por el usuario');
       },
       onError: function (err) {
         console.error('[PayPal] Error:', err);
         mostrarStatus('Error con PayPal: ' + (err?.message || 'Intenta de nuevo'), 'error');
       }
-    }).render('#paypal-button-container-P-68D98156KX953822UNK7KYIQ');
+    }).render('#paypal-button-container');
     paypalRenderizado = true;
   } catch (e) {
     console.error('[PayPal] Render falló:', e);
@@ -1310,7 +1323,7 @@ async function solicitarRetiro() {
 }
 retiroBtn?.addEventListener('click', solicitarRetiro);
 
-// ============ Observador auth para suscripción ============
+// ============ Observador auth ============
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     await cargarSuscripcion(user.uid);
@@ -1321,6 +1334,9 @@ onAuthStateChanged(auth, async (user) => {
     subBox?.classList.add('hidden');
     if (retiroBtn)  retiroBtn.disabled = true;
     if (retiroInfo) retiroInfo.textContent = '—';
+    paypalRenderizado = false;
+    const c = document.getElementById('paypal-button-container');
+    if (c) { c.dataset.rendered = ''; c.innerHTML = ''; }
   }
 });
 
