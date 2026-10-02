@@ -1203,6 +1203,11 @@ function actualizarAccesoSubida() {
   } else {
     lockMessage.textContent = 'Activa tu suscripción para comenzar a subir tu música.';
   }
+
+  // 🆕 Aviso para admins
+  if (esAdminSusc) {
+    lockMessage.textContent += ' (Eres administrador: usa el botón 🛡️ Panel admin abajo a la derecha para gestionar pagos).';
+  }
 }
 window.actualizarAccesoSubida = actualizarAccesoSubida;
 
@@ -1540,21 +1545,52 @@ function escucharSuscripcion(uid) {
   }, (err) => console.error('Error suscripción:', err));
 }
 
+/* ---------- Detectar admin (por colección /admins o whitelist de correo) ---------- */
+const ADMIN_EMAILS = [
+  'kerimmusic2024@gmail.com'
+  // , 'otro_admin@gmail.com'
+];
+
 async function detectarAdmin(user) {
   try {
-    const snap = await getDoc(doc(db, 'admins', user.uid));
-    esAdminSusc = snap.exists();
+    // 1) Verificar si está en la colección /admins/{uid}
+    let esAdminColeccion = false;
+    try {
+      const snap = await getDoc(doc(db, 'admins', user.uid));
+      esAdminColeccion = snap.exists();
+    } catch (e) {
+      console.warn('No se pudo leer /admins:', e.message);
+    }
+
+    // 2) Verificar si su correo está en la whitelist
+    const esAdminEmail = ADMIN_EMAILS.includes(
+      (user.email || '').toLowerCase().trim()
+    );
+
+    esAdminSusc = esAdminColeccion || esAdminEmail;
+
+    // Quitar botón anterior si existe
     document.getElementById('btn-admin')?.remove();
+
     if (esAdminSusc) {
       const b = document.createElement('button');
       b.id = 'btn-admin';
       b.textContent = '🛡️ Panel admin';
       b.className = 'susc-btn-inline';
-      b.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:900;box-shadow:0 8px 24px rgba(0,0,0,0.2);';
-      b.onclick = () => { abrirModalSusc('modal-admin'); cargarAdminSuscripciones(); };
+      b.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:900;' +
+                        'box-shadow:0 8px 24px rgba(0,0,0,0.2);';
+      b.onclick = () => {
+        abrirModalSusc('modal-admin');
+        cargarAdminSuscripciones();
+      };
       document.body.appendChild(b);
     }
-  } catch (e) { console.warn('detectarAdmin:', e); }
+
+    // Refrescar el mensaje del candado para incluir el aviso de admin
+    actualizarAccesoSubida();
+  } catch (e) {
+    console.warn('detectarAdmin:', e);
+  }
 }
 
 async function cargarAdminSuscripciones() {
