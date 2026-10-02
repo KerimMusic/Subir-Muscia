@@ -15,6 +15,7 @@
     <div id="menuDropdown" class="menu-dropdown hidden">
       <button id="statsBtn" class="menu-item" type="button">📚 Mis canciones subidas</button>
       <button id="suscBtn" class="menu-item" type="button">💳 Suscripción</button>
+      <button id="tutorialBtn" class="menu-item" type="button">🎵 Cómo subir mi canción</button>
       <button id="logoutBtn" class="menu-item" type="button">🚪 Cerrar sesión</button>
     </div>
   </div>
@@ -336,6 +337,99 @@
     <div class="pago-wrap">
       <h1 class="pago-title">🛡️ Panel de administración — Pagos</h1>
       <div id="adminLista"></div>
+    </div>
+  </div>
+
+  <!-- 🎵 MODAL: CÓMO SUBIR MI CANCIÓN -->
+  <div id="modal-tutorial" class="pago-overlay hidden">
+    <button class="pago-x" data-close="modal-tutorial">✕</button>
+    <div class="pago-wrap">
+      <h1 class="pago-title">🎵 Cómo subir mi canción</h1>
+
+      <div class="tutorial-intro">
+        Sigue estos pasos para subir tu música a <strong>OmegaBeats</strong>:
+      </div>
+
+      <div class="tutorial-step">
+        <div class="tutorial-num">1</div>
+        <div class="tutorial-body">
+          <h2>🎧 Crea una cuenta en Dropbox</h2>
+          <p>Crea o inicia sesión en tu cuenta de Dropbox.</p>
+          <a href="https://www.dropbox.com/login" target="_blank" rel="noopener" class="tutorial-btn">Abrir Dropbox ↗</a>
+        </div>
+      </div>
+
+      <div class="tutorial-step">
+        <div class="tutorial-num">2</div>
+        <div class="tutorial-body">
+          <h2>📁 Crea una carpeta para tu álbum</h2>
+          <p>Dentro de Dropbox, crea una carpeta con el nombre de tu álbum.</p>
+        </div>
+      </div>
+
+      <div class="tutorial-step">
+        <div class="tutorial-num">3</div>
+        <div class="tutorial-body">
+          <h2>🎵 Agrega tu música y portada</h2>
+          <p>Dentro de la carpeta coloca:</p>
+          <ul>
+            <li>🎵 Tu canción en formato compatible.</li>
+            <li>🖼️ La portada de tu canción o álbum.</li>
+          </ul>
+          <p class="tutorial-warn">📐 La portada debe tener una resolución de <strong>3000 × 3000 píxeles</strong>.</p>
+        </div>
+      </div>
+
+      <div class="tutorial-step">
+        <div class="tutorial-num">4</div>
+        <div class="tutorial-body">
+          <h2>🚀 Entra a tu plan</h2>
+          <p>Cuando tengas preparada tu música, portada y carpeta de Dropbox, entra a <strong>tu plan</strong> en OmegaBeats y selecciona la opción para <strong>subir tu música</strong>.</p>
+        </div>
+      </div>
+
+      <div class="tutorial-step">
+        <div class="tutorial-num">5</div>
+        <div class="tutorial-body">
+          <h2>🔗 Copia el enlace de tu canción</h2>
+          <p>Cuando llegues a la sección <strong>Link de Dropbox</strong>:</p>
+          <ol>
+            <li>Regresa a tu cuenta de Dropbox.</li>
+            <li>Busca el archivo de audio que quieres publicar.</li>
+            <li>Selecciona <strong>Compartir</strong>.</li>
+            <li>Copia el enlace.</li>
+            <li>Regresa a OmegaBeats.</li>
+            <li>Pega el enlace en <strong>Dropbox Audio</strong>.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="tutorial-step">
+        <div class="tutorial-num">6</div>
+        <div class="tutorial-body">
+          <h2>🖼️ Copia el enlace de la portada</h2>
+          <p>Regresa nuevamente a Dropbox:</p>
+          <ol>
+            <li>Busca la imagen de tu portada.</li>
+            <li>Selecciona <strong>Compartir</strong>.</li>
+            <li>Copia el enlace.</li>
+            <li>Regresa a OmegaBeats.</li>
+            <li>Pega el enlace en <strong>Dropbox Imagen / Portada</strong>.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="tutorial-step">
+        <div class="tutorial-num">7</div>
+        <div class="tutorial-body">
+          <h2>✅ Publica tu música</h2>
+          <p>Revisa que todos los datos estén completos y selecciona <strong>Publicar</strong>.</p>
+        </div>
+      </div>
+
+      <div class="tutorial-final">
+        🎉 <strong>¡Listo! Tu música quedará publicada en OmegaBeats.</strong>
+      </div>
     </div>
   </div>
 
