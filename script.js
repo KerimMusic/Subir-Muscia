@@ -1,31 +1,17 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
-  onAuthStateChanged,
-  signOut,
-  setPersistence,
-  browserLocalPersistence
+  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect,
+  getRedirectResult, onAuthStateChanged, signOut,
+  setPersistence, browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
-  getFirestore,
-  collection,
-  addDoc,
-  serverTimestamp,
-  onSnapshot,
-  deleteDoc,
-  doc,
-  updateDoc,
-  getDoc,
-  setDoc
+  getFirestore, collection, addDoc, serverTimestamp, onSnapshot,
+  deleteDoc, doc, updateDoc, getDoc, setDoc, getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// ============================================
-// ✅ TU CONFIGURACIÓN REAL DE FIREBASE
-// ============================================
+/* ============================================
+   ✅ CONFIGURACIÓN FIREBASE
+   ============================================ */
 const firebaseConfig = {
   apiKey: "AIzaSyDMabE70hIApcNU5RY3_WEEIF-BWUzO0K4",
   authDomain: "kerim-music-a9c46.firebaseapp.com",
@@ -35,18 +21,17 @@ const firebaseConfig = {
   appId: "1:470731440209:web:f6eba4784027a5d8c57870",
   measurementId: "G-LBHTKL8KDK"
 };
-// ============================================
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-// ============================================================
-// ✅ COMPATIBILIDAD CON WEBVIEW
-// ============================================================
+/* ============================================================
+   ✅ WEBVIEW
+   ============================================================ */
 setPersistence(auth, browserLocalPersistence).catch(err => {
-  console.warn('[WebView] No se pudo establecer persistencia:', err);
+  console.warn('[WebView] Persistencia:', err);
 });
 
 function esWebView() {
@@ -69,22 +54,17 @@ const LOGIN_BTN_HTML = `
 
 getRedirectResult(auth)
   .then(result => {
-    if (result && result.user) {
-      mostrarStatus('✅ Sesión iniciada correctamente', 'ok');
-    }
+    if (result && result.user) mostrarStatus('✅ Sesión iniciada correctamente', 'ok');
   })
   .catch(err => {
     if (err && err.code && err.code !== 'auth/no-auth-event') {
       console.error('[Auth] getRedirectResult:', err);
-      mostrarStatus('Error al iniciar sesión: ' + err.message, 'error');
     }
   });
 
-// ============================================================
-// FIN BLOQUE WEBVIEW
-// ============================================================
-
-// Elementos del DOM
+/* ============================================================
+   ELEMENTOS DOM
+   ============================================================ */
 const loginBtn   = document.getElementById('loginBtn');
 const form       = document.getElementById('formCancion');
 const userBox    = document.getElementById('userBox');
@@ -96,20 +76,22 @@ const previewImg = document.getElementById('previewImg');
 const previewTitulo  = document.getElementById('previewTitulo');
 const previewArtista = document.getElementById('previewArtista');
 
-// Historial
+const formLocked   = document.getElementById('formLocked');
+const lockMessage  = document.getElementById('lockMessage');
+const verSuscBtn   = document.getElementById('verSuscBtn');
+
 const historySection = document.getElementById('historySection');
 const historyList    = document.getElementById('historyList');
 const historyCount   = document.getElementById('historyCount');
 const historyEmpty   = document.getElementById('historyEmpty');
 
-// Menú hamburguesa
 const menuWrap     = document.getElementById('menuWrap');
 const menuBtn      = document.getElementById('menuBtn');
 const menuDropdown = document.getElementById('menuDropdown');
 const logoutBtn    = document.getElementById('logoutBtn');
 const statsBtn     = document.getElementById('statsBtn');
+const suscBtn      = document.getElementById('suscBtn');
 
-// Modal reproductor
 const playerModal    = document.getElementById('playerModal');
 const playerImg      = document.getElementById('playerImg');
 const playerTitle    = document.getElementById('playerTitle');
@@ -122,7 +104,6 @@ const playerVol      = document.getElementById('playerVol');
 const playerCurrent  = document.getElementById('playerCurrent');
 const playerDuration = document.getElementById('playerDuration');
 
-// Modal editar
 const editModal    = document.getElementById('editModal');
 const editForm     = document.getElementById('editForm');
 const editImg      = document.getElementById('editImg');
@@ -133,14 +114,12 @@ const editAudio    = document.getElementById('editAudio');
 const editImagen   = document.getElementById('editImagen');
 const editSubmitBtn = document.getElementById('editSubmitBtn');
 
-// Modal estadísticas
 const statsModal          = document.getElementById('statsModal');
 const statsList           = document.getElementById('statsList');
 const statsEmpty          = document.getElementById('statsEmpty');
 const statsTotalListeners = document.getElementById('statsTotalListeners');
 const statsTotalEarnings  = document.getElementById('statsTotalEarnings');
 
-// 🆕 Colaboradores
 const collabContainerForm = document.getElementById('collaboratorsContainer');
 const collabContainerEdit = document.getElementById('collaboratorsEditContainer');
 const addCollabBtnForm    = document.getElementById('addCollaboratorBtn');
@@ -152,238 +131,138 @@ let unsubscribeOyentes   = null;
 let cancionesActuales = [];
 let editandoId = null;
 let statsAbierto = false;
-
-// Mapa de estadísticas: { tituloNormalizado: { docId, oyentes } }
 let statsOyentes = {};
 
 const PLACEHOLDER = 'https://via.placeholder.com/64/333/666?text=%E2%99%AB';
-
 const COLECCION_OYENTES = 'oyentes_canciones';
+const PAGO_POR_OYENTE = 0.20;
 
-// 💵 Tarifa por oyente
-const PAGO_POR_OYENTE = 0.20; // MXN
-
-// ===================
-// Utilidades
-// ===================
+/* =================== Utilidades =================== */
 function mostrarStatus(msg, tipo = 'ok') {
   status.textContent = msg;
   status.className = 'status ' + tipo;
-  if (tipo === 'ok') {
-    setTimeout(() => { status.className = 'status'; }, 4000);
-  }
+  if (tipo === 'ok') setTimeout(() => { status.className = 'status'; }, 4000);
 }
 
 function dropboxDirecto(url) {
   if (!url) return '';
-  url = url.trim();
-  return url
+  return url.trim()
     .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
-    .replace('?dl=0', '')
-    .replace('?dl=1', '')
-    .replace('&dl=0', '')
-    .replace('&dl=1', '')
+    .replace('?dl=0', '').replace('?dl=1', '')
+    .replace('&dl=0', '').replace('&dl=1', '')
     .replace('?raw=1', '');
 }
 
 function escapeHtml(str = '') {
   return String(str).replace(/[&<>"']/g, c => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
 }
 
 function fmtNumero(n) {
-  const v = Number(n) || 0;
-  return v.toLocaleString('es-MX');
+  return (Number(n) || 0).toLocaleString('es-MX');
 }
-
 function fmtDinero(n) {
-  const v = Number(n) || 0;
-  return '$' + v.toLocaleString('es-MX', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+  return '$' + (Number(n) || 0).toLocaleString('es-MX', {
+    minimumFractionDigits: 2, maximumFractionDigits: 2
   }) + ' MXN';
 }
-
-// Normaliza un título para comparar de forma robusta
 function normalizarTitulo(t) {
-  return String(t || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
+  return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
-// ==========================================================
-// 👥 COLABORADORES (NUEVA FUNCIÓN)
-// ==========================================================
-
-// Crea una fila de input para un colaborador
+/* ==========================================================
+   COLABORADORES
+   ========================================================== */
 function crearFilaColaborador(valor = '') {
   const row = document.createElement('div');
   row.className = 'collaborator-row';
   row.innerHTML = `
-    <input type="text" class="collaborator-input"
-           placeholder="Ej: Nombre del colaborador"
-           value="${escapeHtml(valor)}">
-    <button type="button" class="btn-remove-collab"
-            title="Eliminar colaborador"
-            aria-label="Eliminar colaborador">✕</button>
+    <input type="text" class="collaborator-input" placeholder="Ej: Nombre del colaborador" value="${escapeHtml(valor)}">
+    <button type="button" class="btn-remove-collab" aria-label="Eliminar colaborador">✕</button>
   `;
-  row.querySelector('.btn-remove-collab').addEventListener('click', () => {
-    row.remove();
-  });
+  row.querySelector('.btn-remove-collab').addEventListener('click', () => row.remove());
   return row;
 }
-
-// Agrega una fila vacía al contenedor
-function agregarColaboradorAlContenedor(contenedor) {
-  if (!contenedor) return;
-  contenedor.appendChild(crearFilaColaborador(''));
+function agregarColaboradorAlContenedor(c) {
+  if (c) c.appendChild(crearFilaColaborador(''));
+}
+function obtenerColaboradoresDe(c) {
+  if (!c) return [];
+  return Array.from(c.querySelectorAll('.collaborator-input'))
+    .map(i => i.value.trim()).filter(v => v !== '');
+}
+function cargarColaboradoresEn(c, lista) {
+  if (!c) return;
+  c.innerHTML = '';
+  const l = Array.isArray(lista) ? lista.filter(Boolean) : [];
+  if (l.length === 0) c.appendChild(crearFilaColaborador(''));
+  else l.forEach(n => c.appendChild(crearFilaColaborador(n)));
 }
 
-// Obtiene todos los colaboradores del contenedor (sin vacíos)
-function obtenerColaboradoresDe(contenedor) {
-  if (!contenedor) return [];
-  return Array.from(contenedor.querySelectorAll('.collaborator-input'))
-    .map(inp => inp.value.trim())
-    .filter(v => v !== '');
-}
-
-// Carga colaboradores en el contenedor.
-// Si la lista está vacía, deja una fila vacía por defecto.
-function cargarColaboradoresEn(contenedor, colaboradores) {
-  if (!contenedor) return;
-  contenedor.innerHTML = '';
-  const lista = Array.isArray(colaboradores) ? colaboradores.filter(Boolean) : [];
-  if (lista.length === 0) {
-    contenedor.appendChild(crearFilaColaborador(''));
-  } else {
-    lista.forEach(nombre => contenedor.appendChild(crearFilaColaborador(nombre)));
-  }
-}
-
-// Botón (+) del formulario principal
 addCollabBtnForm?.addEventListener('click', () => {
   agregarColaboradorAlContenedor(collabContainerForm);
   const inputs = collabContainerForm.querySelectorAll('.collaborator-input');
   inputs[inputs.length - 1]?.focus();
 });
-
-// Botón (+) del modal de editar
 addCollabBtnEdit?.addEventListener('click', () => {
   agregarColaboradorAlContenedor(collabContainerEdit);
   const inputs = collabContainerEdit.querySelectorAll('.collaborator-input');
   inputs[inputs.length - 1]?.focus();
 });
-
-// Inicializar con una fila vacía en el formulario principal
 cargarColaboradoresEn(collabContainerForm, []);
 cargarColaboradoresEn(collabContainerEdit, []);
 
-// ==========================================================
-// 🔧 EXTRAER OYENTES
-// Soporta dos formatos:
-//   1) Número directo:  data.oyentes = 42
-//   2) Mapa/objeto:     data.oyentes = { uid1: fecha1, uid2: fecha2, ... }
-//      → en este caso se cuenta cuántas claves tiene (oyentes únicos)
-// ==========================================================
+/* ==========================================================
+   OYENTES
+   ========================================================== */
 function extraerOyentes(data) {
   if (!data) return 0;
-
-  const posibles = [
-    data.oyentes,
-    data.Oyentes,
-    data.oyente,
-    data.listeners,
-    data.Listeners,
-    data.listener,
-    data.oyentes_totales,
-    data.totalOyentes,
-    data.total_oyentes,
-    data.listenerCount,
-    data.listener_count
-  ];
-
+  const posibles = [data.oyentes, data.Oyentes, data.oyente, data.listeners,
+    data.Listeners, data.listener, data.oyentes_totales, data.totalOyentes,
+    data.total_oyentes, data.listenerCount, data.listener_count];
   for (const v of posibles) {
     if (v === undefined || v === null || v === '') continue;
-
-    if (typeof v === 'object' && !Array.isArray(v)) {
-      return Object.keys(v).length;
-    }
-    if (Array.isArray(v)) {
-      return v.length;
-    }
-
+    if (typeof v === 'object' && !Array.isArray(v)) return Object.keys(v).length;
+    if (Array.isArray(v)) return v.length;
     const n = Number(v);
     if (!isNaN(n)) return n;
   }
-
   return 0;
 }
-
-// ==========================================================
-// 🔧 OBTENER STATS: busca por varios campos de la canción
-// ==========================================================
-function obtenerStatsDeCancion(cancion) {
-  if (!cancion) return { oyentes: 0, docId: null };
-
-  const candidatos = [
-    cancion.titulo,
-    cancion.title,
-    cancion.nombre,
-    cancion.id
-  ];
-
-  for (const c of candidatos) {
-    if (!c) continue;
-    const key = normalizarTitulo(c);
+function obtenerStatsDeCancion(c) {
+  if (!c) return { oyentes: 0, docId: null };
+  const cands = [c.titulo, c.title, c.nombre, c.id];
+  for (const x of cands) {
+    if (!x) continue;
+    const key = normalizarTitulo(x);
     const s = statsOyentes[key];
     if (s) return s;
   }
-
   return { oyentes: 0, docId: null };
 }
 
-// ===================
-// Autenticación
-// ===================
+/* ============================================================
+   AUTENTICACIÓN
+   ============================================================ */
 loginBtn.addEventListener('click', async () => {
   try {
     loginBtn.disabled = true;
     loginBtn.innerHTML = '<span class="loader"></span>Iniciando sesión...';
-
-    if (esWebView()) {
-      await signInWithRedirect(auth, provider);
-      return;
-    }
-
+    if (esWebView()) { await signInWithRedirect(auth, provider); return; }
     await signInWithPopup(auth, provider);
-
   } catch (e) {
     console.error('[Auth] Error login:', e);
-    const necesitaFallback =
-      e.code === 'auth/popup-blocked' ||
+    const fallback = e.code === 'auth/popup-blocked' ||
       e.code === 'auth/operation-not-supported-in-this-environment' ||
       e.code === 'auth/web-storage-unsupported';
-
-    if (necesitaFallback) {
-      try {
-        await signInWithRedirect(auth, provider);
-        return;
-      } catch (e2) {
-        console.error('[Auth] Fallback redirect falló:', e2);
-        mostrarStatus('Error al iniciar sesión: ' + e2.message, 'error');
-      }
+    if (fallback) {
+      try { await signInWithRedirect(auth, provider); return; }
+      catch (e2) { mostrarStatus('Error: ' + e2.message, 'error'); }
     } else {
       mostrarStatus('Error al iniciar sesión: ' + e.message, 'error');
     }
-
     loginBtn.disabled = false;
     loginBtn.innerHTML = LOGIN_BTN_HTML;
   }
@@ -395,30 +274,34 @@ onAuthStateChanged(auth, (user) => {
   if (user) {
     loginBtn.classList.add('hidden');
     userBox.classList.remove('hidden');
-    form.classList.remove('hidden');
     historySection.classList.remove('hidden');
     userEmail.textContent = user.email;
     menuWrap.classList.remove('hidden');
     escucharHistorial(user.uid);
     escucharOyentesCanciones();
+
+    // Suscripción
+    escucharSuscripcion(user.uid);
+    detectarAdmin(user);
+    actualizarAccesoSubida();
   } else {
     loginBtn.classList.remove('hidden');
     loginBtn.disabled = false;
     loginBtn.innerHTML = LOGIN_BTN_HTML;
     userBox.classList.add('hidden');
     form.classList.add('hidden');
+    formLocked?.classList.add('hidden');
     historySection.classList.add('hidden');
     menuWrap.classList.add('hidden');
     cerrarMenu();
 
-    if (unsubscribeHistorial) {
-      unsubscribeHistorial();
-      unsubscribeHistorial = null;
-    }
-    if (unsubscribeOyentes) {
-      unsubscribeOyentes();
-      unsubscribeOyentes = null;
-    }
+    if (unsubscribeHistorial) { unsubscribeHistorial(); unsubscribeHistorial = null; }
+    if (unsubscribeOyentes) { unsubscribeOyentes(); unsubscribeOyentes = null; }
+    if (unsubscribeSusc) { unsubscribeSusc(); unsubscribeSusc = null; }
+
+    suscripcionActual = null;
+    esAdminSusc = false;
+    document.getElementById('btn-admin')?.remove();
 
     historyList.innerHTML = '';
     historyCount.textContent = '0';
@@ -428,12 +311,11 @@ onAuthStateChanged(auth, (user) => {
     cerrarPlayer();
     cerrarEditModal();
     cerrarStatsModal();
+    actualizarAccesoSubida();
   }
 });
 
-// ===================
-// Vista previa dinámica (formulario)
-// ===================
+/* =================== VISTA PREVIA =================== */
 ['artista', 'titulo', 'imagen', 'album'].forEach(id => {
   document.getElementById(id).addEventListener('input', actualizarPreview);
 });
@@ -445,19 +327,13 @@ function actualizarPreview() {
   const album   = document.getElementById('album').value.trim();
 
   if (!artista && !titulo && !imagen && !album) {
-    preview.classList.remove('show');
-    return;
+    preview.classList.remove('show'); return;
   }
-
   preview.classList.add('show');
   previewTitulo.textContent  = titulo || '—';
   previewArtista.textContent = artista || '—';
-
   const albumSpan = document.querySelector('.preview-info .Album');
-  if (albumSpan) {
-    albumSpan.textContent = album || 'Reggeton 1';
-  }
-
+  if (albumSpan) albumSpan.textContent = album || 'Reggeton 1';
   if (imagen) {
     previewImg.src = dropboxDirecto(imagen);
     previewImg.onerror = () => { previewImg.src = PLACEHOLDER; };
@@ -466,270 +342,170 @@ function actualizarPreview() {
   }
 }
 
-// ===================
-// HISTORIAL
-// ===================
+/* =================== HISTORIAL =================== */
 function escucharHistorial(uid) {
   if (unsubscribeHistorial) unsubscribeHistorial();
-
   historyList.innerHTML = '<p class="history-empty">Cargando canciones...</p>';
   historyEmpty.classList.add('hidden');
-
   const ref = collection(db, 'historial_usuarios', uid, 'canciones');
-
   unsubscribeHistorial = onSnapshot(ref, (snap) => {
     const canciones = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    canciones.sort((a, b) => {
-      const fa = a.fecha?.seconds || 0;
-      const fb = b.fecha?.seconds || 0;
-      return fb - fa;
-    });
-
+    canciones.sort((a, b) => (b.fecha?.seconds || 0) - (a.fecha?.seconds || 0));
     renderHistorial(canciones);
-
     if (statsAbierto) renderStats(canciones);
   }, (err) => {
     console.error('Error historial:', err);
     historyList.innerHTML = '';
-    mostrarStatus('Error al cargar el historial: ' + err.message, 'error');
+    mostrarStatus('Error: ' + err.message, 'error');
   });
 }
 
-// ===================
-// OYENTES_CANCIONES (SOLO LECTURA)
-// ===================
 function escucharOyentesCanciones() {
   if (unsubscribeOyentes) unsubscribeOyentes();
-
   const ref = collection(db, COLECCION_OYENTES);
-
   unsubscribeOyentes = onSnapshot(ref, (snap) => {
     const mapa = {};
-
     snap.docs.forEach(d => {
       const data = d.data() || {};
       const oyentes = extraerOyentes(data);
-
       const stats = { docId: d.id, oyentes };
-
-      const candidatos = [
-        d.id,
-        data.titulo,
-        data.title,
-        data.nombre,
-        data.cancion,
-        data.song
-      ];
-
-      candidatos.forEach(c => {
+      const cands = [d.id, data.titulo, data.title, data.nombre, data.cancion, data.song];
+      cands.forEach(c => {
         if (!c) return;
         const key = normalizarTitulo(c);
         if (key && !mapa[key]) mapa[key] = stats;
       });
     });
-
     statsOyentes = mapa;
-
     if (statsAbierto) renderStats(cancionesActuales);
-  }, (err) => {
-    console.error('Error al escuchar oyentes_canciones:', err);
-  });
+  }, (err) => { console.error('Error oyentes:', err); });
 }
 
-// Asegura que exista el registro en oyentes_canciones (solo si NO existe)
 async function asegurarRegistroOyentes(titulo) {
   if (!titulo) return;
-
   const key = normalizarTitulo(titulo);
   if (statsOyentes[key]) return;
-
   try {
-    const docRef = doc(db, COLECCION_OYENTES, titulo);
-    const snap = await getDoc(docRef);
-
+    const ref = doc(db, COLECCION_OYENTES, titulo);
+    const snap = await getDoc(ref);
     if (snap.exists()) return;
-
-    await setDoc(docRef, { oyentes: 0 });
-
-  } catch (e) {
-    console.warn('No se pudo asegurar registro en oyentes_canciones:', e);
-  }
+    await setDoc(ref, { oyentes: 0 });
+  } catch (e) { console.warn(e); }
 }
 
-// ==========================================================
-// 🆕 SINCRONIZAR OYENTES AL EDITAR UNA CANCIÓN
-// ==========================================================
 async function sincronizarOyentesAlEditar(tituloAntiguo, tituloNuevo) {
   if (!tituloNuevo) return;
-
   const keyAntiguo = normalizarTitulo(tituloAntiguo);
   const keyNuevo   = normalizarTitulo(tituloNuevo);
-
-  if (keyAntiguo === keyNuevo) {
-    await asegurarRegistroOyentes(tituloNuevo);
-    return;
-  }
-
+  if (keyAntiguo === keyNuevo) { await asegurarRegistroOyentes(tituloNuevo); return; }
   try {
     const statsAntiguas = statsOyentes[keyAntiguo];
     const docIdAntiguo  = statsAntiguas?.docId || tituloAntiguo;
-
     let contenidoAntiguo = null;
     if (docIdAntiguo) {
       const snapAntiguo = await getDoc(doc(db, COLECCION_OYENTES, docIdAntiguo));
-      if (snapAntiguo.exists()) {
-        contenidoAntiguo = snapAntiguo.data();
-      }
+      if (snapAntiguo.exists()) contenidoAntiguo = snapAntiguo.data();
     }
-
-    const snapNuevo   = await getDoc(doc(db, COLECCION_OYENTES, tituloNuevo));
+    const snapNuevo = await getDoc(doc(db, COLECCION_OYENTES, tituloNuevo));
     const existeNuevo = snapNuevo.exists();
-
     if (contenidoAntiguo) {
       if (existeNuevo) {
-        const datosNuevos     = snapNuevo.data() || {};
+        const datosNuevos = snapNuevo.data() || {};
         const oyentesAntiguos = contenidoAntiguo.oyentes || {};
         const oyentesNuevos   = datosNuevos.oyentes     || {};
-
         let oyentesFinales;
-
-        const ambosSonMapas =
-          oyentesAntiguos && typeof oyentesAntiguos === 'object' && !Array.isArray(oyentesAntiguos) &&
-          oyentesNuevos   && typeof oyentesNuevos   === 'object' && !Array.isArray(oyentesNuevos);
-
-        if (ambosSonMapas) {
-          oyentesFinales = { ...oyentesAntiguos, ...oyentesNuevos };
-        } else if (Array.isArray(oyentesAntiguos) && Array.isArray(oyentesNuevos)) {
+        const ambosMapas = oyentesAntiguos && typeof oyentesAntiguos === 'object' && !Array.isArray(oyentesAntiguos) &&
+                           oyentesNuevos   && typeof oyentesNuevos   === 'object' && !Array.isArray(oyentesNuevos);
+        if (ambosMapas) oyentesFinales = { ...oyentesAntiguos, ...oyentesNuevos };
+        else if (Array.isArray(oyentesAntiguos) && Array.isArray(oyentesNuevos))
           oyentesFinales = Array.from(new Set([...oyentesAntiguos, ...oyentesNuevos]));
-        } else {
-          oyentesFinales = oyentesNuevos || oyentesAntiguos || {};
-        }
-
-        await setDoc(doc(db, COLECCION_OYENTES, tituloNuevo), {
-          ...datosNuevos,
-          oyentes: oyentesFinales
-        });
+        else oyentesFinales = oyentesNuevos || oyentesAntiguos || {};
+        await setDoc(doc(db, COLECCION_OYENTES, tituloNuevo), { ...datosNuevos, oyentes: oyentesFinales });
       } else {
         await setDoc(doc(db, COLECCION_OYENTES, tituloNuevo), contenidoAntiguo);
       }
     } else if (!existeNuevo) {
       await setDoc(doc(db, COLECCION_OYENTES, tituloNuevo), { oyentes: {} });
     }
-
     if (docIdAntiguo && docIdAntiguo !== tituloNuevo) {
       await deleteDoc(doc(db, COLECCION_OYENTES, docIdAntiguo));
     }
-
-  } catch (e) {
-    console.warn('No se pudo sincronizar oyentes_canciones al editar:', e);
-  }
+  } catch (e) { console.warn(e); }
 }
 
-// Elimina el registro de oyentes_canciones asociado a una canción
 async function eliminarRegistroOyentes(cancion) {
   if (!cancion || !cancion.titulo) return;
-
   const stats = obtenerStatsDeCancion(cancion);
   const docId = stats.docId || cancion.titulo;
-
-  try {
-    await deleteDoc(doc(db, COLECCION_OYENTES, docId));
-  } catch (e) {
-    console.warn('No se pudo eliminar de oyentes_canciones:', e);
-  }
+  try { await deleteDoc(doc(db, COLECCION_OYENTES, docId)); }
+  catch (e) { console.warn(e); }
 }
 
 function renderHistorial(canciones) {
   cancionesActuales = canciones;
   historyCount.textContent = canciones.length;
-
   if (!canciones.length) {
     historyList.innerHTML = '';
     historyEmpty.classList.remove('hidden');
     return;
   }
-
   historyEmpty.classList.add('hidden');
-
   historyList.innerHTML = canciones.map(c => {
     const img = c.imagenUrl ? escapeHtml(c.imagenUrl) : PLACEHOLDER;
     const titulo  = escapeHtml(c.titulo  || 'Sin título');
     const artista = escapeHtml(c.artista || 'Desconocido');
-
     return `
       <div class="history-item" data-id="${escapeHtml(c.id)}">
-        <img src="${img}" alt="" loading="lazy"
-             onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
+        <img src="${img}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
         <div class="history-info">
           <strong title="${titulo}">${titulo}</strong>
           <small title="${artista}">${artista}</small>
         </div>
-        <button type="button" class="btn-edit" data-id="${escapeHtml(c.id)}" title="Editar canción">
-          ✏️
-        </button>
-        <button type="button" class="btn-delete" data-id="${escapeHtml(c.id)}" title="Eliminar canción">
-          🗑️
-        </button>
+        <button type="button" class="btn-edit" data-id="${escapeHtml(c.id)}" title="Editar">✏️</button>
+        <button type="button" class="btn-delete" data-id="${escapeHtml(c.id)}" title="Eliminar">🗑️</button>
       </div>
     `;
   }).join('');
 }
 
 historyList.addEventListener('click', (e) => {
-  const deleteBtn = e.target.closest('.btn-delete');
-  if (deleteBtn) {
-    const id = deleteBtn.dataset.id;
-    const item = deleteBtn.closest('.history-item');
+  const del = e.target.closest('.btn-delete');
+  if (del) {
+    const id = del.dataset.id;
+    const item = del.closest('.history-item');
     const titulo = item?.querySelector('.history-info strong')?.textContent || 'esta canción';
     const cancion = cancionesActuales.find(c => c.id === id);
-    eliminarCancion(id, deleteBtn, titulo, cancion);
+    eliminarCancion(id, del, titulo, cancion);
     return;
   }
-
-  const editBtn = e.target.closest('.btn-edit');
-  if (editBtn) {
-    const id = editBtn.dataset.id;
+  const edit = e.target.closest('.btn-edit');
+  if (edit) {
+    const id = edit.dataset.id;
     const cancion = cancionesActuales.find(c => c.id === id);
     if (cancion) abrirEditModal(cancion);
     return;
   }
-
   const item = e.target.closest('.history-item');
   if (!item) return;
-
   const id = item.dataset.id;
   const cancion = cancionesActuales.find(c => c.id === id);
   if (cancion) abrirPlayer(cancion);
 });
 
 async function eliminarCancion(id, boton, titulo, cancion) {
-  if (!usuarioActual) {
-    mostrarStatus('Debes iniciar sesión primero', 'error');
+  if (!usuarioActual) { mostrarStatus('Debes iniciar sesión primero', 'error'); return; }
+  if (!window.tieneAccesoVigente()) {
+    mostrarStatus('Necesitas una suscripción activa.', 'error');
+    abrirModalSusc('modal-susc');
     return;
   }
-
-  const confirmado = confirm(`¿Seguro que quieres eliminar "${titulo}"?\nEsta acción no se puede deshacer.`);
-  if (!confirmado) return;
-
+  if (!confirm(`¿Seguro que quieres eliminar "${titulo}"?\nEsta acción no se puede deshacer.`)) return;
   try {
     boton.disabled = true;
     boton.textContent = '⏳';
-
     await deleteDoc(doc(db, 'historial_usuarios', usuarioActual.uid, 'canciones', id));
-
-    if (cancion) {
-      await eliminarRegistroOyentes(cancion);
-    } else {
-      try {
-        await deleteDoc(doc(db, COLECCION_OYENTES, titulo));
-      } catch (e) {
-        console.warn('Fallback eliminar oyentes_canciones:', e);
-      }
-    }
-
+    if (cancion) await eliminarRegistroOyentes(cancion);
     mostrarStatus('🗑️ Canción eliminada correctamente', 'ok');
-
   } catch (err) {
     console.error('Error al eliminar:', err);
     mostrarStatus('Error al eliminar: ' + err.message, 'error');
@@ -738,14 +514,14 @@ async function eliminarCancion(id, boton, titulo, cancion) {
   }
 }
 
-// ===================
-// Guardar canción
-// ===================
+/* =================== GUARDAR CANCIÓN =================== */
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (!usuarioActual) { mostrarStatus('Debes iniciar sesión primero', 'error'); return; }
 
-  if (!usuarioActual) {
-    mostrarStatus('Debes iniciar sesión primero', 'error');
+  if (!window.tieneAccesoVigente()) {
+    mostrarStatus('Necesitas una suscripción activa para subir música.', 'error');
+    abrirModalSusc('modal-susc');
     return;
   }
 
@@ -756,7 +532,7 @@ form.addEventListener('submit', async (e) => {
   const subgenero = (document.getElementById('subgenero')?.value || '').trim();
   const audioRaw  = document.getElementById('audio').value.trim();
   const imagenRaw = document.getElementById('imagen').value.trim();
-  const colaboradores = obtenerColaboradoresDe(collabContainerForm); // 🆕
+  const colaboradores = obtenerColaboradoresDe(collabContainerForm);
 
   if (!artista || !titulo || !audioRaw) {
     mostrarStatus('Completa artista, título y audio', 'error');
@@ -768,50 +544,30 @@ form.addEventListener('submit', async (e) => {
 
   submitBtn.disabled = true;
   submitBtn.innerHTML = '<span class="loader"></span>Verificando audio...';
-  mostrarStatus('Verificando que el audio de Dropbox sea accesible...', 'loading');
+  mostrarStatus('Verificando audio de Dropbox...', 'loading');
 
   try {
     const res = await fetch(audioUrl, { method: 'HEAD' });
-    if (!res.ok) throw new Error('El link de audio no responde correctamente');
-  } catch (err) {
-    console.warn('Validación de audio:', err);
-  }
+    if (!res.ok) throw new Error('Audio no responde');
+  } catch (err) { console.warn('Validación audio:', err); }
 
   try {
     submitBtn.innerHTML = '<span class="loader"></span>Guardando...';
-    mostrarStatus('Guardando en la base de datos...', 'loading');
-
     const uid = usuarioActual.uid;
-
     await addDoc(collection(db, 'historial_usuarios', uid, 'canciones'), {
-      artista:   artista,
-      titulo:    titulo,
-      album:     album,
-      genero:    genero,
-      subgenero: subgenero,
-      colaboradores: colaboradores, // 🆕
-      audioUrl:  audioUrl,
-      imagenUrl: imagenUrl,
-      origen:    'dropbox',
-      uid:       uid,
-      email:     usuarioActual.email,
-      fecha:     serverTimestamp()
+      artista, titulo, album, genero, subgenero, colaboradores,
+      audioUrl, imagenUrl, origen: 'dropbox',
+      uid, email: usuarioActual.email, fecha: serverTimestamp()
     });
-
     await asegurarRegistroOyentes(titulo);
-
     mostrarStatus('✅ Canción subida correctamente', 'ok');
-
     form.reset();
     preview.classList.remove('show');
-    cargarColaboradoresEn(collabContainerForm, []); // 🆕
-
+    cargarColaboradoresEn(collabContainerForm, []);
     const albumSpan = document.querySelector('.preview-info .Album');
     if (albumSpan) albumSpan.textContent = 'Reggeton 1';
-
     submitBtn.disabled = false;
     submitBtn.textContent = 'Subir canción';
-
   } catch (err) {
     console.error(err);
     mostrarStatus('Error al guardar: ' + err.message, 'error');
@@ -820,9 +576,9 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
-// ================================================================
-// MODAL REPRODUCTOR
-// ================================================================
+/* ================================================================
+   PLAYER
+   ================================================================ */
 const previewAudio = new Audio();
 previewAudio.preload = 'metadata';
 
@@ -835,22 +591,17 @@ function fmtTiempo(seg) {
 
 function abrirPlayer(cancion) {
   if (!cancion) return;
-
   playerImg.src = cancion.imagenUrl || PLACEHOLDER;
   playerImg.onerror = () => { playerImg.onerror = null; playerImg.src = PLACEHOLDER; };
-
   playerTitle.textContent  = cancion.titulo  || 'Sin título';
   playerArtist.textContent = cancion.artista || 'Desconocido';
-
   playerSeek.value = 0;
   playerCurrent.textContent = '0:00';
   playerDuration.textContent = '0:00';
   playerPlay.textContent = '▶';
-
   previewAudio.pause();
   previewAudio.src = cancion.audioUrl || '';
   previewAudio.currentTime = 0;
-
   playerModal.classList.remove('hidden');
   playerModal.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
@@ -871,13 +622,9 @@ function cerrarPlayer() {
 playerModal.addEventListener('click', (e) => {
   if (e.target.dataset.close === '1') cerrarPlayer();
 });
-
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !playerModal.classList.contains('hidden')) {
-    cerrarPlayer();
-  }
+  if (e.key === 'Escape' && !playerModal.classList.contains('hidden')) cerrarPlayer();
 });
-
 playerPlay.addEventListener('click', async () => {
   if (!previewAudio.src) return;
   try {
@@ -888,49 +635,36 @@ playerPlay.addEventListener('click', async () => {
       previewAudio.pause();
       playerPlay.textContent = '▶';
     }
-  } catch (err) {
-    console.warn('No se pudo reproducir:', err);
-  }
+  } catch (err) { console.warn(err); }
 });
-
 playerRewind.addEventListener('click', () => {
   previewAudio.currentTime = Math.max(0, previewAudio.currentTime - 10);
 });
 playerForward.addEventListener('click', () => {
-  previewAudio.currentTime = Math.min(
-    previewAudio.duration || 0,
-    previewAudio.currentTime + 10
-  );
+  previewAudio.currentTime = Math.min(previewAudio.duration || 0, previewAudio.currentTime + 10);
 });
-
 previewAudio.addEventListener('loadedmetadata', () => {
   playerDuration.textContent = fmtTiempo(previewAudio.duration);
 });
-
 previewAudio.addEventListener('timeupdate', () => {
   if (!previewAudio.duration) return;
-  const pct = (previewAudio.currentTime / previewAudio.duration) * 1000;
-  playerSeek.value = pct;
+  playerSeek.value = (previewAudio.currentTime / previewAudio.duration) * 1000;
   playerCurrent.textContent = fmtTiempo(previewAudio.currentTime);
 });
-
 playerSeek.addEventListener('input', () => {
   if (!previewAudio.duration) return;
   previewAudio.currentTime = (playerSeek.value / 1000) * previewAudio.duration;
 });
-
 previewAudio.addEventListener('ended', () => {
   playerPlay.textContent = '▶';
   previewAudio.currentTime = 0;
   playerSeek.value = 0;
   playerCurrent.textContent = '0:00';
 });
-
 playerVol.addEventListener('input', () => {
   previewAudio.volume = parseFloat(playerVol.value);
 });
 previewAudio.volume = parseFloat(playerVol.value);
-
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && !previewAudio.paused) {
     previewAudio.pause();
@@ -938,32 +672,26 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-// ================================================================
-// MODAL EDITAR
-// ================================================================
+/* ================================================================
+   EDITAR
+   ================================================================ */
 function abrirEditModal(cancion) {
   if (!cancion) return;
-
+  if (!window.tieneAccesoVigente()) {
+    mostrarStatus('Necesitas una suscripción activa.', 'error');
+    abrirModalSusc('modal-susc');
+    return;
+  }
   editandoId = cancion.id;
-
   editArtista.value = cancion.artista || '';
   editTitulo.value  = cancion.titulo  || '';
   editAlbum.value   = cancion.album   || '';
-
-  const revertirDropbox = (url) => {
-    if (!url) return '';
-    return url.replace('dl.dropboxusercontent.com', 'www.dropbox.com');
-  };
-
-  editAudio.value   = revertirDropbox(cancion.audioUrl || '');
-  editImagen.value  = revertirDropbox(cancion.imagenUrl || '');
-
-  // 🆕 Cargar colaboradores existentes
+  const rev = (u) => u ? u.replace('dl.dropboxusercontent.com', 'www.dropbox.com') : '';
+  editAudio.value   = rev(cancion.audioUrl || '');
+  editImagen.value  = rev(cancion.imagenUrl || '');
   cargarColaboradoresEn(collabContainerEdit, cancion.colaboradores || []);
-
   editImg.src = cancion.imagenUrl || PLACEHOLDER;
   editImg.onerror = () => { editImg.onerror = null; editImg.src = PLACEHOLDER; };
-
   editModal.classList.remove('hidden');
   editModal.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
@@ -975,71 +703,52 @@ function cerrarEditModal() {
   document.body.style.overflow = '';
   editandoId = null;
   editForm.reset();
-  cargarColaboradoresEn(collabContainerEdit, []); // 🆕
+  cargarColaboradoresEn(collabContainerEdit, []);
 }
 
 editModal.addEventListener('click', (e) => {
   if (e.target.dataset.close === '1') cerrarEditModal();
 });
-
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !editModal.classList.contains('hidden')) {
-    cerrarEditModal();
-  }
+  if (e.key === 'Escape' && !editModal.classList.contains('hidden')) cerrarEditModal();
 });
 
 editForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-
-  if (!usuarioActual || !editandoId) {
-    mostrarStatus('Error: No hay sesión o canción seleccionada', 'error');
+  if (!usuarioActual || !editandoId) { mostrarStatus('Error', 'error'); return; }
+  if (!window.tieneAccesoVigente()) {
+    mostrarStatus('Necesitas una suscripción activa.', 'error');
+    abrirModalSusc('modal-susc');
     return;
   }
-
-  const artista   = editArtista.value.trim();
-  const titulo    = editTitulo.value.trim();
-  const album     = editAlbum.value.trim();
-  const audioRaw  = editAudio.value.trim();
+  const artista = editArtista.value.trim();
+  const titulo = editTitulo.value.trim();
+  const album = editAlbum.value.trim();
+  const audioRaw = editAudio.value.trim();
   const imagenRaw = editImagen.value.trim();
-  const colaboradores = obtenerColaboradoresDe(collabContainerEdit); // 🆕
-
+  const colaboradores = obtenerColaboradoresDe(collabContainerEdit);
   if (!artista || !titulo || !audioRaw) {
     mostrarStatus('Completa artista, título y audio', 'error');
     return;
   }
-
-  const audioUrl  = dropboxDirecto(audioRaw);
+  const audioUrl = dropboxDirecto(audioRaw);
   const imagenUrl = imagenRaw ? dropboxDirecto(imagenRaw) : '';
-
   editSubmitBtn.disabled = true;
-  editSubmitBtn.innerHTML = '<span class="loader"></span>Guardando cambios...';
-
+  editSubmitBtn.innerHTML = '<span class="loader"></span>Guardando...';
   try {
     const uid = usuarioActual.uid;
-
-    const cancionAntigua = cancionesActuales.find(c => c.id === editandoId);
-    const tituloAntiguo  = cancionAntigua?.titulo || '';
-
-    const docRef = doc(db, 'historial_usuarios', uid, 'canciones', editandoId);
-
-    await updateDoc(docRef, {
-      artista:   artista,
-      titulo:    titulo,
-      album:     album,
-      colaboradores: colaboradores, // 🆕
-      audioUrl:  audioUrl,
-      imagenUrl: imagenUrl,
+    const vieja = cancionesActuales.find(c => c.id === editandoId);
+    const tituloAntiguo = vieja?.titulo || '';
+    await updateDoc(doc(db, 'historial_usuarios', uid, 'canciones', editandoId), {
+      artista, titulo, album, colaboradores, audioUrl, imagenUrl,
       fechaEdicion: serverTimestamp()
     });
-
     await sincronizarOyentesAlEditar(tituloAntiguo, titulo);
-
     mostrarStatus('✅ Canción actualizada correctamente', 'ok');
     cerrarEditModal();
-
   } catch (err) {
-    console.error('Error al editar:', err);
-    mostrarStatus('Error al guardar cambios: ' + err.message, 'error');
+    console.error(err);
+    mostrarStatus('Error: ' + err.message, 'error');
   } finally {
     editSubmitBtn.disabled = false;
     editSubmitBtn.textContent = 'TEREMINAR';
@@ -1048,20 +757,15 @@ editForm.addEventListener('submit', async (e) => {
 
 editImagen.addEventListener('input', () => {
   const url = editImagen.value.trim();
-  if (url) {
-    editImg.src = dropboxDirecto(url);
-    editImg.onerror = () => { editImg.src = PLACEHOLDER; };
-  } else {
-    editImg.src = PLACEHOLDER;
-  }
+  editImg.src = url ? dropboxDirecto(url) : PLACEHOLDER;
+  editImg.onerror = () => { editImg.src = PLACEHOLDER; };
 });
 
-// ================================================================
-// MODAL ESTADÍSTICAS — Oyentes + Ganancias ($0.20 MXN por oyente)
-// ================================================================
+/* ================================================================
+   ESTADÍSTICAS
+   ================================================================ */
 function renderStats(canciones) {
   const lista = canciones || cancionesActuales || [];
-
   if (!lista.length) {
     statsList.innerHTML = '';
     statsEmpty.classList.remove('hidden');
@@ -1069,29 +773,22 @@ function renderStats(canciones) {
     statsTotalEarnings.textContent  = fmtDinero(0);
     return;
   }
-
   statsEmpty.classList.add('hidden');
-
-  let totalOyentes = 0;
-
+  let total = 0;
   statsList.innerHTML = lista.map(c => {
-    const img     = c.imagenUrl ? escapeHtml(c.imagenUrl) : PLACEHOLDER;
+    const img = c.imagenUrl ? escapeHtml(c.imagenUrl) : PLACEHOLDER;
     const titulo  = escapeHtml(c.titulo  || 'Sin título');
     const artista = escapeHtml(c.artista || 'Desconocido');
-
-    const stats     = obtenerStatsDeCancion(c);
+    const stats = obtenerStatsDeCancion(c);
     const listeners = stats.oyentes || 0;
-    const ganancia  = listeners * PAGO_POR_OYENTE;
-
-    totalOyentes += listeners;
-
+    const ganancia = listeners * PAGO_POR_OYENTE;
+    total += listeners;
     return `
       <div class="stats-item">
-        <img src="${img}" alt="" loading="lazy"
-             onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
+        <img src="${img}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
         <div class="stats-item-info">
-          <span class="stats-item-title" title="${titulo}">${titulo}</span>
-          <span class="stats-item-artist" title="${artista}">${artista}</span>
+          <span class="stats-item-title">${titulo}</span>
+          <span class="stats-item-artist">${artista}</span>
         </div>
         <div class="stats-item-grid">
           <div class="stats-cell">
@@ -1103,14 +800,10 @@ function renderStats(canciones) {
             <span class="stats-cell-value">${fmtDinero(ganancia)}</span>
           </div>
         </div>
-      </div>
-    `;
+      </div>`;
   }).join('');
-
-  const totalGanancias = totalOyentes * PAGO_POR_OYENTE;
-
-  statsTotalListeners.textContent = fmtNumero(totalOyentes);
-  statsTotalEarnings.textContent  = fmtDinero(totalGanancias);
+  statsTotalListeners.textContent = fmtNumero(total);
+  statsTotalEarnings.textContent  = fmtDinero(total * PAGO_POR_OYENTE);
 }
 
 function abrirStatsModal() {
@@ -1120,7 +813,6 @@ function abrirStatsModal() {
   statsModal.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
 }
-
 function cerrarStatsModal() {
   statsAbierto = false;
   if (!statsModal) return;
@@ -1128,69 +820,52 @@ function cerrarStatsModal() {
   statsModal.setAttribute('aria-hidden', 'true');
   document.body.style.overflow = '';
 }
-
 statsModal.addEventListener('click', (e) => {
   if (e.target.dataset.close === '1') cerrarStatsModal();
 });
-
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !statsModal.classList.contains('hidden')) {
-    cerrarStatsModal();
-  }
+  if (e.key === 'Escape' && !statsModal.classList.contains('hidden')) cerrarStatsModal();
 });
-
 statsBtn.addEventListener('click', () => {
   cerrarMenu();
   setTimeout(abrirStatsModal, 120);
 });
 
-// ================================================================
-// MENÚ HAMBURGUESA + CERRAR SESIÓN
-// ================================================================
+/* ================================================================
+   MENÚ HAMBURGUESA
+   ================================================================ */
 function abrirMenu() {
   if (!menuDropdown || !menuBtn) return;
   menuDropdown.classList.remove('hidden');
   menuBtn.classList.add('open');
   menuBtn.setAttribute('aria-expanded', 'true');
 }
-
 function cerrarMenu() {
   if (!menuDropdown || !menuBtn) return;
   menuDropdown.classList.add('hidden');
   menuBtn.classList.remove('open');
   menuBtn.setAttribute('aria-expanded', 'false');
 }
-
 menuBtn.addEventListener('click', (e) => {
   e.stopPropagation();
-  if (menuDropdown.classList.contains('hidden')) {
-    abrirMenu();
-  } else {
-    cerrarMenu();
-  }
+  if (menuDropdown.classList.contains('hidden')) abrirMenu();
+  else cerrarMenu();
 });
-
 document.addEventListener('click', (e) => {
   if (menuWrap.classList.contains('hidden')) return;
   if (!menuWrap.contains(e.target)) cerrarMenu();
 });
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') cerrarMenu();
-});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarMenu(); });
 
 logoutBtn.addEventListener('click', async () => {
   try {
     logoutBtn.disabled = true;
     logoutBtn.textContent = 'Cerrando sesión...';
-
     await signOut(auth);
-
     cerrarMenu();
     mostrarStatus('👋 Sesión cerrada correctamente', 'ok');
-
   } catch (err) {
-    console.error('Error al cerrar sesión:', err);
+    console.error(err);
     mostrarStatus('Error al cerrar sesión: ' + err.message, 'error');
   } finally {
     logoutBtn.disabled = false;
@@ -1198,229 +873,107 @@ logoutBtn.addEventListener('click', async () => {
   }
 });
 
-// ================================================================
-// SELECTOR DE GÉNERO MUSICAL CON BUSCADOR
-// ================================================================
+/* ================================================================
+   SELECTOR DE GÉNERO
+   ================================================================ */
 const GENEROS_RAW = [
-  // ===== CATEGORÍAS PRINCIPALES =====
-  "Regional Mexicano",
-  "Reggaetón",
-  "Pop",
-  "Rock",
-  "Hip-Hop / Rap",
-  "Música Latina",
-  "Cumbia",
-  "Electrónica",
-  "R&B / Soul",
-  "Indie / Alternativo",
-  "Metal",
-  "Punk",
-  "Reggae",
-  "Afrobeat",
-  "Country",
-  "Folk",
-  "Jazz",
-  "Blues",
-  "K-Pop",
-  "J-Pop",
-  "Cristiana / Gospel",
-  "Clásica",
-  "Flamenco",
-  "Acústica",
-  "Instrumental",
-  "Soundtrack",
-  "Otros",
-
-  // ===== POP =====
-  "Art Pop", "Dance Pop", "Electropop", "Synth-pop", "Indie Pop", "Dream Pop",
-  "Bedroom Pop", "Hyperpop", "Teen Pop", "Bubblegum Pop", "Power Pop",
-  "C-Pop", "Latin Pop", "Europop", "Britpop", "Sophisti-Pop", "Baroque Pop",
-  "Sunshine Pop", "Chamber Pop", "Experimental Pop",
-
-  // ===== ROCK =====
-  "Alternative Rock", "Indie Rock", "Hard Rock", "Soft Rock", "Classic Rock",
-  "Progressive Rock", "Psychedelic Rock", "Garage Rock", "Blues Rock", "Folk Rock",
-  "Southern Rock", "Surf Rock", "Glam Rock", "Art Rock", "Experimental Rock", "Post-Rock",
-  "Math Rock", "Noise Rock", "Space Rock", "Gothic Rock", "Industrial Rock",
-  "Christian Rock", "Grunge", "Brit Rock", "Emo", "Shoegaze", "Dream Rock",
-
-  // ===== METAL =====
-  "Heavy Metal", "Thrash Metal", "Death Metal", "Black Metal", "Doom Metal", "Power Metal",
-  "Speed Metal", "Progressive Metal", "Symphonic Metal", "Folk Metal", "Groove Metal",
-  "Nu Metal", "Alternative Metal", "Industrial Metal", "Gothic Metal", "Metalcore",
-  "Deathcore", "Grindcore", "Sludge Metal", "Stoner Metal", "Funeral Doom",
-  "Melodic Death Metal", "Technical Death Metal", "Viking Metal", "Pagan Metal",
-  "Post-Metal", "Djent",
-
-  // ===== PUNK =====
-  "Punk Rock", "Hardcore Punk", "Post-Punk", "Pop Punk", "Skate Punk", "Street Punk",
-  "Anarcho-Punk", "Crust Punk", "D-Beat", "Garage Punk", "Riot Grrrl", "Emo Punk",
-  "Ska Punk", "Celtic Punk", "Folk Punk", "Horror Punk", "Psychobilly",
-
-  // ===== HIP-HOP / RAP =====
-  "Hip-Hop", "Rap", "Trap", "Drill", "Gangsta Rap", "Boom Bap", "Conscious Hip-Hop",
-  "Underground Hip-Hop", "Alternative Hip-Hop", "Old School Hip-Hop", "West Coast Hip-Hop",
-  "East Coast Hip-Hop", "Southern Hip-Hop", "Crunk", "Dirty South", "G-Funk", "Cloud Rap",
-  "Emo Rap", "Jazz Rap", "Experimental Hip-Hop", "Hardcore Hip-Hop", "Latin Hip-Hop",
-  "Chicano Rap", "UK Hip-Hop", "UK Drill", "Grime", "Freestyle Rap", "Trap Latino",
-
-  // ===== R&B / SOUL =====
-  "R&B", "Contemporary R&B", "Alternative R&B", "Neo Soul", "Soul", "Classic Soul",
-  "Southern Soul", "Motown", "Funk", "P-Funk", "Quiet Storm", "New Jack Swing",
-  "Blue-Eyed Soul", "Psychedelic Soul", "Gospel Soul", "Soul Jazz",
-
-  // ===== BLUES =====
-  "Blues", "Delta Blues", "Chicago Blues", "Texas Blues", "Electric Blues",
-  "Acoustic Blues", "Country Blues", "Piedmont Blues", "British Blues", "Jump Blues",
-  "Swamp Blues", "Gospel Blues", "Soul Blues",
-
-  // ===== JAZZ =====
-  "Jazz", "Bebop", "Hard Bop", "Cool Jazz", "Free Jazz", "Fusion", "Jazz Fusion",
-  "Smooth Jazz", "Acid Jazz", "Latin Jazz", "Afro-Cuban Jazz", "Gypsy Jazz", "Swing",
-  "Big Band", "Dixieland", "Ragtime", "Modal Jazz", "Avant-Garde Jazz", "Jazz Funk",
-  "Nu Jazz", "Vocal Jazz", "Contemporary Jazz",
-
-  // ===== ELECTRÓNICA =====
-  "Electronic", "EDM", "House", "Deep House", "Tech House", "Progressive House",
-  "Electro House", "Future House", "Tropical House", "Bass House", "Acid House",
-  "Chicago House", "French House", "Minimal House", "Techno", "Detroit Techno",
-  "Minimal Techno", "Industrial Techno", "Hard Techno", "Acid Techno", "Trance",
-  "Progressive Trance", "Psytrance", "Goa Trance", "Uplifting Trance", "Hard Trance",
-  "Electro", "Ambient", "Dark Ambient", "Chillout", "Downtempo", "IDM", "Breakbeat",
-  "Drum & Bass", "Jungle", "Liquid Drum & Bass", "Dubstep", "Brostep", "UK Garage",
-  "Future Bass", "Synthwave", "Vaporwave", "Retrowave", "Lo-Fi", "Chillwave", "Glitch",
-  "Industrial", "EBM", "Hardcore", "Gabber", "Hardstyle", "Future Rave",
-
-  // ===== REGGAE =====
-  "Reggae", "Roots Reggae", "Dancehall", "Dub", "Rocksteady", "Ska", "Lovers Rock",
-  "Ragga", "Reggae Fusion", "Digital Reggae", "Dub Poetry",
-
-  // ===== MÚSICA LATINA =====
-  "Música Latina", "Latin Urban", "Salsa", "Salsa Romántica", "Salsa Dura",
-  "Son Cubano", "Bachata", "Merengue", "Cumbia", "Cumbia Mexicana", "Cumbia Colombiana",
-  "Cumbia Villera", "Cumbia Peruana", "Cumbia Andina", "Vallenato", "Bolero", "Mambo",
-  "Cha-cha-chá", "Rumba", "Guaracha", "Danzón", "Timba", "Latin Rock", "Latin Soul",
-  "Tango", "Milonga", "Bossa Nova", "Samba", "MPB", "Forró", "Axé",
-  "Frevo", "Sertanejo",
-
-  // ===== REGIONAL MEXICANO =====
-  "Mariachi", "Ranchera", "Norteño", "Norteño-Banda", "Banda", "Banda Sinaloense",
-  "Corridos", "Corrido Tradicional", "Corrido Tumbado", "Corrido Bélico",
-  "Corridos Alterados", "Tejano", "Grupero", "Duranguense", "Sierreño", "Huapango",
-  "Son Jarocho", "Son Huasteco", "Música de Tierra Caliente", "Música Norteña",
-  "Cumbia Norteña", "Bolero Ranchero", "Mariachi Moderno",
-
-  // ===== COUNTRY =====
-  "Country", "Country Pop", "Country Rock", "Traditional Country", "Outlaw Country",
-  "Alternative Country", "Bluegrass", "Americana", "Honky Tonk", "Country Blues",
-  "Western Swing", "Nashville Sound", "Red Dirt", "Contemporary Country", "Country Folk",
-
-  // ===== FOLK =====
-  "Folk", "Contemporary Folk", "Traditional Folk", "Celtic Folk", "Irish Folk",
-  "Scottish Folk", "English Folk", "American Folk", "Appalachian", "Nordic Folk",
-  "Balkan Folk", "Slavic Folk", "Gypsy / Romani", "Klezmer", "Neofolk", "World Folk",
-  "Folk Fusion",
-
-  // ===== CLÁSICA =====
-  "Música Clásica", "Medieval", "Renacimiento", "Barroco", "Clasicismo", "Romanticismo",
-  "Impresionismo", "Modernismo", "Música Contemporánea", "Música de Cámara", "Sinfónica",
-  "Coral", "Ópera", "Opereta", "Oratorio", "Cantata", "Concierto", "Sonata", "Sinfonía",
-  "Música Minimalista", "Música Experimental",
-
-  // ===== CRISTIANA / GOSPEL =====
-  "Gospel", "Christian", "Christian Pop", "Christian Hip-Hop", "Christian Metal",
-  "Worship", "Contemporary Christian", "Spiritual", "Hymns", "Islamic Music", "Nasheed",
-  "Jewish Music", "Buddhist Music", "Hindu Devotional", "Mantra",
-
-  // ===== AFRO =====
-  "Afrobeat", "Afrobeats", "Afro-Pop", "Amapiano", "Highlife", "Hiplife", "Kizomba",
-  "Kuduro", "Kwaito", "Gqom", "Mbalax", "Juju", "Fuji", "Makossa", "Soukous",
-  "Congolese Rumba", "Benga", "Bikutsi", "Chimurenga", "Jit", "Marrabenta", "Mbube",
-  "Marabi", "Township Jazz", "Rai", "Gnawa", "Desert Blues", "Maloya", "Sega", "Cape Jazz",
-
-  // ===== CARIBEÑA =====
-  "Calypso", "Soca", "Zouk", "Kompa", "Son", "Mento", "Steelpan", "Bouyon", "Punta",
-
-  // ===== BRASILEÑA =====
-  "Pagode", "Choro", "Tropicália", "Maracatu", "Baião", "Carimbó", "Lambada",
-  "Música Caipira", "Samba-Reggae", "Funk Carioca",
-
-  // ===== ASIÁTICA =====
-  "K-Rock", "K-Hip-Hop", "J-Rock", "J-Hip-Hop", "City Pop", "Enka", "Shibuya-kei",
-  "Mandopop", "Cantopop", "Bollywood", "Bhangra", "Qawwali", "Ghazal", "Carnatic",
-  "Hindustani Classical", "Raga", "Dhrupad", "Gamelan", "Dangdut", "Thai Pop", "V-Pop",
-  "Pinoy Pop", "Persian Pop", "Arabic Pop", "Turkish Pop",
-
-  // ===== ÁRABE / MEDIO ORIENTE =====
-  "Arabic Music", "Shaabi", "Dabke", "Khaleeji", "Egyptian Pop", "Lebanese Pop",
-  "Iraqi Music", "Persian Music", "Turkish Music", "Kurdish Music", "Armenian Music",
-  "Israeli Music", "Mizrahi", "Andalusian Music", "Oud Music", "Traditional Middle Eastern",
-
-  // ===== OCEÁNICA =====
-  "Hawaiian", "Hawaiian Pop", "Polynesian", "Samoan", "Tahitian", "Tongan", "Maori",
-  "Aboriginal Australian", "Melanesian", "Micronesian", "Pacific Island Music",
-  "New Zealand Folk",
-
-  // ===== EXPERIMENTAL =====
-  "Experimental", "Avant-Garde", "Noise", "Drone", "Musique Concrète",
-  "Electroacoustic", "Minimalism", "Sound Art", "Free Improvisation",
-  "Experimental Electronic",
-
-  // ===== CINE / TV / VIDEOJUEGOS =====
-  "Film Score", "Soundtrack", "Movie Soundtrack", "Television Score", "Video Game Music",
-  "Anime Music", "Orchestral Score", "Cinematic", "Trailer Music", "Ambient Score",
-  "Musical Theatre", "Broadway", "Stage & Screen",
-
-  // ===== VOCAL =====
-  "A Cappella", "Vocal Pop", "Choral", "Choir", "Barbershop", "Doo-Wop", "Beatboxing",
-  "Gregorian Chant", "Operatic", "Vocal Classical",
-
-  // ===== INFANTIL / HUMOR =====
-  "Children's Music", "Nursery Rhymes", "Educational Music", "Comedy Music", "Novelty",
-  "Parody", "Comedy Rock", "Comedy Rap", "Comedy Pop",
-
-  // ===== BAILE / CLUB =====
-  "Dance", "Dance-Pop", "Eurodance", "Eurobeat", "Disco", "Nu-Disco", "Garage",
-  "Jersey Club", "Baltimore Club", "Footwork", "Juke",
-
-  // ===== ACÚSTICA =====
-  "Acústica", "Acústica Pop", "Rock Acústico", "Folk Acústico", "Latino Acústico",
-  "Indie Acústico", "Regional Mexicano Acústico", "Acústica Instrumental",
-  "Unplugged", "Balada Acústica", "Bolero Acústico"
+  "Regional Mexicano","Reggaetón","Pop","Rock","Hip-Hop / Rap","Música Latina","Cumbia",
+  "Electrónica","R&B / Soul","Indie / Alternativo","Metal","Punk","Reggae","Afrobeat",
+  "Country","Folk","Jazz","Blues","K-Pop","J-Pop","Cristiana / Gospel","Clásica","Flamenco",
+  "Acústica","Instrumental","Soundtrack","Otros",
+  "Art Pop","Dance Pop","Electropop","Synth-pop","Indie Pop","Dream Pop","Bedroom Pop",
+  "Hyperpop","Teen Pop","Bubblegum Pop","Power Pop","C-Pop","Latin Pop","Europop","Britpop",
+  "Sophisti-Pop","Baroque Pop","Sunshine Pop","Chamber Pop","Experimental Pop",
+  "Alternative Rock","Indie Rock","Hard Rock","Soft Rock","Classic Rock","Progressive Rock",
+  "Psychedelic Rock","Garage Rock","Blues Rock","Folk Rock","Southern Rock","Surf Rock",
+  "Glam Rock","Art Rock","Experimental Rock","Post-Rock","Math Rock","Noise Rock","Space Rock",
+  "Gothic Rock","Industrial Rock","Christian Rock","Grunge","Brit Rock","Emo","Shoegaze","Dream Rock",
+  "Heavy Metal","Thrash Metal","Death Metal","Black Metal","Doom Metal","Power Metal","Speed Metal",
+  "Progressive Metal","Symphonic Metal","Folk Metal","Groove Metal","Nu Metal","Alternative Metal",
+  "Industrial Metal","Gothic Metal","Metalcore","Deathcore","Grindcore","Sludge Metal","Stoner Metal",
+  "Funeral Doom","Melodic Death Metal","Technical Death Metal","Viking Metal","Pagan Metal","Post-Metal","Djent",
+  "Punk Rock","Hardcore Punk","Post-Punk","Pop Punk","Skate Punk","Street Punk","Anarcho-Punk","Crust Punk",
+  "D-Beat","Garage Punk","Riot Grrrl","Emo Punk","Ska Punk","Celtic Punk","Folk Punk","Horror Punk","Psychobilly",
+  "Hip-Hop","Rap","Trap","Drill","Gangsta Rap","Boom Bap","Conscious Hip-Hop","Underground Hip-Hop",
+  "Alternative Hip-Hop","Old School Hip-Hop","West Coast Hip-Hop","East Coast Hip-Hop","Southern Hip-Hop",
+  "Crunk","Dirty South","G-Funk","Cloud Rap","Emo Rap","Jazz Rap","Experimental Hip-Hop","Hardcore Hip-Hop",
+  "Latin Hip-Hop","Chicano Rap","UK Hip-Hop","UK Drill","Grime","Freestyle Rap","Trap Latino",
+  "R&B","Contemporary R&B","Alternative R&B","Neo Soul","Soul","Classic Soul","Southern Soul","Motown",
+  "Funk","P-Funk","Quiet Storm","New Jack Swing","Blue-Eyed Soul","Psychedelic Soul","Gospel Soul","Soul Jazz",
+  "Blues","Delta Blues","Chicago Blues","Texas Blues","Electric Blues","Acoustic Blues","Country Blues",
+  "Piedmont Blues","British Blues","Jump Blues","Swamp Blues","Gospel Blues","Soul Blues",
+  "Jazz","Bebop","Hard Bop","Cool Jazz","Free Jazz","Fusion","Jazz Fusion","Smooth Jazz","Acid Jazz",
+  "Latin Jazz","Afro-Cuban Jazz","Gypsy Jazz","Swing","Big Band","Dixieland","Ragtime","Modal Jazz",
+  "Avant-Garde Jazz","Jazz Funk","Nu Jazz","Vocal Jazz","Contemporary Jazz",
+  "Electronic","EDM","House","Deep House","Tech House","Progressive House","Electro House","Future House",
+  "Tropical House","Bass House","Acid House","Chicago House","French House","Minimal House","Techno",
+  "Detroit Techno","Minimal Techno","Industrial Techno","Hard Techno","Acid Techno","Trance",
+  "Progressive Trance","Psytrance","Goa Trance","Uplifting Trance","Hard Trance","Electro","Ambient",
+  "Dark Ambient","Chillout","Downtempo","IDM","Breakbeat","Drum & Bass","Jungle","Liquid Drum & Bass",
+  "Dubstep","Brostep","UK Garage","Future Bass","Synthwave","Vaporwave","Retrowave","Lo-Fi","Chillwave",
+  "Glitch","Industrial","EBM","Hardcore","Gabber","Hardstyle","Future Rave",
+  "Reggae","Roots Reggae","Dancehall","Dub","Rocksteady","Ska","Lovers Rock","Ragga","Reggae Fusion",
+  "Digital Reggae","Dub Poetry",
+  "Música Latina","Latin Urban","Salsa","Salsa Romántica","Salsa Dura","Son Cubano","Bachata","Merengue",
+  "Cumbia","Cumbia Mexicana","Cumbia Colombiana","Cumbia Villera","Cumbia Peruana","Cumbia Andina",
+  "Vallenato","Bolero","Mambo","Cha-cha-chá","Rumba","Guaracha","Danzón","Timba","Latin Rock","Latin Soul",
+  "Tango","Milonga","Bossa Nova","Samba","MPB","Forró","Axé","Frevo","Sertanejo",
+  "Mariachi","Ranchera","Norteño","Norteño-Banda","Banda","Banda Sinaloense","Corridos",
+  "Corrido Tradicional","Corrido Tumbado","Corrido Bélico","Corridos Alterados","Tejano","Grupero",
+  "Duranguense","Sierreño","Huapango","Son Jarocho","Son Huasteco","Música de Tierra Caliente",
+  "Música Norteña","Cumbia Norteña","Bolero Ranchero","Mariachi Moderno",
+  "Country","Country Pop","Country Rock","Traditional Country","Outlaw Country","Alternative Country",
+  "Bluegrass","Americana","Honky Tonk","Country Blues","Western Swing","Nashville Sound","Red Dirt",
+  "Contemporary Country","Country Folk",
+  "Folk","Contemporary Folk","Traditional Folk","Celtic Folk","Irish Folk","Scottish Folk","English Folk",
+  "American Folk","Appalachian","Nordic Folk","Balkan Folk","Slavic Folk","Gypsy / Romani","Klezmer",
+  "Neofolk","World Folk","Folk Fusion",
+  "Música Clásica","Medieval","Renacimiento","Barroco","Clasicismo","Romanticismo","Impresionismo",
+  "Modernismo","Música Contemporánea","Música de Cámara","Sinfónica","Coral","Ópera","Opereta","Oratorio",
+  "Cantata","Concierto","Sonata","Sinfonía","Música Minimalista","Música Experimental",
+  "Gospel","Christian","Christian Pop","Christian Hip-Hop","Christian Metal","Worship",
+  "Contemporary Christian","Spiritual","Hymns","Islamic Music","Nasheed","Jewish Music","Buddhist Music",
+  "Hindu Devotional","Mantra",
+  "Afrobeat","Afrobeats","Afro-Pop","Amapiano","Highlife","Hiplife","Kizomba","Kuduro","Kwaito","Gqom",
+  "Mbalax","Juju","Fuji","Makossa","Soukous","Congolese Rumba","Benga","Bikutsi","Chimurenga","Jit",
+  "Marrabenta","Mbube","Marabi","Township Jazz","Rai","Gnawa","Desert Blues","Maloya","Sega","Cape Jazz",
+  "Calypso","Soca","Zouk","Kompa","Son","Mento","Steelpan","Bouyon","Punta",
+  "Pagode","Choro","Tropicália","Maracatu","Baião","Carimbó","Lambada","Música Caipira","Samba-Reggae",
+  "Funk Carioca",
+  "K-Rock","K-Hip-Hop","J-Rock","J-Hip-Hop","City Pop","Enka","Shibuya-kei","Mandopop","Cantopop",
+  "Bollywood","Bhangra","Qawwali","Ghazal","Carnatic","Hindustani Classical","Raga","Dhrupad","Gamelan",
+  "Dangdut","Thai Pop","V-Pop","Pinoy Pop","Persian Pop","Arabic Pop","Turkish Pop",
+  "Arabic Music","Shaabi","Dabke","Khaleeji","Egyptian Pop","Lebanese Pop","Iraqi Music","Persian Music",
+  "Turkish Music","Kurdish Music","Armenian Music","Israeli Music","Mizrahi","Andalusian Music",
+  "Oud Music","Traditional Middle Eastern",
+  "Hawaiian","Hawaiian Pop","Polynesian","Samoan","Tahitian","Tongan","Maori","Aboriginal Australian",
+  "Melanesian","Micronesian","Pacific Island Music","New Zealand Folk",
+  "Experimental","Avant-Garde","Noise","Drone","Musique Concrète","Electroacoustic","Minimalism",
+  "Sound Art","Free Improvisation","Experimental Electronic",
+  "Film Score","Soundtrack","Movie Soundtrack","Television Score","Video Game Music","Anime Music",
+  "Orchestral Score","Cinematic","Trailer Music","Ambient Score","Musical Theatre","Broadway","Stage & Screen",
+  "A Cappella","Vocal Pop","Choral","Choir","Barbershop","Doo-Wop","Beatboxing","Gregorian Chant",
+  "Operatic","Vocal Classical",
+  "Children's Music","Nursery Rhymes","Educational Music","Comedy Music","Novelty","Parody","Comedy Rock",
+  "Comedy Rap","Comedy Pop",
+  "Dance","Dance-Pop","Eurodance","Eurobeat","Disco","Nu-Disco","Garage","Jersey Club","Baltimore Club",
+  "Footwork","Juke",
+  "Acústica","Acústica Pop","Rock Acústico","Folk Acústico","Latino Acústico","Indie Acústico",
+  "Regional Mexicano Acústico","Acústica Instrumental","Unplugged","Balada Acústica","Bolero Acústico"
 ];
 
 const GENEROS = [...new Set(GENEROS_RAW.map(g => g.trim()).filter(Boolean))]
   .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
 
-// ================================================================
-// SUBGÉNEROS DE "REGIONAL MEXICANO"
-// ================================================================
 const SUBGENEROS_RAW = [
-  "Corridos",
-  "Corridos Tumbados",
-  "Corridos Bélicos",
-  "Corridos Tradicionales",
-  "Banda",
-  "Banda Sinaloense",
-  "Norteño",
-  "Norteño-Banda",
-  "Sierreño",
-  "Sad Sierreño",
-  "Grupero",
-  "Mariachi",
-  "Ranchera",
-  "Huapango",
-  "Duranguense",
-  "Tejano",
-  "Cumbia Norteña"
+  "Corridos","Corridos Tumbados","Corridos Bélicos","Corridos Tradicionales","Banda",
+  "Banda Sinaloense","Norteño","Norteño-Banda","Sierreño","Sad Sierreño","Grupero","Mariachi",
+  "Ranchera","Huapango","Duranguense","Tejano","Cumbia Norteña"
 ];
 
 const SUBGENEROS = [...new Set(SUBGENEROS_RAW.map(g => g.trim()).filter(Boolean))]
   .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
 
-// ================================================================
-// ELEMENTOS DEL DOM — GÉNERO
-// ================================================================
 const generoHidden  = document.getElementById('genero');
 const genreSelect   = document.getElementById('genreSelect');
 const genreToggle   = document.getElementById('genreToggle');
@@ -1430,16 +983,15 @@ const genreSearch   = document.getElementById('genreSearch');
 const genreValue    = document.getElementById('genreValue');
 const genreEmpty    = document.getElementById('genreEmpty');
 
-// Elementos del DOM — SUBGÉNERO
-const subgenreGroup  = document.getElementById('subgenreGroup');
+const subgenreGroup   = document.getElementById('subgenreGroup');
 const subgeneroHidden = document.getElementById('subgenero');
-const subgenreSelect = document.getElementById('subgenreSelect');
-const subgenreToggle = document.getElementById('subgenreToggle');
-const subgenrePanel  = document.getElementById('subgenrePanel');
-const subgenreList   = document.getElementById('subgenreList');
-const subgenreSearch = document.getElementById('subgenreSearch');
-const subgenreValue  = document.getElementById('subgenreValue');
-const subgenreEmpty  = document.getElementById('subgenreEmpty');
+const subgenreSelect  = document.getElementById('subgenreSelect');
+const subgenreToggle  = document.getElementById('subgenreToggle');
+const subgenrePanel   = document.getElementById('subgenrePanel');
+const subgenreList    = document.getElementById('subgenreList');
+const subgenreSearch  = document.getElementById('subgenreSearch');
+const subgenreValue   = document.getElementById('subgenreValue');
+const subgenreEmpty   = document.getElementById('subgenreEmpty');
 
 let generoSeleccionado = '';
 let subgeneroSeleccionado = '';
@@ -1447,29 +999,19 @@ let subgeneroSeleccionado = '';
 const normalizarTexto = (s = '') =>
   String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
-// ================================================================
-// RENDERIZADO DE GÉNEROS
-// ================================================================
 function pintarGeneros(filtro = '') {
   const q = normalizarTexto(filtro);
   const lista = q ? GENEROS.filter(g => normalizarTexto(g).includes(q)) : GENEROS;
-
   if (!lista.length) {
     genreList.innerHTML = '';
     genreEmpty.classList.remove('hidden');
     return;
   }
-
   genreEmpty.classList.add('hidden');
-
   genreList.innerHTML = lista.map(g => {
     const sel = g === generoSeleccionado;
-    return `<button type="button" class="genre-item${sel ? ' selected' : ''}"
-              role="option" aria-selected="${sel}"
-              data-genero="${escapeHtml(g)}">
-              <span>${escapeHtml(g)}</span>
-              <span class="check">✓</span>
-            </button>`;
+    return `<button type="button" class="genre-item${sel ? ' selected' : ''}" data-genero="${escapeHtml(g)}">
+      <span>${escapeHtml(g)}</span><span class="check">✓</span></button>`;
   }).join('');
 }
 
@@ -1480,19 +1022,16 @@ function abrirGeneros() {
   pintarGeneros('');
   setTimeout(() => { try { genreSearch.focus(); } catch (e) {} }, 30);
 }
-
 function cerrarGeneros() {
   genrePanel.classList.add('hidden');
   genreToggle.setAttribute('aria-expanded', 'false');
 }
-
 function seleccionarGenero(valor) {
   generoSeleccionado = valor || '';
   generoHidden.value = generoSeleccionado;
   genreValue.textContent = generoSeleccionado || 'Selecciona un género';
   genreValue.classList.toggle('placeholder', !generoSeleccionado);
   cerrarGeneros();
-
   if (generoSeleccionado === 'Regional Mexicano') {
     if (subgenreGroup) subgenreGroup.classList.remove('hidden');
   } else {
@@ -1503,36 +1042,25 @@ function seleccionarGenero(valor) {
       subgenreValue.textContent = 'Selecciona un subgénero';
       subgenreValue.classList.add('placeholder');
     }
-    if (typeof cerrarSubgeneros === 'function') cerrarSubgeneros();
+    cerrarSubgeneros();
   }
 }
 
-// ================================================================
-// RENDERIZADO DE SUBGÉNEROS
-// ================================================================
 function pintarSubgeneros(filtro = '') {
   const q = normalizarTexto(filtro);
   const lista = q ? SUBGENEROS.filter(g => normalizarTexto(g).includes(q)) : SUBGENEROS;
-
   if (!lista.length) {
     subgenreList.innerHTML = '';
     subgenreEmpty.classList.remove('hidden');
     return;
   }
-
   subgenreEmpty.classList.add('hidden');
-
   subgenreList.innerHTML = lista.map(g => {
     const sel = g === subgeneroSeleccionado;
-    return `<button type="button" class="genre-item${sel ? ' selected' : ''}"
-              role="option" aria-selected="${sel}"
-              data-subgenero="${escapeHtml(g)}">
-              <span>${escapeHtml(g)}</span>
-              <span class="check">✓</span>
-            </button>`;
+    return `<button type="button" class="genre-item${sel ? ' selected' : ''}" data-subgenero="${escapeHtml(g)}">
+      <span>${escapeHtml(g)}</span><span class="check">✓</span></button>`;
   }).join('');
 }
-
 function abrirSubgeneros() {
   subgenrePanel.classList.remove('hidden');
   subgenreToggle.setAttribute('aria-expanded', 'true');
@@ -1540,13 +1068,11 @@ function abrirSubgeneros() {
   pintarSubgeneros('');
   setTimeout(() => { try { subgenreSearch.focus(); } catch (e) {} }, 30);
 }
-
 function cerrarSubgeneros() {
   if (!subgenrePanel) return;
   subgenrePanel.classList.add('hidden');
   if (subgenreToggle) subgenreToggle.setAttribute('aria-expanded', 'false');
 }
-
 function seleccionarSubgenero(valor) {
   subgeneroSeleccionado = valor || '';
   if (subgeneroHidden) subgeneroHidden.value = subgeneroSeleccionado;
@@ -1557,86 +1083,66 @@ function seleccionarSubgenero(valor) {
   cerrarSubgeneros();
 }
 
-// ================================================================
-// EVENTOS — GÉNERO
-// ================================================================
 genreToggle.addEventListener('click', (e) => {
   e.stopPropagation();
   if (genrePanel.classList.contains('hidden')) abrirGeneros();
   else cerrarGeneros();
 });
-
 genreSearch.addEventListener('input', () => pintarGeneros(genreSearch.value));
-
 genreSearch.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     e.preventDefault();
-    const primero = genreList.querySelector('.genre-item');
-    if (primero) seleccionarGenero(primero.dataset.genero);
+    const p = genreList.querySelector('.genre-item');
+    if (p) seleccionarGenero(p.dataset.genero);
   }
   if (e.key === 'Escape') cerrarGeneros();
 });
-
 genreList.addEventListener('click', (e) => {
-  const btn = e.target.closest('.genre-item');
-  if (!btn) return;
-  seleccionarGenero(btn.dataset.genero);
+  const b = e.target.closest('.genre-item');
+  if (!b) return;
+  seleccionarGenero(b.dataset.genero);
 });
-
 document.addEventListener('click', (e) => {
   if (genrePanel.classList.contains('hidden')) return;
   if (genreSelect && !genreSelect.contains(e.target)) cerrarGeneros();
 });
-
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !genrePanel.classList.contains('hidden')) cerrarGeneros();
 });
 
-// ================================================================
-// EVENTOS — SUBGÉNERO
-// ================================================================
 subgenreToggle.addEventListener('click', (e) => {
   e.stopPropagation();
   if (subgenrePanel.classList.contains('hidden')) abrirSubgeneros();
   else cerrarSubgeneros();
 });
-
 subgenreSearch.addEventListener('input', () => pintarSubgeneros(subgenreSearch.value));
-
 subgenreSearch.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     e.preventDefault();
-    const primero = subgenreList.querySelector('.genre-item');
-    if (primero) seleccionarSubgenero(primero.dataset.subgenero);
+    const p = subgenreList.querySelector('.genre-item');
+    if (p) seleccionarSubgenero(p.dataset.subgenero);
   }
   if (e.key === 'Escape') cerrarSubgeneros();
 });
-
 subgenreList.addEventListener('click', (e) => {
-  const btn = e.target.closest('.genre-item');
-  if (!btn) return;
-  seleccionarSubgenero(btn.dataset.subgenero);
+  const b = e.target.closest('.genre-item');
+  if (!b) return;
+  seleccionarSubgenero(b.dataset.subgenero);
 });
-
 document.addEventListener('click', (e) => {
   if (subgenrePanel.classList.contains('hidden')) return;
   if (subgenreSelect && !subgenreSelect.contains(e.target)) cerrarSubgeneros();
 });
-
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !subgenrePanel.classList.contains('hidden')) cerrarSubgeneros();
 });
 
-// ================================================================
-// RESET DEL FORMULARIO
-// ================================================================
 document.getElementById('formCancion').addEventListener('reset', () => {
   generoSeleccionado = '';
   generoHidden.value = '';
   genreValue.textContent = 'Selecciona un género';
   genreValue.classList.add('placeholder');
   cerrarGeneros();
-
   subgeneroSeleccionado = '';
   if (subgeneroHidden) subgeneroHidden.value = '';
   if (subgenreValue) {
@@ -1645,13 +1151,472 @@ document.getElementById('formCancion').addEventListener('reset', () => {
   }
   if (subgenreGroup) subgenreGroup.classList.add('hidden');
   cerrarSubgeneros();
-
-  // 🆕 Resetear colaboradores
   cargarColaboradoresEn(collabContainerForm, []);
 });
 
-// ================================================================
-// INICIALIZAR
-// ================================================================
 pintarGeneros('');
 pintarSubgeneros('');
+
+/* ═══════════════════════════════════════════════════════════════
+   💳 SISTEMA DE SUSCRIPCIÓN — Anual $450 MXN
+   ═══════════════════════════════════════════════════════════════ */
+
+const PLAN_SUSC = {
+  nombre: 'Anual',
+  precio: 450,
+  mesesDuracion: 12
+};
+
+let suscripcionActual = null;
+let unsubscribeSusc   = null;
+let esAdminSusc       = false;
+
+const tsToDate = (ts) => ts?.toDate ? ts.toDate() : (ts ? new Date(ts) : null);
+const fmtFecha = (f) => f ? f.toLocaleDateString('es-MX', {
+  day: '2-digit', month: '2-digit', year: 'numeric'
+}) : '—';
+
+function abrirModalSusc(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+function cerrarModalSusc(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('hidden');
+  // Solo restauramos overflow si no queda otro modal abierto
+  const abiertos = document.querySelectorAll('.susc-overlay:not(.hidden), .pago-overlay:not(.hidden)');
+  if (abiertos.length === 0) document.body.style.overflow = '';
+}
+
+/* Cierre genérico */
+document.querySelectorAll('[data-close]').forEach(btn => {
+  btn.addEventListener('click', () => cerrarModalSusc(btn.dataset.close));
+});
+
+/* ---------- ¿Tiene acceso vigente? ---------- */
+window.tieneAccesoVigente = function() {
+  if (!usuarioActual || !suscripcionActual) return false;
+  if (suscripcionActual.estado !== 'activa') return false;
+  const venc = tsToDate(suscripcionActual.fechaVencimiento);
+  if (!venc) return false;
+  return new Date() < venc;
+};
+
+/* ---------- Actualizar vista (form vs candado) ---------- */
+function actualizarAccesoSubida() {
+  if (!usuarioActual) {
+    form.classList.add('hidden');
+    formLocked?.classList.add('hidden');
+    return;
+  }
+
+  if (window.tieneAccesoVigente()) {
+    form.classList.remove('hidden');
+    formLocked?.classList.add('hidden');
+    return;
+  }
+
+  form.classList.add('hidden');
+  formLocked?.classList.remove('hidden');
+
+  if (!lockMessage) return;
+  if (!suscripcionActual) {
+    lockMessage.textContent = 'Activa tu suscripción para comenzar a subir tu música.';
+  } else if (suscripcionActual.estado === 'pendiente') {
+    lockMessage.textContent = '🟡 Tu pago está en revisión. Te avisaremos cuando el administrador lo apruebe.';
+  } else if (suscripcionActual.estado === 'rechazada') {
+    lockMessage.textContent = '🔴 Tu comprobante fue rechazado. Vuelve a enviar la información correcta.';
+  } else {
+    lockMessage.textContent = 'Tu suscripción ha vencido. Renueva para continuar subiendo música.';
+  }
+}
+window.actualizarAccesoSubida = actualizarAccesoSubida;
+
+/* ---------- Generar PDF ---------- */
+async function descargarComprobantePDF() {
+  if (!window.jspdf) {
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      s.onload = res;
+      s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const W = 210;
+
+  // Header
+  doc.setFillColor(230, 57, 70); doc.rect(0, 0, W, 45, 'F');
+  doc.setFillColor(247, 127, 0); doc.rect(0, 40, W, 5, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(28);
+  doc.text('OmegaBeats', W / 2, 22, { align: 'center' });
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+  doc.text('Comprobante de suscripción', W / 2, 32, { align: 'center' });
+
+  // Plan
+  doc.setTextColor(20, 20, 20);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
+  doc.text('Tipo de SUSCRIPCIÓN', 20, 65);
+  doc.setFontSize(12); doc.setFont('helvetica', 'normal');
+  doc.text('Plan: ' + PLAN_SUSC.nombre, 20, 75);
+  doc.text('Precio: $' + PLAN_SUSC.precio.toFixed(2) + ' MXN', 20, 83);
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(13);
+  doc.text('Tiempo válido para realizar el pago:', 20, 100);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(12);
+  doc.text('1 día con 6 horas', 20, 108);
+
+  // Banco principal
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
+  doc.text('Datos bancarios', 20, 128);
+  doc.setDrawColor(220, 220, 220);
+  doc.setFillColor(248, 248, 248);
+  doc.roundedRect(20, 133, 170, 38, 3, 3, 'FD');
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold'); doc.text('Banco:', 25, 143);
+  doc.setFont('helvetica', 'normal'); doc.text('Nu', 70, 143);
+  doc.setFont('helvetica', 'bold'); doc.text('Cuenta:', 25, 153);
+  doc.setFont('helvetica', 'normal'); doc.text('5101 2535 2025 4352', 70, 153);
+  doc.setFont('helvetica', 'bold'); doc.text('Titular:', 25, 163);
+  doc.setFont('helvetica', 'normal'); doc.text('OmegaBeats', 70, 163);
+
+  // BBVA opcional
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
+  doc.text('Opcional', 20, 185);
+  doc.setFillColor(248, 248, 248);
+  doc.roundedRect(20, 190, 170, 28, 3, 3, 'FD');
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold'); doc.text('Banco:', 25, 200);
+  doc.setFont('helvetica', 'normal'); doc.text('BBVA', 70, 200);
+  doc.setFont('helvetica', 'bold'); doc.text('Cuenta:', 25, 210);
+  doc.setFont('helvetica', 'normal'); doc.text('4815 1631 9674 1147', 70, 210);
+  doc.setFont('helvetica', 'bold'); doc.text('Titular:', 25, 220);
+  doc.setFont('helvetica', 'normal'); doc.text('OmegaBeats', 70, 220);
+
+  // Leyenda
+  doc.setFillColor(255, 245, 230);
+  doc.roundedRect(20, 228, 170, 22, 3, 3, 'F');
+  doc.setTextColor(180, 60, 20);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+  doc.text('IMPORTANTE:', 25, 237);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Conserva tu ticket o los datos del pago hasta que tu suscripción sea aprobada.', 25, 244, { maxWidth: 160 });
+
+  doc.setTextColor(150, 150, 150); doc.setFontSize(9);
+  doc.text('OmegaBeats © ' + new Date().getFullYear() + ' — Todos los derechos reservados.',
+    W / 2, 285, { align: 'center' });
+
+  doc.save('OmegaBeats-Comprobante-' + Date.now() + '.pdf');
+}
+
+/* ---------- Botón SUSCRIBIRME → PDF + form ---------- */
+document.getElementById('btnSuscribirme')?.addEventListener('click', async () => {
+  if (!usuarioActual) {
+    alert('Inicia sesión con Google primero.');
+    return;
+  }
+  const btn = document.getElementById('btnSuscribirme');
+  btn.disabled = true;
+  btn.textContent = 'GENERANDO PDF...';
+  try {
+    await descargarComprobantePDF();
+    cerrarModalSusc('modal-susc');
+    setTimeout(() => {
+      const f = document.querySelector('#pagoForm input[name="fechaPago"]');
+      if (f && !f.value) f.value = new Date().toISOString().split('T')[0];
+      abrirModalSusc('modal-pago');
+    }, 200);
+  } catch (e) {
+    console.error('Error PDF:', e);
+    alert('No se pudo generar el PDF. Intenta de nuevo.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'SUSCRIBIRME';
+  }
+});
+
+/* ---------- Enviar formulario de pago ---------- */
+document.getElementById('pagoForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('pagoMsg');
+  const btn = e.target.querySelector('.pago-submit');
+  msg.className = 'pago-msg';
+  msg.textContent = '';
+
+  if (!usuarioActual) {
+    msg.classList.add('error');
+    msg.textContent = 'Inicia sesión primero.';
+    return;
+  }
+
+  const fd = new FormData(e.target);
+  const datos = {
+    nombreTitular: fd.get('nombreTitular').trim(),
+    monto:         parseFloat(fd.get('monto')) || 0,
+    fechaPago:     fd.get('fechaPago'),
+    referencia:    fd.get('referencia').trim(),
+    banco:         fd.get('banco').trim(),
+    plan:          'anual',
+    precio:        PLAN_SUSC.precio,
+    comprobante:   fd.get('comprobante').trim(),
+    uid:           usuarioActual.uid,
+    nombre:        usuarioActual.displayName || '',
+    correo:        usuarioActual.email || '',
+    estado:        'pendiente',
+    fechaSolicitud: serverTimestamp()
+  };
+
+  if (!datos.nombreTitular || !datos.monto || !datos.fechaPago ||
+      !datos.referencia || !datos.banco || !datos.comprobante) {
+    msg.classList.add('error');
+    msg.textContent = 'Completa todos los campos.';
+    return;
+  }
+  if (!/^https?:\/\//i.test(datos.comprobante)) {
+    msg.classList.add('error');
+    msg.textContent = 'El enlace debe iniciar con https://';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'ENVIANDO...';
+  msg.textContent = 'Guardando solicitud...';
+
+  try {
+    await setDoc(doc(db, 'suscripciones', usuarioActual.uid), datos, { merge: true });
+    msg.classList.add('ok');
+    msg.textContent = '🟡 ¡Comprobante enviado! Tu pago quedó EN REVISIÓN.';
+    setTimeout(() => {
+      cerrarModalSusc('modal-pago');
+      mostrarEstadoSuscripcion();
+    }, 1800);
+  } catch (err) {
+    console.error('Error al enviar:', err);
+    msg.classList.add('error');
+    msg.textContent = 'Error: ' + err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'ENVIAR COMPROBANTE';
+  }
+});
+
+/* ---------- Mi suscripción ---------- */
+function mostrarEstadoSuscripcion() {
+  const cont = document.getElementById('estadoContenido');
+  if (!cont) return;
+
+  if (!suscripcionActual) {
+    cont.innerHTML = `
+      <h1 class="pago-title">💳 Mi suscripción</h1>
+      <div class="estado-card">
+        <p>Aún no tienes una suscripción registrada.</p>
+        <button class="susc-btn" id="btnVerPlanes" style="margin-top:16px;">VER PLANES</button>
+      </div>
+    `;
+    document.getElementById('btnVerPlanes').onclick = () => {
+      cerrarModalSusc('modal-estado');
+      setTimeout(() => abrirModalSusc('modal-susc'), 120);
+    };
+    abrirModalSusc('modal-estado');
+    return;
+  }
+
+  const s = suscripcionActual;
+  const venc = tsToDate(s.fechaVencimiento);
+  const inicio = tsToDate(s.fechaInicio);
+
+  let emoji = '🟡', txt = 'PAGO EN REVISIÓN', cls = 'estado-pendiente';
+  if (s.estado === 'activa')    { emoji = '🟢'; txt = 'PAGO APROBADO';  cls = 'estado-activa'; }
+  if (s.estado === 'rechazada') { emoji = '🔴'; txt = 'PAGO RECHAZADO'; cls = 'estado-rechazada'; }
+
+  cont.innerHTML = `
+    <h1 class="pago-title">💳 Mi suscripción</h1>
+    <div class="estado-card">
+      <p><span class="estado-badge ${cls}">${emoji} ${txt}</span></p>
+      <p style="margin-top:14px;"><strong>Plan:</strong> OmegaBeats ${s.plan === 'anual' ? 'Anual' : s.plan}</p>
+      <p><strong>Precio:</strong> $${s.precio || s.monto || PLAN_SUSC.precio} MXN</p>
+      <p><strong>Titular:</strong> ${s.nombreTitular || '—'}</p>
+      <p><strong>Referencia:</strong> ${s.referencia || '—'}</p>
+      <p><strong>Banco:</strong> ${s.banco || '—'}</p>
+      <p><strong>Fecha de pago:</strong> ${s.fechaPago || '—'}</p>
+      <p><strong>Fecha de inicio:</strong> ${fmtFecha(inicio)}</p>
+      <p><strong>Fecha de vencimiento:</strong> ${fmtFecha(venc)}</p>
+      ${s.comprobante ? `<p><strong>Comprobante:</strong> <a href="${s.comprobante}" target="_blank" style="color:#4ade80;">Ver en Dropbox ↗</a></p>` : ''}
+    </div>
+    ${s.estado === 'rechazada'
+      ? `<button class="susc-btn" id="btnReenviar" style="background:#e63946;">REENVIAR COMPROBANTE</button>`
+      : ''}
+  `;
+
+  document.getElementById('btnReenviar')?.addEventListener('click', () => {
+    cerrarModalSusc('modal-estado');
+    setTimeout(() => {
+      const f = document.querySelector('#pagoForm input[name="fechaPago"]');
+      if (f && !f.value) f.value = new Date().toISOString().split('T')[0];
+      abrirModalSusc('modal-pago');
+    }, 120);
+  });
+
+  abrirModalSusc('modal-estado');
+}
+
+/* ---------- Escuchar suscripción (tiempo real) ---------- */
+function escucharSuscripcion(uid) {
+  if (unsubscribeSusc) unsubscribeSusc();
+  unsubscribeSusc = onSnapshot(doc(db, 'suscripciones', uid), (snap) => {
+    suscripcionActual = snap.exists() ? { ...snap.data() } : null;
+    actualizarAccesoSubida();
+  }, (err) => console.error('Error suscripción:', err));
+}
+
+/* ---------- Detectar admin ---------- */
+async function detectarAdmin(user) {
+  try {
+    const snap = await getDoc(doc(db, 'admins', user.uid));
+    esAdminSusc = snap.exists();
+    document.getElementById('btn-admin')?.remove();
+    if (esAdminSusc) {
+      const b = document.createElement('button');
+      b.id = 'btn-admin';
+      b.textContent = '🛡️ Panel admin';
+      b.className = 'susc-btn-inline';
+      b.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:900;box-shadow:0 8px 24px rgba(0,0,0,0.2);';
+      b.onclick = () => { abrirModalSusc('modal-admin'); cargarAdminSuscripciones(); };
+      document.body.appendChild(b);
+    }
+  } catch (e) { console.warn('detectarAdmin:', e); }
+}
+
+/* ---------- Panel admin ---------- */
+async function cargarAdminSuscripciones() {
+  if (!esAdminSusc) return;
+  const cont = document.getElementById('adminLista');
+  cont.innerHTML = '<p style="color:#aaa;">Cargando solicitudes…</p>';
+
+  try {
+    const snap = await getDocs(collection(db, 'suscripciones'));
+    if (snap.empty) {
+      cont.innerHTML = '<p style="color:#aaa;">No hay solicitudes.</p>';
+      return;
+    }
+
+    let html = `<table class="admin-tabla">
+      <thead><tr>
+        <th>Usuario</th><th>Correo</th><th>Titular</th>
+        <th>Monto</th><th>Referencia</th><th>Banco</th>
+        <th>Fecha</th><th>Estado</th><th>Comprobante</th><th>Acciones</th>
+      </tr></thead><tbody>`;
+
+    snap.forEach(d => {
+      const s = d.data();
+      let badge = 'estado-pendiente', emoji = '🟡';
+      if (s.estado === 'activa')    { badge = 'estado-activa'; emoji = '🟢'; }
+      if (s.estado === 'rechazada') { badge = 'estado-rechazada'; emoji = '🔴'; }
+
+      html += `<tr>
+        <td>${s.nombre || '—'}</td>
+        <td style="font-size:11px;">${s.correo || '—'}</td>
+        <td>${s.nombreTitular || '—'}</td>
+        <td>$${s.monto || s.precio || 0}</td>
+        <td style="font-size:11px;">${s.referencia || '—'}</td>
+        <td>${s.banco || '—'}</td>
+        <td style="font-size:11px;">${s.fechaPago || fmtFecha(tsToDate(s.fechaSolicitud))}</td>
+        <td><span class="estado-badge ${badge}">${emoji} ${(s.estado || '').toUpperCase()}</span></td>
+        <td>${s.comprobante ? `<a href="${s.comprobante}" target="_blank" class="admin-btn ver" style="text-decoration:none;">👁️ Ver</a>` : '—'}</td>
+        <td>
+          ${s.estado !== 'activa' ? `<button class="admin-btn ok" data-uid="${d.id}" data-act="aprobar">✅ Aprobar</button>` : ''}
+          ${s.estado !== 'rechazada' ? `<button class="admin-btn no" data-uid="${d.id}" data-act="rechazar">❌ Rechazar</button>` : ''}
+        </td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    cont.innerHTML = html;
+
+    cont.querySelectorAll('.admin-btn[data-act]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const uid = btn.dataset.uid;
+        const act = btn.dataset.act;
+        if (act === 'aprobar') aprobarSuscripcion(uid);
+        if (act === 'rechazar') rechazarSuscripcion(uid);
+      });
+    });
+  } catch (e) {
+    console.error('Error admin:', e);
+    cont.innerHTML = '<p style="color:#ff7a7a;">Error al cargar.</p>';
+  }
+}
+
+/* ---------- Aprobar ---------- */
+async function aprobarSuscripcion(uid) {
+  if (!esAdminSusc) return;
+  if (!confirm('¿Aprobar esta suscripción?')) return;
+  try {
+    const { Timestamp } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    const ahora = new Date();
+    const venc = new Date(ahora);
+    venc.setMonth(venc.getMonth() + PLAN_SUSC.mesesDuracion);
+
+    await updateDoc(doc(db, 'suscripciones', uid), {
+      estado: 'activa',
+      fechaInicio: Timestamp.fromDate(ahora),
+      fechaVencimiento: Timestamp.fromDate(venc),
+      fechaAprobacion: serverTimestamp()
+    });
+
+    await addDoc(collection(db, 'historial_pagos', uid, 'pagos'), {
+      plan: PLAN_SUSC.nombre,
+      precio: PLAN_SUSC.precio,
+      estado: 'activa',
+      fechaAprobacion: serverTimestamp(),
+      fechaInicio: Timestamp.fromDate(ahora),
+      fechaVencimiento: Timestamp.fromDate(venc)
+    });
+
+    cargarAdminSuscripciones();
+  } catch (e) {
+    console.error('aprobar:', e);
+    alert('Error al aprobar: ' + e.message);
+  }
+}
+
+/* ---------- Rechazar ---------- */
+async function rechazarSuscripcion(uid) {
+  if (!esAdminSusc) return;
+  if (!confirm('¿Rechazar este comprobante?')) return;
+  try {
+    await updateDoc(doc(db, 'suscripciones', uid), {
+      estado: 'rechazada',
+      fechaRechazo: serverTimestamp()
+    });
+    await addDoc(collection(db, 'historial_pagos', uid, 'pagos'), {
+      plan: PLAN_SUSC.nombre,
+      precio: PLAN_SUSC.precio,
+      estado: 'rechazada',
+      fechaRechazo: serverTimestamp()
+    });
+    cargarAdminSuscripciones();
+  } catch (e) {
+    console.error('rechazar:', e);
+    alert('Error al rechazar: ' + e.message);
+  }
+}
+
+/* ---------- Abrir modal suscripción desde menú ---------- */
+document.getElementById('suscBtn')?.addEventListener('click', () => {
+  cerrarMenu();
+  setTimeout(() => {
+    if (suscripcionActual) mostrarEstadoSuscripcion();
+    else abrirModalSusc('modal-susc');
+  }, 120);
+});
+
+/* ---------- Botón "Ver suscripciones" del candado ---------- */
+document.getElementById('verSuscBtn')?.addEventListener('click', () => {
+  abrirModalSusc('modal-susc');
+});
