@@ -82,6 +82,7 @@ const menuDropdown = document.getElementById('menuDropdown');
 const logoutBtn    = document.getElementById('logoutBtn');
 const statsBtn     = document.getElementById('statsBtn');
 const suscBtn      = document.getElementById('suscBtn');
+const tutorialBtn  = document.getElementById('tutorialBtn');
 
 const playerModal    = document.getElementById('playerModal');
 const playerImg      = document.getElementById('playerImg');
@@ -1783,4 +1784,9 @@ document.getElementById('suscBtn')?.addEventListener('click', () => {
 
 document.getElementById('verSuscBtn')?.addEventListener('click', () => {
   abrirModalSusc('modal-susc');
+});
+
+document.getElementById('tutorialBtn')?.addEventListener('click', () => {
+  cerrarMenu();
+  setTimeout(() => abrirModalSusc('modal-tutorial'), 120);
 });
