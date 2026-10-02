@@ -8,14 +8,10 @@
 </head>
 <body>
 
-  <!-- ============ MENÚ HAMBURGUESA ============ -->
   <div id="menuWrap" class="menu-wrap hidden">
     <button id="menuBtn" class="menu-btn" type="button" aria-label="Abrir menú" aria-expanded="false">
-      <span></span>
-      <span></span>
-      <span></span>
+      <span></span><span></span><span></span>
     </button>
-
     <div id="menuDropdown" class="menu-dropdown hidden">
       <button id="statsBtn" class="menu-item" type="button">📚 Mis canciones subidas</button>
       <button id="suscBtn" class="menu-item" type="button">💳 Suscripción</button>
@@ -44,7 +40,6 @@
       Iniciar sesión con Google
     </button>
 
-    <!-- 🔒 CANDADO -->
     <div id="formLocked" class="form-locked hidden">
       <div class="lock-icon">🔒</div>
       <h3>Necesitas una suscripción activa para subir música.</h3>
@@ -52,7 +47,6 @@
       <button id="verSuscBtn" class="susc-btn-inline" type="button">Ver suscripciones</button>
     </div>
 
-    <!-- FORMULARIO -->
     <form id="formCancion" class="hidden">
       <div class="form-group">
         <label for="artista">1. Nombre del artista</label>
@@ -66,7 +60,6 @@
         <label for="album">3. Nombre del álbum</label>
         <input type="text" id="album" placeholder="Ej: Nombre del Album">
       </div>
-
       <div class="form-group">
         <label for="collaboratorsContainer">3b. Colaboradores</label>
         <div class="collaborators" id="collaboratorsContainer"></div>
@@ -75,7 +68,6 @@
         </button>
         <p class="hint">Opcional. Agrega uno o más colaboradores de la canción.</p>
       </div>
-
       <div class="form-group">
         <label for="genreToggle">4. Género musical</label>
         <div class="genre-select" id="genreSelect">
@@ -96,7 +88,6 @@
         <input type="hidden" id="genero" name="genero" value="">
         <p class="hint">Opcional. Abre la lista y usa el buscador.</p>
       </div>
-
       <div class="form-group hidden" id="subgenreGroup">
         <label for="subgenreToggle">4b. Subgénero (Regional Mexicano)</label>
         <div class="genre-select" id="subgenreSelect">
@@ -117,19 +108,16 @@
         <input type="hidden" id="subgenero" name="subgenero" value="">
         <p class="hint">Elige el subgénero específico.</p>
       </div>
-
       <div class="form-group">
         <label for="audio">5. Link de audio (Dropbox)</label>
         <input type="url" id="audio" placeholder="https://www.dropbox.com/s/.../cancion.mp3?dl=0" required>
         <p class="hint">Pega el link normal de Dropbox. Se convertirá automáticamente.</p>
       </div>
-
       <div class="form-group">
         <label for="imagen">6. Link de imagen (Dropbox)</label>
         <input type="url" id="imagen" placeholder="https://www.dropbox.com/s/.../portada.jpg?dl=0">
         <p class="hint">Opcional. Si lo dejas vacío se mostrará una imagen por defecto.</p>
       </div>
-
       <div id="preview" class="preview">
         <img id="previewImg" src="" alt="">
         <div class="preview-info">
@@ -138,7 +126,6 @@
           <span class="Album">Reggeton 1</span>
         </div>
       </div>
-
       <button type="submit" id="submitBtn">Subir canción</button>
     </form>
 
@@ -243,11 +230,6 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════
-       SISTEMA DE SUSCRIPCIÓN
-       ═══════════════════════════════════════════════════════════ -->
-
-  <!-- 🎟️ TARJETA DE SUSCRIPCIÓN -->
   <div id="modal-susc" class="susc-overlay hidden">
     <div class="susc-card" role="dialog" aria-modal="true">
       <button class="susc-x" data-close="modal-susc">✕</button>
@@ -264,21 +246,17 @@
     </div>
   </div>
 
-  <!-- 📝 MODAL PAGO FULLSCREEN -->
   <div id="modal-pago" class="pago-overlay hidden">
     <button class="pago-x" data-close="modal-pago">✕</button>
     <div class="pago-wrap">
       <h1 class="pago-title">📄 COMPROBANTE DE PAGO</h1>
-
       <div class="pago-info">
         <p>Para enviar tu comprobante de pago, <strong>sube el ticket o comprobante a tu cuenta de Dropbox</strong> y genera un <strong>enlace compartido</strong> del documento.</p>
         <p>Después, pega el enlace de Dropbox en el campo correspondiente.</p>
         <p class="pago-warn"><strong>Importante:</strong> el enlace debe permitir visualizar el documento correctamente y debe permanecer disponible para su revisión.</p>
       </div>
-
       <form id="pagoForm" class="pago-form">
         <h2>🔎 Datos del pago</h2>
-
         <label>Nombre del titular o remitente
           <input type="text" name="nombreTitular" required placeholder="Ej: Juan Pérez">
         </label>
@@ -300,11 +278,9 @@
         <label>📎 Enlace del comprobante (Dropbox)
           <input type="url" name="comprobante" required placeholder="https://www.dropbox.com/s/.../comprobante.jpg?dl=0">
         </label>
-
         <button type="submit" class="pago-submit">ENVIAR COMPROBANTE</button>
         <p id="pagoMsg" class="pago-msg"></p>
       </form>
-
       <div class="pago-info" style="margin-top:24px;">
         <h2 style="font-size:16px;font-weight:800;color:#fff;margin-bottom:10px;">🛡️ VALIDACIÓN DEL ADMINISTRADOR</h2>
         <p>Cuando envíes la información, la solicitud quedará con el estado <strong style="color:#ffd76a;">🟡 PAGO EN REVISIÓN</strong>.</p>
@@ -314,7 +290,6 @@
     </div>
   </div>
 
-  <!-- ⚡ MODAL ESTADO -->
   <div id="modal-estado" class="pago-overlay hidden">
     <button class="pago-x" data-close="modal-estado">✕</button>
     <div class="pago-wrap">
@@ -322,7 +297,6 @@
     </div>
   </div>
 
-  <!-- 🛡️ PANEL ADMIN -->
   <div id="modal-admin" class="pago-overlay hidden">
     <button class="pago-x" data-close="modal-admin">✕</button>
     <div class="pago-wrap">
