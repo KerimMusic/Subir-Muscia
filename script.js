@@ -28,6 +28,41 @@ setPersistence(auth, browserLocalPersistence).catch(err => {
   console.warn('[WebView] Persistencia:', err);
 });
 
+/* ═══════════════════════════════════════════════
+   🎯 PLANES DISPONIBLES
+   ═══════════════════════════════════════════════ */
+const PLANES = {
+  gratis: {
+    id: 'gratis',
+    nombre: 'Plan Gratis',
+    nombreCorto: 'Gratis',
+    precio: 0,
+    mesesDuracion: 3,
+    soloPrimeraVez: true,
+    badge: '🆓'
+  },
+  omega3m: {
+    id: 'omega3m',
+    nombre: 'OmegaBeats 3 meses',
+    nombreCorto: '3 meses',
+    precio: 250,
+    mesesDuracion: 3,
+    badge: '⭐'
+  },
+  omega1a: {
+    id: 'omega1a',
+    nombre: 'OmegaBeats Anual',
+    nombreCorto: 'Anual',
+    precio: 450,
+    mesesDuracion: 12,
+    badge: '👑'
+  }
+};
+
+function getPlan(id) {
+  return PLANES[id] || PLANES.omega1a;
+}
+
 function esWebView() {
   const ua = (navigator.userAgent || '').toLowerCase();
   const esAndroidWV = /android/.test(ua) && /(wv|version\/[\d.]+)/.test(ua);
@@ -56,6 +91,7 @@ getRedirectResult(auth)
     }
   });
 
+/* ─── DOM refs ─── */
 const loginBtn   = document.getElementById('loginBtn');
 const form       = document.getElementById('formCancion');
 const userBox    = document.getElementById('userBox');
@@ -838,6 +874,7 @@ logoutBtn.addEventListener('click', async () => {
   }
 });
 
+/* ─── GÉNEROS ─── */
 const GENEROS_RAW = [
   "Regional Mexicano","Reggaetón","Pop","Rock","Hip-Hop / Rap","Música Latina","Cumbia",
   "Electrónica","R&B / Soul","Indie / Alternativo","Metal","Punk","Reggae","Afrobeat",
@@ -1074,30 +1111,29 @@ pintarGeneros('');
 pintarSubgeneros('');
 
 /* ═══════════════════════════════════════════════════════════════
-   💳 SISTEMA DE SUSCRIPCIÓN
+   💳 SISTEMA DE SUSCRIPCIÓN MULTI-PLAN
    ═══════════════════════════════════════════════════════════════ */
-
-const PLAN_SUSC = {
-  nombre: 'Anual',
-  precio: 450,
-  mesesDuracion: 12,
-  horasLimitePago: 30
-};
 
 let suscripcionActual = null;
 let unsubscribeSusc   = null;
 let esAdminSusc       = false;
+let planSeleccionado  = null;
+let gratisElegible    = false;
 
 const tsToDate = (ts) => ts?.toDate ? ts.toDate() : (ts ? new Date(ts) : null);
 const fmtFecha = (f) => f ? f.toLocaleDateString('es-MX', {
   day: '2-digit', month: '2-digit', year: 'numeric'
 }) : '—';
 
-function abrirModalSusc(id) {
+/* ─── Abrir / cerrar modales ─── */
+async function abrirModalSusc(id) {
   const el = document.getElementById(id);
   if (!el) return;
   el.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
+  if (id === 'modal-susc') {
+    await actualizarPlanesUI();
+  }
 }
 function cerrarModalSusc(id) {
   const el = document.getElementById(id);
@@ -1111,20 +1147,64 @@ document.querySelectorAll('[data-close]').forEach(btn => {
   btn.addEventListener('click', () => cerrarModalSusc(btn.dataset.close));
 });
 
-/* ✅ LÓGICA DE ACCESO:
-   - Si NO hay fecha de vencimiento y está aprobado → acceso concedido.
-   - Si HAY fecha de vencimiento → debe estar en el futuro. */
+/* ─── Elegibilidad del plan gratis ─── */
+async function verificarElegibilidadGratis() {
+  if (!usuarioActual) return false;
+  try {
+    const snap = await getDoc(doc(db, 'historial_gratis', usuarioActual.uid));
+    if (!snap.exists()) return true;
+    return !snap.data().usado;
+  } catch (e) {
+    console.warn('verificarElegibilidadGratis:', e);
+    return false;
+  }
+}
+
+async function marcarGratisUsado() {
+  if (!usuarioActual) return;
+  try {
+    await setDoc(doc(db, 'historial_gratis', usuarioActual.uid), {
+      usado: true,
+      fechaUso: serverTimestamp(),
+      email: usuarioActual.email
+    }, { merge: true });
+  } catch (e) { console.warn('marcarGratisUsado:', e); }
+}
+
+/* ─── Actualizar UI de planes según elegibilidad ─── */
+async function actualizarPlanesUI() {
+  const btnFree = document.querySelector('.plan-card[data-plan="gratis"] .plan-btn');
+  const cardFree = document.querySelector('.plan-card[data-plan="gratis"]');
+  if (!btnFree) return;
+
+  if (!usuarioActual) {
+    btnFree.disabled = true;
+    btnFree.textContent = 'INICIA SESIÓN';
+    cardFree?.classList.add('usado');
+    return;
+  }
+
+  gratisElegible = await verificarElegibilidadGratis();
+  if (!gratisElegible) {
+    btnFree.disabled = true;
+    btnFree.textContent = 'YA USADO';
+    cardFree?.classList.add('usado');
+  } else {
+    btnFree.disabled = false;
+    btnFree.textContent = 'EMPEZAR GRATIS';
+    cardFree?.classList.remove('usado');
+  }
+}
+
+/* ─── Acceso vigente ─── */
 window.tieneAccesoVigente = function() {
   if (!usuarioActual || !suscripcionActual) return false;
 
   const est = String(suscripcionActual.estado || '').toLowerCase();
-
   if (est !== 'aprobado' && est !== 'activa') return false;
 
   const venc = tsToDate(suscripcionActual.fechaVencimiento);
-
   if (!venc) return true;
-
   return new Date() < venc;
 };
 
@@ -1149,22 +1229,23 @@ function actualizarAccesoSubida() {
   const est = String(suscripcionActual?.estado || '').toLowerCase();
 
   if (!suscripcionActual) {
-    lockMessage.textContent = 'Activa tu suscripción para comenzar a subir tu música.';
+    lockMessage.textContent = 'Activa un plan para comenzar a subir tu música.';
   } else if (est === 'pendiente') {
     lockMessage.textContent = '🟡 Tu pago está en revisión. Estamos verificando tu comprobante.';
   } else if (est === 'rechazado') {
     lockMessage.textContent = '🔴 Tu pago fue rechazado. Envía un nuevo comprobante para reactivar el acceso.';
   } else if (est === 'expirada') {
     lockMessage.textContent = '⏰ Tu solicitud expiró. Envía el comprobante de nuevo.';
-  } else if (est === 'aprobado' || est === 'activa') {
-    lockMessage.textContent = '⏰ Tu suscripción ha vencido. Renueva para continuar subiendo música.';
+  } else if (est === 'vencido' || est === 'aprobado' || est === 'activa') {
+    lockMessage.textContent = '⏰ Tu suscripción ha vencido. Renueva tu plan para continuar subiendo música.';
   } else {
-    lockMessage.textContent = 'Activa tu suscripción para comenzar a subir tu música.';
+    lockMessage.textContent = 'Activa un plan para comenzar a subir tu música.';
   }
 }
 window.actualizarAccesoSubida = actualizarAccesoSubida;
 
-async function descargarComprobantePDF() {
+/* ─── Generar PDF con el plan seleccionado ─── */
+async function descargarComprobantePDF(plan) {
   if (!window.jspdf) {
     await new Promise((res, rej) => {
       const s = document.createElement('script');
@@ -1177,6 +1258,7 @@ async function descargarComprobantePDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const W = 210;
+  const p = plan || PLANES.omega1a;
 
   doc.setFillColor(230, 57, 70); doc.rect(0, 0, W, 45, 'F');
   doc.setFillColor(247, 127, 0); doc.rect(0, 40, W, 5, 'F');
@@ -1188,96 +1270,157 @@ async function descargarComprobantePDF() {
 
   doc.setTextColor(20, 20, 20);
   doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
-  doc.text('Tipo de SUSCRIPCIÓN', 20, 65);
+  doc.text('Detalles del plan', 20, 65);
   doc.setFontSize(12); doc.setFont('helvetica', 'normal');
-  doc.text('Plan: ' + PLAN_SUSC.nombre, 20, 75);
-  doc.text('Precio: $' + PLAN_SUSC.precio.toFixed(2) + ' MXN', 20, 83);
+  doc.text('Plan: ' + p.nombre, 20, 75);
+  doc.text('Duración: ' + p.mesesDuracion + ' meses', 20, 83);
+  doc.text('Precio: $' + p.precio.toFixed(2) + ' MXN', 20, 91);
 
   doc.setFont('helvetica', 'bold'); doc.setFontSize(13);
-  doc.text('Tiempo válido para realizar el pago:', 20, 100);
+  doc.text('Tiempo válido para realizar el pago:', 20, 108);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(12);
-  doc.text('1 día con 6 horas', 20, 108);
+  doc.text('1 día con 6 horas', 20, 116);
 
   doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
-  doc.text('Datos bancarios', 20, 128);
+  doc.text('Datos bancarios', 20, 136);
   doc.setDrawColor(220, 220, 220);
   doc.setFillColor(248, 248, 248);
-  doc.roundedRect(20, 133, 170, 38, 3, 3, 'FD');
+  doc.roundedRect(20, 141, 170, 38, 3, 3, 'FD');
   doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold'); doc.text('Banco:', 25, 143);
-  doc.setFont('helvetica', 'normal'); doc.text('Nu', 70, 143);
-  doc.setFont('helvetica', 'bold'); doc.text('Cuenta:', 25, 153);
-  doc.setFont('helvetica', 'normal'); doc.text('5101 2535 2025 4352', 70, 153);
-  doc.setFont('helvetica', 'bold'); doc.text('Titular:', 25, 163);
-  doc.setFont('helvetica', 'normal'); doc.text('OmegaBeats', 70, 163);
+  doc.setFont('helvetica', 'bold'); doc.text('Banco:', 25, 151);
+  doc.setFont('helvetica', 'normal'); doc.text('Nu', 70, 151);
+  doc.setFont('helvetica', 'bold'); doc.text('Cuenta:', 25, 161);
+  doc.setFont('helvetica', 'normal'); doc.text('5101 2535 2025 4352', 70, 161);
+  doc.setFont('helvetica', 'bold'); doc.text('Titular:', 25, 171);
+  doc.setFont('helvetica', 'normal'); doc.text('OmegaBeats', 70, 171);
 
   doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
-  doc.text('Opcional', 20, 185);
+  doc.text('Opcional', 20, 193);
   doc.setFillColor(248, 248, 248);
-  doc.roundedRect(20, 190, 170, 28, 3, 3, 'FD');
+  doc.roundedRect(20, 198, 170, 28, 3, 3, 'FD');
   doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold'); doc.text('Banco:', 25, 200);
-  doc.setFont('helvetica', 'normal'); doc.text('BBVA', 70, 200);
-  doc.setFont('helvetica', 'bold'); doc.text('Cuenta:', 25, 210);
-  doc.setFont('helvetica', 'normal'); doc.text('4815 1631 9674 1147', 70, 210);
-  doc.setFont('helvetica', 'bold'); doc.text('Titular:', 25, 220);
-  doc.setFont('helvetica', 'normal'); doc.text('OmegaBeats', 70, 220);
+  doc.setFont('helvetica', 'bold'); doc.text('Banco:', 25, 208);
+  doc.setFont('helvetica', 'normal'); doc.text('BBVA', 70, 208);
+  doc.setFont('helvetica', 'bold'); doc.text('Cuenta:', 25, 218);
+  doc.setFont('helvetica', 'normal'); doc.text('4815 1631 9674 1147', 70, 218);
+  doc.setFont('helvetica', 'bold'); doc.text('Titular:', 25, 228);
+  doc.setFont('helvetica', 'normal'); doc.text('OmegaBeats', 70, 228);
 
   doc.setFillColor(255, 245, 230);
-  doc.roundedRect(20, 228, 170, 22, 3, 3, 'F');
+  doc.roundedRect(20, 236, 170, 22, 3, 3, 'F');
   doc.setTextColor(180, 60, 20);
   doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
-  doc.text('IMPORTANTE:', 25, 237);
+  doc.text('IMPORTANTE:', 25, 245);
   doc.setFont('helvetica', 'normal');
-  doc.text('Conserva tu ticket o los datos del pago hasta que tu suscripción sea aprobada.', 25, 244, { maxWidth: 160 });
+  doc.text('Conserva tu ticket o los datos del pago hasta que tu suscripción sea aprobada.', 25, 252, { maxWidth: 160 });
 
   doc.setTextColor(150, 150, 150); doc.setFontSize(9);
   doc.text('OmegaBeats © ' + new Date().getFullYear() + ' — Todos los derechos reservados.',
     W / 2, 285, { align: 'center' });
 
-  doc.save('OmegaBeats-Comprobante-' + Date.now() + '.pdf');
+  doc.save('OmegaBeats-' + p.id + '-' + Date.now() + '.pdf');
 }
 
-document.getElementById('btnSuscribirme')?.addEventListener('click', async () => {
-  if (!usuarioActual) {
-    alert('Inicia sesión con Google primero.');
+/* ─── Activar plan gratis (directo, sin admin) ─── */
+async function activarPlanGratis() {
+  if (!usuarioActual) { alert('Inicia sesión primero.'); return; }
+  const elegible = await verificarElegibilidadGratis();
+  if (!elegible) {
+    alert('❌ Ya usaste tu plan gratis. Elige un plan de pago para continuar.');
     return;
   }
 
-  const estActual = String(suscripcionActual?.estado || '').toLowerCase();
+  const btn = document.querySelector('.plan-card[data-plan="gratis"] .plan-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'ACTIVANDO...'; }
 
-  if (estActual === 'pendiente') {
-    cerrarModalSusc('modal-susc');
-    setTimeout(() => mostrarEstadoSuscripcion(), 200);
-    return;
-  }
-
-  if ((estActual === 'aprobado' || estActual === 'activa') && window.tieneAccesoVigente()) {
-    cerrarModalSusc('modal-susc');
-    setTimeout(() => mostrarEstadoSuscripcion(), 200);
-    return;
-  }
-
-  const btn = document.getElementById('btnSuscribirme');
-  btn.disabled = true;
-  btn.textContent = 'GENERANDO PDF...';
   try {
-    await descargarComprobantePDF();
+    const ahora = new Date();
+    const venc = new Date(ahora);
+    venc.setMonth(venc.getMonth() + PLANES.gratis.mesesDuracion);
+
+    await marcarGratisUsado();
+
+    await setDoc(doc(db, 'suscripciones', usuarioActual.uid), {
+      plan: 'gratis',
+      planNombre: PLANES.gratis.nombre,
+      precio: 0,
+      monto: 0,
+      estado: 'aprobado',
+      nombreTitular: usuarioActual.displayName || 'Usuario',
+      correo: usuarioActual.email || '',
+      referencia: 'GRATIS-' + usuarioActual.uid.slice(0, 8),
+      banco: '—',
+      comprobante: '',
+      uid: usuarioActual.uid,
+      solicitudId: 'FREE-' + usuarioActual.uid.slice(0, 8) + '-' + Date.now(),
+      fechaInicio: Timestamp.fromDate(ahora),
+      fechaVencimiento: Timestamp.fromDate(venc),
+      fechaAprobacion: serverTimestamp(),
+      fechaSolicitud: serverTimestamp(),
+      fechaUltimaActualizacion: serverTimestamp()
+    }, { merge: true });
+
+    await addDoc(collection(db, 'historial_pagos', usuarioActual.uid, 'pagos'), {
+      plan: 'gratis',
+      planNombre: PLANES.gratis.nombre,
+      precio: 0,
+      estado: 'aprobado',
+      fechaAprobacion: serverTimestamp(),
+      fechaInicio: Timestamp.fromDate(ahora),
+      fechaVencimiento: Timestamp.fromDate(venc)
+    });
+
     cerrarModalSusc('modal-susc');
-    setTimeout(() => {
-      const f = document.querySelector('#pagoForm input[name="fechaPago"]');
-      if (f && !f.value) f.value = new Date().toISOString().split('T')[0];
-      abrirModalSusc('modal-pago');
-    }, 200);
+    mostrarStatus('🎉 ¡Plan Gratis activado! Disfruta 3 meses.', 'ok');
+    setTimeout(() => mostrarEstadoSuscripcion(), 300);
   } catch (e) {
-    console.error('Error PDF:', e);
-    alert('No se pudo generar el PDF. Intenta de nuevo.');
+    console.error('activarPlanGratis:', e);
+    alert('Error al activar el plan: ' + e.message);
   } finally {
-    btn.disabled = false;
-    btn.textContent = 'SUSCRIBIRME';
+    if (btn) { btn.disabled = false; btn.textContent = 'EMPEZAR GRATIS'; }
   }
+}
+
+/* ─── Click en botones de plan ─── */
+document.querySelectorAll('.plan-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const planId = btn.dataset.plan;
+    if (!usuarioActual) { alert('Inicia sesión con Google primero.'); return; }
+
+    if (planId === 'gratis') {
+      await activarPlanGratis();
+      return;
+    }
+
+    const plan = getPlan(planId);
+    planSeleccionado = planId;
+
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'GENERANDO PDF...';
+    try {
+      await descargarComprobantePDF(plan);
+      cerrarModalSusc('modal-susc');
+      setTimeout(() => {
+        const frm = document.getElementById('pagoForm');
+        frm.querySelector('input[name="plan"]').value =
+          plan.nombre + ' · $' + plan.precio + ' MXN';
+        frm.querySelector('input[name="planId"]').value = planId;
+        const f = frm.querySelector('input[name="fechaPago"]');
+        if (f && !f.value) f.value = new Date().toISOString().split('T')[0];
+        abrirModalSusc('modal-pago');
+      }, 200);
+    } catch (e) {
+      console.error('Error PDF:', e);
+      alert('No se pudo generar el PDF. Intenta de nuevo.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  });
 });
 
+/* ─── Enviar comprobante de pago ─── */
 document.getElementById('pagoForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const msg = document.getElementById('pagoMsg');
@@ -1293,6 +1436,8 @@ document.getElementById('pagoForm')?.addEventListener('submit', async (e) => {
 
   const fd = new FormData(e.target);
   const comprobante = fd.get('comprobante').trim();
+  const planId = fd.get('planId') || planSeleccionado;
+  const plan = getPlan(planId);
 
   if (!fd.get('nombreTitular').trim() || !fd.get('monto') ||
       !fd.get('fechaPago') || !fd.get('referencia').trim() ||
@@ -1328,25 +1473,22 @@ document.getElementById('pagoForm')?.addEventListener('submit', async (e) => {
     }
 
     const limiteActual = tsToDate(previa?.fechaLimiteValidacion);
-    const yaEnRevision =
-      previa &&
-      estPrevia === 'pendiente' &&
-      previa.fechaSolicitud &&
-      (!limiteActual || new Date() < limiteActual);
+    const yaEnRevision = previa && estPrevia === 'pendiente' &&
+      previa.fechaSolicitud && (!limiteActual || new Date() < limiteActual);
 
     const ahora = new Date();
-    const fechaLimite = new Date(
-      ahora.getTime() + PLAN_SUSC.horasLimitePago * 60 * 60 * 1000
-    );
+    const fechaLimite = new Date(ahora.getTime() + 30 * 60 * 60 * 1000);
 
     const datos = {
       nombreTitular: fd.get('nombreTitular').trim(),
-      monto:         parseFloat(fd.get('monto')) || 0,
+      monto:         parseFloat(fd.get('monto')) || plan.precio,
       fechaPago:     fd.get('fechaPago'),
       referencia:    fd.get('referencia').trim(),
       banco:         fd.get('banco').trim(),
-      plan:          'anual',
-      precio:        PLAN_SUSC.precio,
+      plan:          plan.id,
+      planNombre:    plan.nombre,
+      precio:        plan.precio,
+      mesesDuracion: plan.mesesDuracion,
       comprobante,
       uid:           usuarioActual.uid,
       solicitudId:   previa?.solicitudId || ('SOL-' + usuarioActual.uid.slice(0, 8) + '-' + Date.now()),
@@ -1365,7 +1507,7 @@ document.getElementById('pagoForm')?.addEventListener('submit', async (e) => {
 
     msg.classList.add('ok');
     msg.textContent = yaEnRevision
-      ? '🟡 Comprobante actualizado. Tu solicitud SIGUE EN REVISIÓN (no se reinició el tiempo).'
+      ? '🟡 Comprobante actualizado. Tu solicitud SIGUE EN REVISIÓN.'
       : '🟡 ¡Comprobante enviado! Tu pago quedó EN REVISIÓN.';
 
     setTimeout(() => {
@@ -1382,6 +1524,7 @@ document.getElementById('pagoForm')?.addEventListener('submit', async (e) => {
   }
 });
 
+/* ─── Mostrar estado de suscripción ─── */
 function mostrarEstadoSuscripcion() {
   const cont = document.getElementById('estadoContenido');
   if (!cont) return;
@@ -1406,19 +1549,24 @@ function mostrarEstadoSuscripcion() {
   const est = String(s.estado || '').toLowerCase();
   const venc   = tsToDate(s.fechaVencimiento);
   const inicio = tsToDate(s.fechaInicio);
+  const plan   = getPlan(s.plan || 'omega1a');
+  const vencida = venc && new Date() >= venc;
 
   let emoji = '🟡', txt = 'PAGO EN REVISIÓN', cls = 'estado-pendiente';
+  let estadoFinal = 'Pendiente';
 
   if (est === 'aprobado' || est === 'activa') {
-    const vencida = venc && new Date() >= venc;
     if (vencida) {
       emoji = '🔴'; txt = 'SUSCRIPCIÓN VENCIDA'; cls = 'estado-rechazada';
+      estadoFinal = 'Vencido';
     } else {
-      emoji = '🟢'; txt = 'PAGO APROBADO'; cls = 'estado-activa';
+      emoji = '🟢'; txt = 'SUSCRIPCIÓN ACTIVA'; cls = 'estado-activa';
+      estadoFinal = 'Activo';
     }
   }
-  if (est === 'rechazado') { emoji = '🔴'; txt = 'PAGO RECHAZADO';     cls = 'estado-rechazada'; }
-  if (est === 'expirada')  { emoji = '⏰'; txt = 'SOLICITUD EXPIRADA'; cls = 'estado-expirada'; }
+  if (est === 'rechazado') { emoji = '🔴'; txt = 'PAGO RECHAZADO';     cls = 'estado-rechazada'; estadoFinal = 'Rechazado'; }
+  if (est === 'expirada')  { emoji = '⏰'; txt = 'SOLICITUD EXPIRADA'; cls = 'estado-expirada';  estadoFinal = 'Expirado'; }
+  if (est === 'vencido')   { emoji = '🔴'; txt = 'SUSCRIPCIÓN VENCIDA'; cls = 'estado-rechazada'; estadoFinal = 'Vencido'; }
 
   let avisoTiempo = '';
   if (est === 'pendiente') {
@@ -1433,41 +1581,56 @@ function mostrarEstadoSuscripcion() {
     }
   }
 
+  const mostrarRenovar = (est === 'rechazado' || est === 'expirada' || est === 'vencido' ||
+    ((est === 'aprobado' || est === 'activa') && vencida));
+
   cont.innerHTML = `
     <h1 class="pago-title">💳 Mi suscripción</h1>
     <div class="estado-card">
-      <p><span class="estado-badge ${cls}">${emoji} ${txt}</span></p>
+      <p style="text-align:center;"><span class="estado-badge ${cls}">${emoji} ${txt}</span></p>
       ${avisoTiempo}
-      <p style="margin-top:14px;"><strong>ID de solicitud:</strong> ${s.solicitudId || s.uid || '—'}</p>
-      <p><strong>Plan:</strong> OmegaBeats ${s.plan === 'anual' ? 'Anual' : s.plan}</p>
-      <p><strong>Precio:</strong> $${s.precio || s.monto || PLAN_SUSC.precio} MXN</p>
-      <p><strong>Titular:</strong> ${s.nombreTitular || '—'}</p>
-      <p><strong>Referencia:</strong> ${s.referencia || '—'}</p>
-      <p><strong>Banco:</strong> ${s.banco || '—'}</p>
-      <p><strong>Fecha de pago:</strong> ${s.fechaPago || '—'}</p>
-      <p><strong>Solicitud creada:</strong> ${fmtFecha(tsToDate(s.fechaSolicitud))}</p>
-      <p><strong>Última actualización:</strong> ${fmtFecha(tsToDate(s.fechaUltimaActualizacion))}</p>
-      <p><strong>Fecha de inicio:</strong> ${fmtFecha(inicio)}</p>
-      <p><strong>Fecha de vencimiento:</strong> ${fmtFecha(venc)}</p>
-      ${s.comprobante ? `<p><strong>Comprobante:</strong> <a href="${s.comprobante}" target="_blank" style="color:#4ade80;">Ver en Dropbox ↗</a></p>` : ''}
+      <div style="margin-top:18px;padding-top:16px;border-top:1px solid #2a2a3a;">
+        <h3 style="color:#fff;font-size:16px;font-weight:800;margin-bottom:12px;">📋 Información de suscripción</h3>
+        <p><strong>Plan actual:</strong> ${plan.badge} ${s.planNombre || plan.nombre}</p>
+        <p><strong>Duración:</strong> ${s.mesesDuracion || plan.mesesDuracion} meses</p>
+        <p><strong>Fecha de inicio:</strong> ${fmtFecha(inicio)}</p>
+        <p><strong>Fecha de vencimiento:</strong> ${fmtFecha(venc)}</p>
+        <p><strong>Estado:</strong> ${estadoFinal}</p>
+      </div>
+      <div style="margin-top:18px;padding-top:16px;border-top:1px solid #2a2a3a;">
+        <h3 style="color:#fff;font-size:14px;font-weight:800;margin-bottom:10px;">📄 Datos de la solicitud</h3>
+        <p><strong>ID de solicitud:</strong> ${s.solicitudId || s.uid || '—'}</p>
+        <p><strong>Precio:</strong> $${s.precio ?? s.monto ?? plan.precio} MXN</p>
+        <p><strong>Titular:</strong> ${s.nombreTitular || '—'}</p>
+        <p><strong>Referencia:</strong> ${s.referencia || '—'}</p>
+        <p><strong>Banco:</strong> ${s.banco || '—'}</p>
+        <p><strong>Fecha de pago:</strong> ${s.fechaPago || '—'}</p>
+        <p><strong>Solicitud creada:</strong> ${fmtFecha(tsToDate(s.fechaSolicitud))}</p>
+        <p><strong>Última actualización:</strong> ${fmtFecha(tsToDate(s.fechaUltimaActualizacion))}</p>
+        ${s.comprobante ? `<p><strong>Comprobante:</strong> <a href="${s.comprobante}" target="_blank" style="color:#4ade80;">Ver en Dropbox ↗</a></p>` : ''}
+      </div>
     </div>
-    ${(est === 'rechazado' || est === 'expirada' || ((est === 'aprobado' || est === 'activa') && venc && new Date() >= venc))
-      ? `<button class="susc-btn" id="btnReenviar" style="background:#e63946;">RENOVAR / REENVIAR COMPROBANTE</button>`
+    ${mostrarRenovar
+      ? `<button class="susc-btn" id="btnReenviar" style="background:#e63946;">🔄 RENOVAR / CAMBIAR DE PLAN</button>`
+      : ''}
+    ${(est === 'aprobado' || est === 'activa') && !vencida
+      ? `<button class="susc-btn" id="btnCambiarPlan" style="background:#2a2a3a;margin-top:10px;">🔁 CAMBIAR DE PLAN</button>`
       : ''}
   `;
 
   document.getElementById('btnReenviar')?.addEventListener('click', () => {
     cerrarModalSusc('modal-estado');
-    setTimeout(() => {
-      const f = document.querySelector('#pagoForm input[name="fechaPago"]');
-      if (f && !f.value) f.value = new Date().toISOString().split('T')[0];
-      abrirModalSusc('modal-pago');
-    }, 120);
+    setTimeout(() => abrirModalSusc('modal-susc'), 120);
+  });
+  document.getElementById('btnCambiarPlan')?.addEventListener('click', () => {
+    cerrarModalSusc('modal-estado');
+    setTimeout(() => abrirModalSusc('modal-susc'), 120);
   });
 
   abrirModalSusc('modal-estado');
 }
 
+/* ─── Escuchar suscripción (con auto-vencimiento) ─── */
 function escucharSuscripcion(uid) {
   if (unsubscribeSusc) unsubscribeSusc();
 
@@ -1476,16 +1639,8 @@ function escucharSuscripcion(uid) {
 
     const est = String(suscripcionActual?.estado || '').toLowerCase();
 
-    if (est === 'rechazado') {
-      try {
-        await deleteDoc(doc(db, 'suscripciones', uid));
-      } catch (e) {
-        console.warn('No se pudo eliminar el doc rechazado:', e.message);
-      }
-      suscripcionActual = null;
-    }
-
-    if (suscripcionActual && String(suscripcionActual.estado || '').toLowerCase() === 'pendiente') {
+    // Auto-expirar solicitud pendiente
+    if (suscripcionActual && est === 'pendiente') {
       const limite = tsToDate(suscripcionActual.fechaLimiteValidacion);
       if (limite && new Date() >= limite) {
         suscripcionActual.estado = 'expirada';
@@ -1494,10 +1649,23 @@ function escucharSuscripcion(uid) {
       }
     }
 
+    // 🔴 Auto-vencer suscripción aprobada cuya fechaVencimiento ya pasó
+    if (suscripcionActual && (est === 'aprobado' || est === 'activa')) {
+      const venc = tsToDate(suscripcionActual.fechaVencimiento);
+      if (venc && new Date() >= venc) {
+        suscripcionActual.estado = 'vencido';
+        updateDoc(doc(db, 'suscripciones', uid), {
+          estado: 'vencido',
+          fechaUltimaActualizacion: serverTimestamp()
+        }).catch(err => console.warn('No se pudo marcar como vencido:', err.message));
+      }
+    }
+
     actualizarAccesoSubida();
   }, (err) => console.error('Error suscripción:', err));
 }
 
+/* ─── Detectar admin ─── */
 async function detectarAdmin(user) {
   try {
     const snap = await getDoc(doc(db, 'admins', user.uid));
@@ -1515,6 +1683,7 @@ async function detectarAdmin(user) {
   } catch (e) { console.warn('detectarAdmin:', e); }
 }
 
+/* ─── Panel admin ─── */
 async function cargarAdminSuscripciones() {
   if (!esAdminSusc) return;
   const cont = document.getElementById('adminLista');
@@ -1529,7 +1698,7 @@ async function cargarAdminSuscripciones() {
 
     let html = `<table class="admin-tabla">
       <thead><tr>
-        <th>Usuario</th><th>Correo</th><th>Titular</th>
+        <th>Usuario</th><th>Correo</th><th>Plan</th>
         <th>Monto</th><th>Referencia</th><th>Banco</th>
         <th>Fecha</th><th>Estado</th><th>Comprobante</th><th>Acciones</th>
       </tr></thead><tbody>`;
@@ -1537,17 +1706,19 @@ async function cargarAdminSuscripciones() {
     snap.forEach(d => {
       const s = d.data();
       const est = String(s.estado || '').toLowerCase();
+      const plan = getPlan(s.plan || 'omega1a');
 
       let badge = 'estado-pendiente', emoji = '🟡';
       if (est === 'aprobado' || est === 'activa') { badge = 'estado-activa';    emoji = '🟢'; }
       if (est === 'rechazado')                    { badge = 'estado-rechazada'; emoji = '🔴'; }
       if (est === 'expirada')                     { badge = 'estado-expirada';  emoji = '⏰'; }
+      if (est === 'vencido')                      { badge = 'estado-rechazada'; emoji = '🔴'; }
 
       html += `<tr>
         <td>${s.nombre || '—'}</td>
         <td style="font-size:11px;">${s.correo || '—'}</td>
-        <td>${s.nombreTitular || '—'}</td>
-        <td>$${s.monto || s.precio || 0}</td>
+        <td style="font-size:11px;">${plan.badge} ${s.planNombre || plan.nombre}</td>
+        <td>$${s.monto ?? s.precio ?? plan.precio}</td>
         <td style="font-size:11px;">${s.referencia || '—'}</td>
         <td>${s.banco || '—'}</td>
         <td style="font-size:11px;">${s.fechaPago || fmtFecha(tsToDate(s.fechaSolicitud))}</td>
@@ -1555,7 +1726,7 @@ async function cargarAdminSuscripciones() {
         <td>${s.comprobante ? `<a href="${s.comprobante}" target="_blank" class="admin-btn ver" style="text-decoration:none;">👁️ Ver</a>` : '—'}</td>
         <td>
           ${!(est === 'aprobado' || est === 'activa') ? `<button class="admin-btn ok" data-uid="${d.id}" data-act="aprobar">✅ Aprobar</button>` : ''}
-          <button class="admin-btn no" data-uid="${d.id}" data-act="rechazar">❌ Rechazar y borrar</button>
+          <button class="admin-btn no" data-uid="${d.id}" data-act="rechazar">❌ Rechazar</button>
         </td>
       </tr>`;
     });
@@ -1578,11 +1749,16 @@ async function cargarAdminSuscripciones() {
 
 async function aprobarSuscripcion(uid) {
   if (!esAdminSusc) return;
-  if (!confirm('¿Aprobar esta suscripción por 12 meses?')) return;
+  if (!confirm('¿Aprobar esta suscripción?')) return;
   try {
+    const snap = await getDoc(doc(db, 'suscripciones', uid));
+    if (!snap.exists()) { alert('Solicitud no encontrada.'); return; }
+    const data = snap.data();
+    const plan = getPlan(data.plan || 'omega1a');
+
     const ahora = new Date();
     const venc = new Date(ahora);
-    venc.setMonth(venc.getMonth() + PLAN_SUSC.mesesDuracion);
+    venc.setMonth(venc.getMonth() + plan.mesesDuracion);
 
     await updateDoc(doc(db, 'suscripciones', uid), {
       estado: 'aprobado',
@@ -1593,8 +1769,10 @@ async function aprobarSuscripcion(uid) {
     });
 
     await addDoc(collection(db, 'historial_pagos', uid, 'pagos'), {
-      plan: PLAN_SUSC.nombre,
-      precio: PLAN_SUSC.precio,
+      plan: plan.id,
+      planNombre: plan.nombre,
+      precio: plan.precio,
+      mesesDuracion: plan.mesesDuracion,
       estado: 'aprobado',
       fechaAprobacion: serverTimestamp(),
       fechaInicio: Timestamp.fromDate(ahora),
@@ -1611,8 +1789,7 @@ async function aprobarSuscripcion(uid) {
 async function rechazarSuscripcion(uid) {
   if (!esAdminSusc) return;
   if (!confirm(
-    '⚠️ ¿Rechazar y ELIMINAR definitivamente esta solicitud?\n\n' +
-    'El documento de /suscripciones/{uid} será borrado.\n' +
+    '⚠️ ¿Rechazar y ELIMINAR esta solicitud?\n\n' +
     'El usuario tendrá que enviar un comprobante nuevo.'
   )) return;
 
@@ -1625,6 +1802,7 @@ async function rechazarSuscripcion(uid) {
   }
 }
 
+/* ─── Botones de menú ─── */
 document.getElementById('suscBtn')?.addEventListener('click', () => {
   cerrarMenu();
   setTimeout(() => {
