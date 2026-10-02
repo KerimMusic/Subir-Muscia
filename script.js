@@ -845,83 +845,37 @@ const GENEROS_RAW = [
   "Acústica","Instrumental","Soundtrack","Otros",
   "Art Pop","Dance Pop","Electropop","Synth-pop","Indie Pop","Dream Pop","Bedroom Pop",
   "Hyperpop","Teen Pop","Bubblegum Pop","Power Pop","C-Pop","Latin Pop","Europop","Britpop",
-  "Sophisti-Pop","Baroque Pop","Sunshine Pop","Chamber Pop","Experimental Pop",
   "Alternative Rock","Indie Rock","Hard Rock","Soft Rock","Classic Rock","Progressive Rock",
   "Psychedelic Rock","Garage Rock","Blues Rock","Folk Rock","Southern Rock","Surf Rock",
   "Glam Rock","Art Rock","Experimental Rock","Post-Rock","Math Rock","Noise Rock","Space Rock",
   "Gothic Rock","Industrial Rock","Christian Rock","Grunge","Brit Rock","Emo","Shoegaze","Dream Rock",
   "Heavy Metal","Thrash Metal","Death Metal","Black Metal","Doom Metal","Power Metal","Speed Metal",
   "Progressive Metal","Symphonic Metal","Folk Metal","Groove Metal","Nu Metal","Alternative Metal",
-  "Industrial Metal","Gothic Metal","Metalcore","Deathcore","Grindcore","Sludge Metal","Stoner Metal",
-  "Funeral Doom","Melodic Death Metal","Technical Death Metal","Viking Metal","Pagan Metal","Post-Metal","Djent",
-  "Punk Rock","Hardcore Punk","Post-Punk","Pop Punk","Skate Punk","Street Punk","Anarcho-Punk","Crust Punk",
-  "D-Beat","Garage Punk","Riot Grrrl","Emo Punk","Ska Punk","Celtic Punk","Folk Punk","Horror Punk","Psychobilly",
+  "Punk Rock","Hardcore Punk","Post-Punk","Pop Punk","Skate Punk","Street Punk",
   "Hip-Hop","Rap","Trap","Drill","Gangsta Rap","Boom Bap","Conscious Hip-Hop","Underground Hip-Hop",
-  "Alternative Hip-Hop","Old School Hip-Hop","West Coast Hip-Hop","East Coast Hip-Hop","Southern Hip-Hop",
-  "Crunk","Dirty South","G-Funk","Cloud Rap","Emo Rap","Jazz Rap","Experimental Hip-Hop","Hardcore Hip-Hop",
-  "Latin Hip-Hop","Chicano Rap","UK Hip-Hop","UK Drill","Grime","Freestyle Rap","Trap Latino",
-  "R&B","Contemporary R&B","Alternative R&B","Neo Soul","Soul","Classic Soul","Southern Soul","Motown",
-  "Funk","P-Funk","Quiet Storm","New Jack Swing","Blue-Eyed Soul","Psychedelic Soul","Gospel Soul","Soul Jazz",
-  "Blues","Delta Blues","Chicago Blues","Texas Blues","Electric Blues","Acoustic Blues","Country Blues",
-  "Piedmont Blues","British Blues","Jump Blues","Swamp Blues","Gospel Blues","Soul Blues",
-  "Jazz","Bebop","Hard Bop","Cool Jazz","Free Jazz","Fusion","Jazz Fusion","Smooth Jazz","Acid Jazz",
-  "Latin Jazz","Afro-Cuban Jazz","Gypsy Jazz","Swing","Big Band","Dixieland","Ragtime","Modal Jazz",
-  "Avant-Garde Jazz","Jazz Funk","Nu Jazz","Vocal Jazz","Contemporary Jazz",
+  "Latin Hip-Hop","UK Drill","Grime","Freestyle Rap","Trap Latino",
+  "R&B","Contemporary R&B","Alternative R&B","Neo Soul","Soul","Classic Soul","Motown",
+  "Funk","P-Funk","Quiet Storm","New Jack Swing","Psychedelic Soul","Gospel Soul","Soul Jazz",
+  "Blues","Delta Blues","Chicago Blues","Texas Blues","Electric Blues","Acoustic Blues",
+  "Jazz","Bebop","Hard Bop","Cool Jazz","Free Jazz","Fusion","Smooth Jazz","Acid Jazz",
+  "Latin Jazz","Gypsy Jazz","Swing","Big Band","Dixieland","Ragtime",
   "Electronic","EDM","House","Deep House","Tech House","Progressive House","Electro House","Future House",
-  "Tropical House","Bass House","Acid House","Chicago House","French House","Minimal House","Techno",
-  "Detroit Techno","Minimal Techno","Industrial Techno","Hard Techno","Acid Techno","Trance",
-  "Progressive Trance","Psytrance","Goa Trance","Uplifting Trance","Hard Trance","Electro","Ambient",
-  "Dark Ambient","Chillout","Downtempo","IDM","Breakbeat","Drum & Bass","Jungle","Liquid Drum & Bass",
-  "Dubstep","Brostep","UK Garage","Future Bass","Synthwave","Vaporwave","Retrowave","Lo-Fi","Chillwave",
-  "Glitch","Industrial","EBM","Hardcore","Gabber","Hardstyle","Future Rave",
-  "Reggae","Roots Reggae","Dancehall","Dub","Rocksteady","Ska","Lovers Rock","Ragga","Reggae Fusion",
-  "Digital Reggae","Dub Poetry",
-  "Música Latina","Latin Urban","Salsa","Salsa Romántica","Salsa Dura","Son Cubano","Bachata","Merengue",
-  "Cumbia","Cumbia Mexicana","Cumbia Colombiana","Cumbia Villera","Cumbia Peruana","Cumbia Andina",
-  "Vallenato","Bolero","Mambo","Cha-cha-chá","Rumba","Guaracha","Danzón","Timba","Latin Rock","Latin Soul",
-  "Tango","Milonga","Bossa Nova","Samba","MPB","Forró","Axé","Frevo","Sertanejo",
-  "Mariachi","Ranchera","Norteño","Norteño-Banda","Banda","Banda Sinaloense","Corridos",
-  "Corrido Tradicional","Corrido Tumbado","Corrido Bélico","Corridos Alterados","Tejano","Grupero",
-  "Duranguense","Sierreño","Huapango","Son Jarocho","Son Huasteco","Música de Tierra Caliente",
-  "Música Norteña","Cumbia Norteña","Bolero Ranchero","Mariachi Moderno",
-  "Country","Country Pop","Country Rock","Traditional Country","Outlaw Country","Alternative Country",
-  "Bluegrass","Americana","Honky Tonk","Country Blues","Western Swing","Nashville Sound","Red Dirt",
-  "Contemporary Country","Country Folk",
-  "Folk","Contemporary Folk","Traditional Folk","Celtic Folk","Irish Folk","Scottish Folk","English Folk",
-  "American Folk","Appalachian","Nordic Folk","Balkan Folk","Slavic Folk","Gypsy / Romani","Klezmer",
-  "Neofolk","World Folk","Folk Fusion",
-  "Música Clásica","Medieval","Renacimiento","Barroco","Clasicismo","Romanticismo","Impresionismo",
-  "Modernismo","Música Contemporánea","Música de Cámara","Sinfónica","Coral","Ópera","Opereta","Oratorio",
-  "Cantata","Concierto","Sonata","Sinfonía","Música Minimalista","Música Experimental",
-  "Gospel","Christian","Christian Pop","Christian Hip-Hop","Christian Metal","Worship",
-  "Contemporary Christian","Spiritual","Hymns","Islamic Music","Nasheed","Jewish Music","Buddhist Music",
-  "Hindu Devotional","Mantra",
-  "Afrobeat","Afrobeats","Afro-Pop","Amapiano","Highlife","Hiplife","Kizomba","Kuduro","Kwaito","Gqom",
-  "Mbalax","Juju","Fuji","Makossa","Soukous","Congolese Rumba","Benga","Bikutsi","Chimurenga","Jit",
-  "Marrabenta","Mbube","Marabi","Township Jazz","Rai","Gnawa","Desert Blues","Maloya","Sega","Cape Jazz",
-  "Calypso","Soca","Zouk","Kompa","Son","Mento","Steelpan","Bouyon","Punta",
-  "Pagode","Choro","Tropicália","Maracatu","Baião","Carimbó","Lambada","Música Caipira","Samba-Reggae",
-  "Funk Carioca",
-  "K-Rock","K-Hip-Hop","J-Rock","J-Hip-Hop","City Pop","Enka","Shibuya-kei","Mandopop","Cantopop",
-  "Bollywood","Bhangra","Qawwali","Ghazal","Carnatic","Hindustani Classical","Raga","Dhrupad","Gamelan",
-  "Dangdut","Thai Pop","V-Pop","Pinoy Pop","Persian Pop","Arabic Pop","Turkish Pop",
-  "Arabic Music","Shaabi","Dabke","Khaleeji","Egyptian Pop","Lebanese Pop","Iraqi Music","Persian Music",
-  "Turkish Music","Kurdish Music","Armenian Music","Israeli Music","Mizrahi","Andalusian Music",
-  "Oud Music","Traditional Middle Eastern",
-  "Hawaiian","Hawaiian Pop","Polynesian","Samoan","Tahitian","Tongan","Maori","Aboriginal Australian",
-  "Melanesian","Micronesian","Pacific Island Music","New Zealand Folk",
-  "Experimental","Avant-Garde","Noise","Drone","Musique Concrète","Electroacoustic","Minimalism",
-  "Sound Art","Free Improvisation","Experimental Electronic",
-  "Film Score","Soundtrack","Movie Soundtrack","Television Score","Video Game Music","Anime Music",
-  "Orchestral Score","Cinematic","Trailer Music","Ambient Score","Musical Theatre","Broadway","Stage & Screen",
-  "A Cappella","Vocal Pop","Choral","Choir","Barbershop","Doo-Wop","Beatboxing","Gregorian Chant",
-  "Operatic","Vocal Classical",
-  "Children's Music","Nursery Rhymes","Educational Music","Comedy Music","Novelty","Parody","Comedy Rock",
-  "Comedy Rap","Comedy Pop",
-  "Dance","Dance-Pop","Eurodance","Eurobeat","Disco","Nu-Disco","Garage","Jersey Club","Baltimore Club",
-  "Footwork","Juke",
-  "Acústica","Acústica Pop","Rock Acústico","Folk Acústico","Latino Acústico","Indie Acústico",
-  "Regional Mexicano Acústico","Acústica Instrumental","Unplugged","Balada Acústica","Bolero Acústico"
+  "Tropical House","Techno","Trance","Psytrance","Electro","Ambient","Chillout","Downtempo",
+  "Drum & Bass","Jungle","Dubstep","Future Bass","Synthwave","Vaporwave","Lo-Fi","Chillwave",
+  "Reggae","Roots Reggae","Dancehall","Dub","Ska","Reggae Fusion",
+  "Música Latina","Latin Urban","Salsa","Bachata","Merengue","Cumbia","Vallenato","Bolero",
+  "Tango","Bossa Nova","Samba","Forró","Sertanejo",
+  "Mariachi","Ranchera","Norteño","Banda","Corridos","Corrido Tumbado","Corrido Bélico",
+  "Tejano","Grupero","Duranguense","Sierreño","Huapango","Son Jarocho",
+  "Country","Country Pop","Bluegrass","Americana","Folk","Celtic Folk",
+  "Música Clásica","Barroco","Romanticismo","Ópera","Oratorio","Sinfónica",
+  "Gospel","Christian","Worship","Contemporary Christian","Hymns",
+  "Afrobeat","Afrobeats","Amapiano","Kizomba","Soca","Calypso",
+  "K-Pop","J-Pop","J-Rock","City Pop","Bollywood",
+  "Film Score","Soundtrack","Video Game Music","Anime Music",
+  "A Cappella","Choral","Children's Music",
+  "Dance","Dance-Pop","Eurodance","Disco","Nu-Disco",
+  "Acústica","Instrumental","Experimental","Avant-Garde"
 ];
 
 const GENEROS = [...new Set(GENEROS_RAW.map(g => g.trim()).filter(Boolean))]
@@ -1157,6 +1111,9 @@ document.querySelectorAll('[data-close]').forEach(btn => {
   btn.addEventListener('click', () => cerrarModalSusc(btn.dataset.close));
 });
 
+/* ✅ LÓGICA DE ACCESO:
+   - Si NO hay fecha de vencimiento y está aprobado → acceso concedido.
+   - Si HAY fecha de vencimiento → debe estar en el futuro. */
 window.tieneAccesoVigente = function() {
   if (!usuarioActual || !suscripcionActual) return false;
 
@@ -1165,7 +1122,8 @@ window.tieneAccesoVigente = function() {
   if (est !== 'aprobado' && est !== 'activa') return false;
 
   const venc = tsToDate(suscripcionActual.fechaVencimiento);
-  if (!venc) return false;
+
+  if (!venc) return true;
 
   return new Date() < venc;
 };
@@ -1202,11 +1160,6 @@ function actualizarAccesoSubida() {
     lockMessage.textContent = '⏰ Tu suscripción ha vencido. Renueva para continuar subiendo música.';
   } else {
     lockMessage.textContent = 'Activa tu suscripción para comenzar a subir tu música.';
-  }
-
-  // 🆕 Aviso para admins
-  if (esAdminSusc) {
-    lockMessage.textContent += ' (Eres administrador: usa el botón 🛡️ Panel admin abajo a la derecha para gestionar pagos).';
   }
 }
 window.actualizarAccesoSubida = actualizarAccesoSubida;
@@ -1545,52 +1498,21 @@ function escucharSuscripcion(uid) {
   }, (err) => console.error('Error suscripción:', err));
 }
 
-/* ---------- Detectar admin (por colección /admins o whitelist de correo) ---------- */
-const ADMIN_EMAILS = [
-  'kerimmusic2024@gmail.com'
-  // , 'otro_admin@gmail.com'
-];
-
 async function detectarAdmin(user) {
   try {
-    // 1) Verificar si está en la colección /admins/{uid}
-    let esAdminColeccion = false;
-    try {
-      const snap = await getDoc(doc(db, 'admins', user.uid));
-      esAdminColeccion = snap.exists();
-    } catch (e) {
-      console.warn('No se pudo leer /admins:', e.message);
-    }
-
-    // 2) Verificar si su correo está en la whitelist
-    const esAdminEmail = ADMIN_EMAILS.includes(
-      (user.email || '').toLowerCase().trim()
-    );
-
-    esAdminSusc = esAdminColeccion || esAdminEmail;
-
-    // Quitar botón anterior si existe
+    const snap = await getDoc(doc(db, 'admins', user.uid));
+    esAdminSusc = snap.exists();
     document.getElementById('btn-admin')?.remove();
-
     if (esAdminSusc) {
       const b = document.createElement('button');
       b.id = 'btn-admin';
       b.textContent = '🛡️ Panel admin';
       b.className = 'susc-btn-inline';
-      b.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:900;' +
-                        'box-shadow:0 8px 24px rgba(0,0,0,0.2);';
-      b.onclick = () => {
-        abrirModalSusc('modal-admin');
-        cargarAdminSuscripciones();
-      };
+      b.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:900;box-shadow:0 8px 24px rgba(0,0,0,0.2);';
+      b.onclick = () => { abrirModalSusc('modal-admin'); cargarAdminSuscripciones(); };
       document.body.appendChild(b);
     }
-
-    // Refrescar el mensaje del candado para incluir el aviso de admin
-    actualizarAccesoSubida();
-  } catch (e) {
-    console.warn('detectarAdmin:', e);
-  }
+  } catch (e) { console.warn('detectarAdmin:', e); }
 }
 
 async function cargarAdminSuscripciones() {
