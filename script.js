@@ -300,6 +300,9 @@ onAuthStateChanged(auth, (user) => {
     escucharSuscripcion(user.uid);
     detectarAdmin(user);
     actualizarAccesoSubida();
+
+    // 🎁 Registrar Plan Gratis en el historial (solo primera vez)
+    registrarPlanGratisSiEsNuevo(user.uid, user);
   } else {
     loginBtn.classList.remove('hidden');
     loginBtn.disabled = false;
@@ -1165,10 +1168,54 @@ async function marcarGratisUsado() {
   try {
     await setDoc(doc(db, 'historial_gratis', usuarioActual.uid), {
       usado: true,
+      registrado: true,
       fechaUso: serverTimestamp(),
-      email: usuarioActual.email
+      email: usuarioActual.email || ''
     }, { merge: true });
   } catch (e) { console.warn('marcarGratisUsado:', e); }
+}
+
+/* ─── Registrar Plan Gratis en el historial como DISPONIBLE al primer login ─── */
+async function registrarPlanGratisSiEsNuevo(uid, user) {
+  if (!uid) return;
+  try {
+    const metaRef = doc(db, 'historial_gratis', uid);
+    const metaSnap = await getDoc(metaRef);
+
+    // Si ya está registrado antes, no hacemos nada
+    if (metaSnap.exists() && metaSnap.data().registrado === true) {
+      return;
+    }
+
+    // Crear el registro del Plan Gratis (DISPONIBLE, sin fechas)
+    const registroRef = await addDoc(
+      collection(db, 'historial_suscripciones', uid, 'registros'),
+      {
+        plan: 'gratis',
+        planNombre: 'Plan Gratis',
+        precio: 0,
+        duracionMeses: 3,
+        badge: '🆓',
+        estado: 'disponible',
+        beneficioUsado: false,
+        fechaRegistro: serverTimestamp(),
+        fechaInicio: null,
+        fechaVencimiento: null,
+        email: user?.email || ''
+      }
+    );
+
+    // Guardar metadata con el ID del registro
+    await setDoc(metaRef, {
+      registrado: true,
+      usado: false,
+      registroId: registroRef.id,
+      fechaRegistro: serverTimestamp(),
+      email: user?.email || ''
+    }, { merge: true });
+  } catch (e) {
+    console.warn('registrarPlanGratisSiEsNuevo:', e);
+  }
 }
 
 /* ─── Actualizar UI de planes según elegibilidad ─── */
@@ -1338,8 +1385,43 @@ async function activarPlanGratis() {
     const venc = new Date(ahora);
     venc.setMonth(venc.getMonth() + PLANES.gratis.mesesDuracion);
 
+    // ── 1. Actualizar el registro del historial (DISPONIBLE → ACTIVO) ──
+    const metaSnap = await getDoc(doc(db, 'historial_gratis', usuarioActual.uid));
+    const registroId = metaSnap.exists() ? metaSnap.data().registroId : null;
+
+    if (registroId) {
+      await updateDoc(
+        doc(db, 'historial_suscripciones', usuarioActual.uid, 'registros', registroId),
+        {
+          estado: 'Activo',
+          beneficioUsado: true,
+          fechaActivacion: serverTimestamp(),
+          fechaInicio: Timestamp.fromDate(ahora),
+          fechaVencimiento: Timestamp.fromDate(venc)
+        }
+      );
+    } else {
+      // Fallback: si por alguna razón no existía el registro, lo creamos ya activo
+      await addDoc(collection(db, 'historial_suscripciones', usuarioActual.uid, 'registros'), {
+        plan: 'gratis',
+        planNombre: 'Plan Gratis',
+        precio: 0,
+        duracionMeses: 3,
+        badge: '🆓',
+        estado: 'Activo',
+        beneficioUsado: true,
+        fechaRegistro: serverTimestamp(),
+        fechaActivacion: serverTimestamp(),
+        fechaInicio: Timestamp.fromDate(ahora),
+        fechaVencimiento: Timestamp.fromDate(venc),
+        email: usuarioActual.email || ''
+      });
+    }
+
+    // ── 2. Marcar el beneficio como usado permanentemente ──
     await marcarGratisUsado();
 
+    // ── 3. Guardar en la colección principal de suscripciones ──
     await setDoc(doc(db, 'suscripciones', usuarioActual.uid), {
       plan: 'gratis',
       planNombre: PLANES.gratis.nombre,
@@ -1359,16 +1441,6 @@ async function activarPlanGratis() {
       fechaSolicitud: serverTimestamp(),
       fechaUltimaActualizacion: serverTimestamp()
     }, { merge: true });
-
-    await addDoc(collection(db, 'historial_pagos', usuarioActual.uid, 'pagos'), {
-      plan: 'gratis',
-      planNombre: PLANES.gratis.nombre,
-      precio: 0,
-      estado: 'aprobado',
-      fechaAprobacion: serverTimestamp(),
-      fechaInicio: Timestamp.fromDate(ahora),
-      fechaVencimiento: Timestamp.fromDate(venc)
-    });
 
     cerrarModalSusc('modal-susc');
     mostrarStatus('🎉 ¡Plan Gratis activado! Disfruta 3 meses.', 'ok');
@@ -1524,18 +1596,95 @@ document.getElementById('pagoForm')?.addEventListener('submit', async (e) => {
   }
 });
 
+/* ─── Cargar historial completo de suscripciones ─── */
+async function cargarHistorialSuscripciones(uid) {
+  if (!uid) return [];
+  try {
+    const snap = await getDocs(collection(db, 'historial_suscripciones', uid, 'registros'));
+    const registros = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    registros.sort((a, b) => {
+      const fa = tsToDate(a.fechaRegistro)?.getTime() || 0;
+      const fb = tsToDate(b.fechaRegistro)?.getTime() || 0;
+      return fb - fa;
+    });
+    return registros;
+  } catch (e) {
+    console.warn('cargarHistorialSuscripciones:', e);
+    return [];
+  }
+}
+
+/* ─── Renderizar una tarjeta del historial ─── */
+function renderHistorialItem(r) {
+  const plan = getPlan(r.plan || 'gratis');
+  const inicio = tsToDate(r.fechaInicio);
+  const venc   = tsToDate(r.fechaVencimiento);
+  let est = String(r.estado || 'disponible').toLowerCase();
+
+  if ((est === 'activo' || est === 'aprobado' || est === 'activa') && venc && new Date() >= venc) {
+    est = 'vencido';
+  }
+
+  let badgeCls = 'estado-pendiente', emoji = '🟡', txt = 'Disponible';
+  if (est === 'activo' || est === 'aprobado' || est === 'activa') {
+    badgeCls = 'estado-activa'; emoji = '🟢'; txt = 'Activo';
+  } else if (est === 'vencido') {
+    badgeCls = 'estado-rechazada'; emoji = '🔴'; txt = 'Vencido';
+  } else if (est === 'disponible') {
+    badgeCls = 'estado-expirada'; emoji = '🎁'; txt = 'Disponible';
+  } else if (est === 'pendiente') {
+    badgeCls = 'estado-pendiente'; emoji = '🟡'; txt = 'Pendiente';
+  } else if (est === 'rechazado') {
+    badgeCls = 'estado-rechazada'; emoji = '🔴'; txt = 'Rechazado';
+  } else if (est === 'expirada') {
+    badgeCls = 'estado-expirada'; emoji = '⏰'; txt = 'Expirado';
+  }
+
+  return `
+    <div class="hist-susc-item">
+      <div class="hist-head">
+        <span class="hist-plan">${plan.badge} ${r.planNombre || plan.nombre}</span>
+        <span class="estado-badge ${badgeCls}">${emoji} ${txt}</span>
+      </div>
+      <div class="hist-grid">
+        <div><span>Precio</span><strong>$${r.precio ?? plan.precio} MXN</strong></div>
+        <div><span>Duración</span><strong>${r.duracionMeses || plan.mesesDuracion} meses</strong></div>
+        <div><span>Fecha inicio</span><strong>${inicio ? fmtFecha(inicio) : '—'}</strong></div>
+        <div><span>Fecha vencimiento</span><strong>${venc ? fmtFecha(venc) : '—'}</strong></div>
+      </div>
+      ${r.plan === 'gratis' ? `
+        <p class="hist-beneficio">🎁 Beneficio utilizado: <strong>${r.beneficioUsado ? 'Sí' : 'No'}</strong></p>
+      ` : ''}
+    </div>
+  `;
+}
+
 /* ─── Mostrar estado de suscripción ─── */
-function mostrarEstadoSuscripcion() {
+async function mostrarEstadoSuscripcion() {
   const cont = document.getElementById('estadoContenido');
   if (!cont) return;
+
+  const registros = usuarioActual
+    ? await cargarHistorialSuscripciones(usuarioActual.uid)
+    : [];
+
+  const historialHtml = `
+    <div style="margin-top:24px;padding-top:18px;border-top:1px solid #2a2a3a;">
+      <h3 style="color:#fff;font-size:16px;font-weight:800;margin-bottom:14px;">📚 Historial de suscripciones</h3>
+      ${registros.length === 0
+        ? '<p style="color:#888;font-size:13px;text-align:center;padding:10px 0;">Aún no hay registros.</p>'
+        : registros.map(r => renderHistorialItem(r)).join('')}
+    </div>
+  `;
 
   if (!suscripcionActual) {
     cont.innerHTML = `
       <h1 class="pago-title">💳 Mi suscripción</h1>
       <div class="estado-card">
-        <p>No tienes una suscripción registrada.</p>
+        <p>No tienes una suscripción activa.</p>
         <button class="susc-btn" id="btnVerPlanes" style="margin-top:16px;">VER PLANES</button>
       </div>
+      ${historialHtml}
     `;
     document.getElementById('btnVerPlanes').onclick = () => {
       cerrarModalSusc('modal-estado');
@@ -1616,6 +1765,7 @@ function mostrarEstadoSuscripcion() {
     ${(est === 'aprobado' || est === 'activa') && !vencida
       ? `<button class="susc-btn" id="btnCambiarPlan" style="background:#2a2a3a;margin-top:10px;">🔁 CAMBIAR DE PLAN</button>`
       : ''}
+    ${historialHtml}
   `;
 
   document.getElementById('btnReenviar')?.addEventListener('click', () => {
@@ -1639,7 +1789,6 @@ function escucharSuscripcion(uid) {
 
     const est = String(suscripcionActual?.estado || '').toLowerCase();
 
-    // Auto-expirar solicitud pendiente
     if (suscripcionActual && est === 'pendiente') {
       const limite = tsToDate(suscripcionActual.fechaLimiteValidacion);
       if (limite && new Date() >= limite) {
@@ -1649,7 +1798,6 @@ function escucharSuscripcion(uid) {
       }
     }
 
-    // 🔴 Auto-vencer suscripción aprobada cuya fechaVencimiento ya pasó
     if (suscripcionActual && (est === 'aprobado' || est === 'activa')) {
       const venc = tsToDate(suscripcionActual.fechaVencimiento);
       if (venc && new Date() >= venc) {
@@ -1768,6 +1916,23 @@ async function aprobarSuscripcion(uid) {
       fechaUltimaActualizacion: serverTimestamp()
     });
 
+    // 📚 Agregar registro al historial de suscripciones
+    await addDoc(collection(db, 'historial_suscripciones', uid, 'registros'), {
+      plan: plan.id,
+      planNombre: plan.nombre,
+      precio: plan.precio,
+      duracionMeses: plan.mesesDuracion,
+      badge: plan.badge,
+      estado: 'Activo',
+      beneficioUsado: true,
+      fechaRegistro: serverTimestamp(),
+      fechaActivacion: serverTimestamp(),
+      fechaInicio: Timestamp.fromDate(ahora),
+      fechaVencimiento: Timestamp.fromDate(venc),
+      email: data.correo || ''
+    });
+
+    // Historial de pagos (ya existía)
     await addDoc(collection(db, 'historial_pagos', uid, 'pagos'), {
       plan: plan.id,
       planNombre: plan.nombre,
