@@ -1,5 +1,47 @@
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-body { background: #fff; color: #000; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; line-height: 1.5; }
+
+/* ═══════════ FONDO GLOBAL RESPONSIVE ═══════════ */
+body {
+  margin: 0;
+  padding: 20px;
+  min-height: 100vh;
+  color: #000;
+  line-height: 1.5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  background-image: url('https://dl.dropboxusercontent.com/scl/fi/n3gnwqcivmyney29sj7fj/1790930772635.jpg?rlkey=5vlev78f26q3vcvw9w38sdtcz&st=sqt18jy2');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-color: #111;
+
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.72);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container,
+.menu-wrap {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 700px) {
+  body::before {
+    background: rgba(255, 255, 255, 0.78);
+  }
+}
+
 .container { width: 100%; max-width: 580px; padding: 20px 0; }
 .header { text-align: center; margin-bottom: 32px; }
 .header h1 { font-size: 28px; font-weight: 700; color: #000; margin-bottom: 4px; letter-spacing: -0.5px; }
