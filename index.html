@@ -230,57 +230,56 @@
     </div>
   </div>
 
-  <!-- ═══════════ MODAL: SELECCIÓN DE PLANES ═══════════ -->
+  <!-- ═══════════ MODAL DE PLANES ═══════════ -->
   <div id="modal-susc" class="susc-overlay hidden">
     <div class="susc-card" role="dialog" aria-modal="true">
       <button class="susc-x" data-close="modal-susc">✕</button>
-      <div class="susc-header">ELIGE TU PLAN</div>
-      <div class="planes-grid">
+      <div class="susc-header">PLANES DE SUSCRIPCIÓN</div>
 
-        <!-- 🆓 PLAN GRATIS -->
-        <div class="plan-card plan-free" data-plan="gratis">
-          <div class="plan-badge">🆓</div>
-          <h3 class="plan-name">Plan Gratis</h3>
-          <div class="plan-price">$0<small>MXN · 3 MESES</small></div>
-          <ul class="plan-features">
-            <li>3 meses de acceso</li>
-            <li>Solo usuarios nuevos</li>
-            <li>Una sola vez por cuenta</li>
-          </ul>
-          <button class="plan-btn" data-plan="gratis">EMPEZAR GRATIS</button>
-        </div>
+      <!-- 🆓 PLAN GRATIS -->
+      <div class="plan-card" data-plan-card="gratis">
+        <div class="plan-titulo">🆓 PLAN GRATIS</div>
+        <div class="plan-precio">$0 <small>MXN</small></div>
+        <div class="plan-duracion">3 MESES · SOLO UNA VEZ POR CUENTA</div>
+        <ul class="plan-features">
+          <li>🎵 Sube tu música durante 3 meses</li>
+          <li>📊 Consulta tus estadísticas</li>
+          <li>🔒 Este beneficio solo puede usarse una vez por cuenta</li>
+        </ul>
+        <button type="button" class="susc-btn btn-plan" data-plan="gratis">ELEGIR PLAN</button>
+        <p class="plan-usado hidden" data-usado="gratis">✅ Ya utilizaste este plan</p>
+      </div>
 
-        <!-- ⭐ PLAN 3 MESES -->
-        <div class="plan-card plan-3m" data-plan="omega3m">
-          <div class="plan-badge">⭐</div>
-          <h3 class="plan-name">OmegaBeats</h3>
-          <div class="plan-price">$250<small>MXN · 3 MESES</small></div>
-          <ul class="plan-features">
-            <li>3 meses de acceso</li>
-            <li>Monetiza tu música</li>
-            <li>Estadísticas y ganancias</li>
-          </ul>
-          <button class="plan-btn" data-plan="omega3m">ELEGIR PLAN</button>
-        </div>
+      <!-- ⭐ PLAN $250 -->
+      <div class="plan-card" data-plan-card="omega250">
+        <div class="plan-titulo">⭐ OMEGABEATS</div>
+        <div class="plan-precio">$250 <small>MXN</small></div>
+        <div class="plan-duracion">3 MESES</div>
+        <ul class="plan-features">
+          <li>🎵 Sube toda la música que quieras</li>
+          <li>✏️ Edita tus canciones</li>
+          <li>📊 Consulta tus estadísticas</li>
+        </ul>
+        <button type="button" class="susc-btn btn-plan" data-plan="omega250">ELEGIR PLAN</button>
+      </div>
 
-        <!-- 👑 PLAN ANUAL -->
-        <div class="plan-card plan-year plan-featured" data-plan="omega1a">
-          <div class="plan-badge">👑</div>
-          <h3 class="plan-name">OmegaBeats Anual</h3>
-          <div class="plan-price">$450<small>MXN · AÑO</small></div>
-          <ul class="plan-features">
-            <li>12 meses de acceso</li>
-            <li>Sube música ilimitada</li>
-            <li>Retiros cada 3 meses</li>
-          </ul>
-          <button class="plan-btn" data-plan="omega1a">ELEGIR PLAN</button>
-        </div>
-
+      <!-- 👑 PLAN $450 -->
+      <div class="plan-card" data-plan-card="omega450">
+        <div class="plan-titulo">👑 OMEGABEATS</div>
+        <div class="plan-precio">$450 <small>MXN</small></div>
+        <div class="plan-duracion">1 AÑO</div>
+        <ul class="plan-features">
+          <li>🎵 Sube toda la música que quieras</li>
+          <li>💰 Monetiza tu música</li>
+          <li>📊 Estadísticas diarias</li>
+          <li>💸 Retira tus ganancias cada 3 meses</li>
+          <li>👑 Acceso a funciones de creador</li>
+        </ul>
+        <button type="button" class="susc-btn btn-plan" data-plan="omega450">ELEGIR PLAN</button>
       </div>
     </div>
   </div>
 
-  <!-- ═══════════ MODAL: COMPROBANTE DE PAGO ═══════════ -->
   <div id="modal-pago" class="pago-overlay hidden">
     <button class="pago-x" data-close="modal-pago">✕</button>
     <div class="pago-wrap">
@@ -308,9 +307,8 @@
           <input type="text" name="banco" required placeholder="Ej: Nu">
         </label>
         <label>Plan seleccionado
-          <input type="text" name="plan" readonly>
+          <input type="text" name="plan" value="Plan OmegaBeats · $450 MXN · 1 año" readonly>
         </label>
-        <input type="hidden" name="planId" value="">
         <label>📎 Enlace del comprobante (Dropbox)
           <input type="url" name="comprobante" required placeholder="https://www.dropbox.com/s/.../comprobante.jpg?dl=0">
         </label>
@@ -326,7 +324,6 @@
     </div>
   </div>
 
-  <!-- ═══════════ MODAL: ESTADO DE SUSCRIPCIÓN ═══════════ -->
   <div id="modal-estado" class="pago-overlay hidden">
     <button class="pago-x" data-close="modal-estado">✕</button>
     <div class="pago-wrap">
@@ -334,7 +331,6 @@
     </div>
   </div>
 
-  <!-- ═══════════ MODAL: ADMIN ═══════════ -->
   <div id="modal-admin" class="pago-overlay hidden">
     <button class="pago-x" data-close="modal-admin">✕</button>
     <div class="pago-wrap">
