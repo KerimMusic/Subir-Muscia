@@ -6,7 +6,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore, collection, addDoc, serverTimestamp, onSnapshot,
-  deleteDoc, doc, updateDoc, getDoc, setDoc, getDocs
+  deleteDoc, doc, updateDoc, getDoc, setDoc, getDocs, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 /* ============================================
@@ -280,7 +280,6 @@ onAuthStateChanged(auth, (user) => {
     escucharHistorial(user.uid);
     escucharOyentesCanciones();
 
-    // Suscripción
     escucharSuscripcion(user.uid);
     detectarAdmin(user);
     actualizarAccesoSubida();
@@ -1164,7 +1163,8 @@ pintarSubgeneros('');
 const PLAN_SUSC = {
   nombre: 'Anual',
   precio: 450,
-  mesesDuracion: 12
+  mesesDuracion: 12,
+  horasLimitePago: 30   // 1 día con 6 horas
 };
 
 let suscripcionActual = null;
@@ -1186,12 +1186,10 @@ function cerrarModalSusc(id) {
   const el = document.getElementById(id);
   if (!el) return;
   el.classList.add('hidden');
-  // Solo restauramos overflow si no queda otro modal abierto
   const abiertos = document.querySelectorAll('.susc-overlay:not(.hidden), .pago-overlay:not(.hidden)');
   if (abiertos.length === 0) document.body.style.overflow = '';
 }
 
-/* Cierre genérico */
 document.querySelectorAll('[data-close]').forEach(btn => {
   btn.addEventListener('click', () => cerrarModalSusc(btn.dataset.close));
 });
@@ -1229,6 +1227,8 @@ function actualizarAccesoSubida() {
     lockMessage.textContent = '🟡 Tu pago está en revisión. Te avisaremos cuando el administrador lo apruebe.';
   } else if (suscripcionActual.estado === 'rechazada') {
     lockMessage.textContent = '🔴 Tu comprobante fue rechazado. Vuelve a enviar la información correcta.';
+  } else if (suscripcionActual.estado === 'expirada') {
+    lockMessage.textContent = '⏰ Tu solicitud expiró (pasaron más de 30 horas). Envía el comprobante de nuevo.';
   } else {
     lockMessage.textContent = 'Tu suscripción ha vencido. Renueva para continuar subiendo música.';
   }
@@ -1250,7 +1250,6 @@ async function descargarComprobantePDF() {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const W = 210;
 
-  // Header
   doc.setFillColor(230, 57, 70); doc.rect(0, 0, W, 45, 'F');
   doc.setFillColor(247, 127, 0); doc.rect(0, 40, W, 5, 'F');
   doc.setTextColor(255, 255, 255);
@@ -1259,7 +1258,6 @@ async function descargarComprobantePDF() {
   doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
   doc.text('Comprobante de suscripción', W / 2, 32, { align: 'center' });
 
-  // Plan
   doc.setTextColor(20, 20, 20);
   doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
   doc.text('Tipo de SUSCRIPCIÓN', 20, 65);
@@ -1272,7 +1270,6 @@ async function descargarComprobantePDF() {
   doc.setFont('helvetica', 'normal'); doc.setFontSize(12);
   doc.text('1 día con 6 horas', 20, 108);
 
-  // Banco principal
   doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
   doc.text('Datos bancarios', 20, 128);
   doc.setDrawColor(220, 220, 220);
@@ -1286,7 +1283,6 @@ async function descargarComprobantePDF() {
   doc.setFont('helvetica', 'bold'); doc.text('Titular:', 25, 163);
   doc.setFont('helvetica', 'normal'); doc.text('OmegaBeats', 70, 163);
 
-  // BBVA opcional
   doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
   doc.text('Opcional', 20, 185);
   doc.setFillColor(248, 248, 248);
@@ -1299,7 +1295,6 @@ async function descargarComprobantePDF() {
   doc.setFont('helvetica', 'bold'); doc.text('Titular:', 25, 220);
   doc.setFont('helvetica', 'normal'); doc.text('OmegaBeats', 70, 220);
 
-  // Leyenda
   doc.setFillColor(255, 245, 230);
   doc.roundedRect(20, 228, 170, 22, 3, 3, 'F');
   doc.setTextColor(180, 60, 20);
@@ -1321,6 +1316,21 @@ document.getElementById('btnSuscribirme')?.addEventListener('click', async () =>
     alert('Inicia sesión con Google primero.');
     return;
   }
+
+  // Si ya tiene una solicitud pendiente, NO reiniciar
+  if (suscripcionActual && suscripcionActual.estado === 'pendiente') {
+    cerrarModalSusc('modal-susc');
+    setTimeout(() => mostrarEstadoSuscripcion(), 200);
+    return;
+  }
+
+  // Si ya está activa, mostrar estado
+  if (suscripcionActual && suscripcionActual.estado === 'activa' && window.tieneAccesoVigente()) {
+    cerrarModalSusc('modal-susc');
+    setTimeout(() => mostrarEstadoSuscripcion(), 200);
+    return;
+  }
+
   const btn = document.getElementById('btnSuscribirme');
   btn.disabled = true;
   btn.textContent = 'GENERANDO PDF...';
@@ -1356,29 +1366,16 @@ document.getElementById('pagoForm')?.addEventListener('submit', async (e) => {
   }
 
   const fd = new FormData(e.target);
-  const datos = {
-    nombreTitular: fd.get('nombreTitular').trim(),
-    monto:         parseFloat(fd.get('monto')) || 0,
-    fechaPago:     fd.get('fechaPago'),
-    referencia:    fd.get('referencia').trim(),
-    banco:         fd.get('banco').trim(),
-    plan:          'anual',
-    precio:        PLAN_SUSC.precio,
-    comprobante:   fd.get('comprobante').trim(),
-    uid:           usuarioActual.uid,
-    nombre:        usuarioActual.displayName || '',
-    correo:        usuarioActual.email || '',
-    estado:        'pendiente',
-    fechaSolicitud: serverTimestamp()
-  };
+  const comprobante = fd.get('comprobante').trim();
 
-  if (!datos.nombreTitular || !datos.monto || !datos.fechaPago ||
-      !datos.referencia || !datos.banco || !datos.comprobante) {
+  if (!fd.get('nombreTitular').trim() || !fd.get('monto') ||
+      !fd.get('fechaPago') || !fd.get('referencia').trim() ||
+      !fd.get('banco').trim() || !comprobante) {
     msg.classList.add('error');
     msg.textContent = 'Completa todos los campos.';
     return;
   }
-  if (!/^https?:\/\//i.test(datos.comprobante)) {
+  if (!/^https?:\/\//i.test(comprobante)) {
     msg.classList.add('error');
     msg.textContent = 'El enlace debe iniciar con https://';
     return;
@@ -1389,9 +1386,66 @@ document.getElementById('pagoForm')?.addEventListener('submit', async (e) => {
   msg.textContent = 'Guardando solicitud...';
 
   try {
-    await setDoc(doc(db, 'suscripciones', usuarioActual.uid), datos, { merge: true });
+    // 1) Leer el estado actual ANTES de sobrescribir
+    const ref = doc(db, 'suscripciones', usuarioActual.uid);
+    const snap = await getDoc(ref);
+    const previa = snap.exists() ? snap.data() : null;
+
+    // 2) Si ya está activa, no permitir reenviar
+    if (previa && previa.estado === 'activa' && window.tieneAccesoVigente()) {
+      msg.classList.add('ok');
+      msg.textContent = '✅ Ya tienes una suscripción activa.';
+      setTimeout(() => {
+        cerrarModalSusc('modal-pago');
+        mostrarEstadoSuscripcion();
+      }, 1500);
+      return;
+    }
+
+    // 3) Detectar si ya había una solicitud pendiente SIN expirar
+    const limiteActual = tsToDate(previa?.fechaLimiteValidacion);
+    const yaEnRevision =
+      previa &&
+      previa.estado === 'pendiente' &&
+      previa.fechaSolicitud &&
+      (!limiteActual || new Date() < limiteActual);
+
+    // 4) Preparar el payload
+    const ahora = new Date();
+    const fechaLimite = new Date(
+      ahora.getTime() + PLAN_SUSC.horasLimitePago * 60 * 60 * 1000
+    );
+
+    const datos = {
+      nombreTitular: fd.get('nombreTitular').trim(),
+      monto:         parseFloat(fd.get('monto')) || 0,
+      fechaPago:     fd.get('fechaPago'),
+      referencia:    fd.get('referencia').trim(),
+      banco:         fd.get('banco').trim(),
+      plan:          'anual',
+      precio:        PLAN_SUSC.precio,
+      comprobante,
+      uid:           usuarioActual.uid,
+      solicitudId:   previa?.solicitudId || ('SOL-' + usuarioActual.uid.slice(0, 8) + '-' + Date.now()),
+      nombre:        usuarioActual.displayName || '',
+      correo:        usuarioActual.email || '',
+      estado:        'pendiente',
+      fechaUltimaActualizacion: serverTimestamp()
+    };
+
+    // 5) Solo reiniciar el contador si es una solicitud NUEVA
+    if (!yaEnRevision) {
+      datos.fechaSolicitud = serverTimestamp();
+      datos.fechaLimiteValidacion = Timestamp.fromDate(fechaLimite);
+    }
+
+    await setDoc(ref, datos, { merge: true });
+
     msg.classList.add('ok');
-    msg.textContent = '🟡 ¡Comprobante enviado! Tu pago quedó EN REVISIÓN.';
+    msg.textContent = yaEnRevision
+      ? '🟡 Comprobante actualizado. Tu solicitud SIGUE EN REVISIÓN (no se reinició el tiempo).'
+      : '🟡 ¡Comprobante enviado! Tu pago quedó EN REVISIÓN.';
+
     setTimeout(() => {
       cerrarModalSusc('modal-pago');
       mostrarEstadoSuscripcion();
@@ -1432,24 +1486,43 @@ function mostrarEstadoSuscripcion() {
   const inicio = tsToDate(s.fechaInicio);
 
   let emoji = '🟡', txt = 'PAGO EN REVISIÓN', cls = 'estado-pendiente';
-  if (s.estado === 'activa')    { emoji = '🟢'; txt = 'PAGO APROBADO';  cls = 'estado-activa'; }
-  if (s.estado === 'rechazada') { emoji = '🔴'; txt = 'PAGO RECHAZADO'; cls = 'estado-rechazada'; }
+  if (s.estado === 'activa')    { emoji = '🟢'; txt = 'PAGO APROBADO';      cls = 'estado-activa'; }
+  if (s.estado === 'rechazada') { emoji = '🔴'; txt = 'PAGO RECHAZADO';     cls = 'estado-rechazada'; }
+  if (s.estado === 'expirada')  { emoji = '⏰'; txt = 'SOLICITUD EXPIRADA'; cls = 'estado-expirada'; }
+
+  // Tiempo restante si está en revisión
+  let avisoTiempo = '';
+  if (s.estado === 'pendiente') {
+    const limite = tsToDate(s.fechaLimiteValidacion);
+    if (limite) {
+      const ms = limite - new Date();
+      const horas = Math.floor(ms / 3600000);
+      const mins  = Math.floor((ms % 3600000) / 60000);
+      if (ms > 0) {
+        avisoTiempo = `<p style="color:#ffd76a;"><strong>⏱ Tiempo restante de revisión:</strong> ${horas}h ${mins}m</p>`;
+      }
+    }
+  }
 
   cont.innerHTML = `
     <h1 class="pago-title">💳 Mi suscripción</h1>
     <div class="estado-card">
       <p><span class="estado-badge ${cls}">${emoji} ${txt}</span></p>
-      <p style="margin-top:14px;"><strong>Plan:</strong> OmegaBeats ${s.plan === 'anual' ? 'Anual' : s.plan}</p>
+      ${avisoTiempo}
+      <p style="margin-top:14px;"><strong>ID de solicitud:</strong> ${s.solicitudId || s.uid || '—'}</p>
+      <p><strong>Plan:</strong> OmegaBeats ${s.plan === 'anual' ? 'Anual' : s.plan}</p>
       <p><strong>Precio:</strong> $${s.precio || s.monto || PLAN_SUSC.precio} MXN</p>
       <p><strong>Titular:</strong> ${s.nombreTitular || '—'}</p>
       <p><strong>Referencia:</strong> ${s.referencia || '—'}</p>
       <p><strong>Banco:</strong> ${s.banco || '—'}</p>
       <p><strong>Fecha de pago:</strong> ${s.fechaPago || '—'}</p>
+      <p><strong>Solicitud creada:</strong> ${fmtFecha(tsToDate(s.fechaSolicitud))}</p>
+      <p><strong>Última actualización:</strong> ${fmtFecha(tsToDate(s.fechaUltimaActualizacion))}</p>
       <p><strong>Fecha de inicio:</strong> ${fmtFecha(inicio)}</p>
       <p><strong>Fecha de vencimiento:</strong> ${fmtFecha(venc)}</p>
       ${s.comprobante ? `<p><strong>Comprobante:</strong> <a href="${s.comprobante}" target="_blank" style="color:#4ade80;">Ver en Dropbox ↗</a></p>` : ''}
     </div>
-    ${s.estado === 'rechazada'
+    ${(s.estado === 'rechazada' || s.estado === 'expirada')
       ? `<button class="susc-btn" id="btnReenviar" style="background:#e63946;">REENVIAR COMPROBANTE</button>`
       : ''}
   `;
@@ -1471,6 +1544,18 @@ function escucharSuscripcion(uid) {
   if (unsubscribeSusc) unsubscribeSusc();
   unsubscribeSusc = onSnapshot(doc(db, 'suscripciones', uid), (snap) => {
     suscripcionActual = snap.exists() ? { ...snap.data() } : null;
+
+    // Detectar expiración automática al leer
+    if (suscripcionActual && suscripcionActual.estado === 'pendiente') {
+      const limite = tsToDate(suscripcionActual.fechaLimiteValidacion);
+      if (limite && new Date() >= limite) {
+        // Marcar como expirada en memoria y en Firestore
+        suscripcionActual.estado = 'expirada';
+        updateDoc(doc(db, 'suscripciones', uid), { estado: 'expirada' })
+          .catch(err => console.warn('No se pudo marcar como expirada:', err));
+      }
+    }
+
     actualizarAccesoSubida();
   }, (err) => console.error('Error suscripción:', err));
 }
@@ -1516,8 +1601,9 @@ async function cargarAdminSuscripciones() {
     snap.forEach(d => {
       const s = d.data();
       let badge = 'estado-pendiente', emoji = '🟡';
-      if (s.estado === 'activa')    { badge = 'estado-activa'; emoji = '🟢'; }
+      if (s.estado === 'activa')    { badge = 'estado-activa';    emoji = '🟢'; }
       if (s.estado === 'rechazada') { badge = 'estado-rechazada'; emoji = '🔴'; }
+      if (s.estado === 'expirada')  { badge = 'estado-expirada';  emoji = '⏰'; }
 
       html += `<tr>
         <td>${s.nombre || '—'}</td>
@@ -1557,7 +1643,6 @@ async function aprobarSuscripcion(uid) {
   if (!esAdminSusc) return;
   if (!confirm('¿Aprobar esta suscripción?')) return;
   try {
-    const { Timestamp } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
     const ahora = new Date();
     const venc = new Date(ahora);
     venc.setMonth(venc.getMonth() + PLAN_SUSC.mesesDuracion);
