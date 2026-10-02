@@ -1099,3 +1099,4 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .admin-btn.ver { background: #2a2a3a; color: #fff; }
 .admin-btn.ok { background: #00d47e; color: #000; }
 .admin-btn.no { background: #ff5c5c; color: #fff; }
+.estado-expirada { background: #3a2a00; color: #ffd76a; }
