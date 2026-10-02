@@ -260,3 +260,60 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .susc-btn { background: #000; color: #fff; border: none; border-radius: 999px; padding: 18px 32px; font-size: 15px; font-weight: 800; letter-spacing: 2px; cursor: pointer; width: 100%; margin: 0; }
 .susc-btn:hover:not(:disabled) { transform: scale(1.02); background: #111; }
 .susc-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ═══════════════════════════════════════════════
+   📚 HISTORIAL DE SUSCRIPCIONES
+   ═══════════════════════════════════════════════ */
+.hist-susc-item {
+  background: #0a0a14;
+  border: 1px solid #2a2a3a;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  transition: border-color .2s;
+}
+.hist-susc-item:hover { border-color: #444; }
+.hist-susc-item .hist-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.hist-susc-item .hist-plan {
+  font-weight: 800;
+  color: #fff;
+  font-size: 14px;
+}
+.hist-susc-item .hist-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  font-size: 11px;
+}
+.hist-susc-item .hist-grid span {
+  color: #888;
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 2px;
+}
+.hist-susc-item .hist-grid strong {
+  color: #fff;
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+.hist-susc-item .hist-beneficio {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #2a2a3a;
+  font-size: 11px;
+  color: #ffd76a;
+}
+.hist-susc-item .hist-beneficio strong { color: #fff; }
+@media (max-width: 480px) {
+  .hist-susc-item .hist-grid { grid-template-columns: 1fr; }
+}
