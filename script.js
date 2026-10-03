@@ -300,7 +300,8 @@ onAuthStateChanged(auth, (user) => {
 });
 
 ['artista', 'titulo', 'imagen', 'album'].forEach(id => {
-  document.getElementById(id).addEventListener('input', actualizarPreview);
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', actualizarPreview);
 });
 
 function actualizarPreview() {
@@ -499,7 +500,7 @@ async function eliminarCancion(id, boton, titulo, cancion) {
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  // 👇 Intercepta modo álbum (Enter desde cualquier input)
+  // Intercepta modo álbum (por si el usuario da Enter en un input)
   if (modoSubida === 'album') { subirAlbum(); return; }
 
   if (!usuarioActual) { mostrarStatus('Debes iniciar sesión primero', 'error'); return; }
@@ -1137,15 +1138,10 @@ document.querySelectorAll('[data-close]').forEach(btn => {
 
 window.tieneAccesoVigente = function() {
   if (!usuarioActual || !suscripcionActual) return false;
-
   const est = String(suscripcionActual.estado || '').toLowerCase();
-
   if (est !== 'aprobado' && est !== 'activa') return false;
-
   const venc = tsToDate(suscripcionActual.fechaVencimiento);
-
   if (!venc) return true;
-
   return new Date() < venc;
 };
 
@@ -1163,4 +1159,798 @@ function actualizarAccesoSubida() {
   }
 
   form.classList.add('hidden');
-  formLocked?.classList.remove('hidden
+  formLocked?.classList.remove('hidden');
+
+  if (!lockMessage) return;
+
+  const est = String(suscripcionActual?.estado || '').toLowerCase();
+
+  if (!suscripcionActual) {
+    lockMessage.textContent = 'Activa tu suscripción para comenzar a subir tu música.';
+  } else if (est === 'pendiente') {
+    lockMessage.textContent = '🟡 Tu pago está en revisión. Estamos verificando tu comprobante.';
+  } else if (est === 'rechazado') {
+    lockMessage.textContent = '🔴 Tu pago fue rechazado. Envía un nuevo comprobante para reactivar el acceso.';
+  } else if (est === 'expirada') {
+    lockMessage.textContent = '⏰ Tu solicitud expiró. Envía el comprobante de nuevo.';
+  } else if (est === 'vencido') {
+    lockMessage.textContent = '⏰ Tu suscripción ha vencido. Contrata un plan para continuar.';
+  } else if (est === 'aprobado' || est === 'activa') {
+    lockMessage.textContent = '⏰ Tu suscripción ha vencido. Renueva para continuar subiendo música.';
+  } else {
+    lockMessage.textContent = 'Activa tu suscripción para comenzar a subir tu música.';
+  }
+}
+window.actualizarAccesoSubida = actualizarAccesoSubida;
+
+async function descargarComprobantePDF(planKey = 'omega450') {
+  if (!window.jspdf) {
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      s.onload = res;
+      s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  const plan = obtenerPlan(planKey);
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const W = 210;
+
+  doc.setFillColor(230, 57, 70); doc.rect(0, 0, W, 45, 'F');
+  doc.setFillColor(247, 127, 0); doc.rect(0, 40, W, 5, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(28);
+  doc.text('OmegaBeats', W / 2, 22, { align: 'center' });
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+  doc.text('Comprobante de suscripción', W / 2, 32, { align: 'center' });
+
+  doc.setTextColor(20, 20, 20);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
+  doc.text('Tipo de SUSCRIPCIÓN', 20, 65);
+  doc.setFontSize(12); doc.setFont('helvetica', 'normal');
+  doc.text('Plan: ' + plan.nombre + ' (' + plan.etiqueta + ')', 20, 75);
+  doc.text('Precio: $' + plan.precio.toFixed(2) + ' MXN', 20, 83);
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(13);
+  doc.text('Tiempo válido para realizar el pago:', 20, 100);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(12);
+  doc.text('1 día con 6 horas', 20, 108);
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
+  doc.text('Datos bancarios', 20, 128);
+  doc.setDrawColor(220, 220, 220);
+  doc.setFillColor(248, 248, 248);
+  doc.roundedRect(20, 133, 170, 38, 3, 3, 'FD');
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold'); doc.text('Banco:', 25, 143);
+  doc.setFont('helvetica', 'normal'); doc.text('Nu', 70, 143);
+  doc.setFont('helvetica', 'bold'); doc.text('Cuenta:', 25, 153);
+  doc.setFont('helvetica', 'normal'); doc.text('5101 2535 2025 4352', 70, 153);
+  doc.setFont('helvetica', 'bold'); doc.text('Titular:', 25, 163);
+  doc.setFont('helvetica', 'normal'); doc.text('OmegaBeats', 70, 163);
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
+  doc.text('Opcional', 20, 185);
+  doc.setFillColor(248, 248, 248);
+  doc.roundedRect(20, 190, 170, 28, 3, 3, 'FD');
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold'); doc.text('Banco:', 25, 200);
+  doc.setFont('helvetica', 'normal'); doc.text('BBVA', 70, 200);
+  doc.setFont('helvetica', 'bold'); doc.text('Cuenta:', 25, 210);
+  doc.setFont('helvetica', 'normal'); doc.text('4815 1631 9674 1147', 70, 210);
+  doc.setFont('helvetica', 'bold'); doc.text('Titular:', 25, 220);
+  doc.setFont('helvetica', 'normal'); doc.text('OmegaBeats', 70, 220);
+
+  doc.setFillColor(255, 245, 230);
+  doc.roundedRect(20, 228, 170, 22, 3, 3, 'F');
+  doc.setTextColor(180, 60, 20);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+  doc.text('IMPORTANTE:', 25, 237);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Conserva tu ticket o los datos del pago hasta que tu suscripción sea aprobada.', 25, 244, { maxWidth: 160 });
+
+  doc.setTextColor(150, 150, 150); doc.setFontSize(9);
+  doc.text('OmegaBeats © ' + new Date().getFullYear() + ' — Todos los derechos reservados.',
+    W / 2, 285, { align: 'center' });
+
+  doc.save('OmegaBeats-Comprobante-' + planKey + '-' + Date.now() + '.pdf');
+}
+
+function escucharUsuario(uid) {
+  if (unsubscribeUsuario) unsubscribeUsuario();
+  unsubscribeUsuario = onSnapshot(doc(db, 'usuarios', uid), (snap) => {
+    const data = snap.exists() ? snap.data() : {};
+    planGratisUsado = !!data.planGratisUsado;
+    actualizarBotonPlanGratis();
+  }, (err) => console.warn('escucharUsuario:', err));
+}
+
+function actualizarBotonPlanGratis() {
+  const card = document.querySelector('[data-plan-card="gratis"]');
+  const btn  = card?.querySelector('.btn-plan');
+  const msg  = document.querySelector('[data-usado="gratis"]');
+  if (!btn || !msg) return;
+  if (planGratisUsado) {
+    btn.classList.add('hidden');
+    msg.classList.remove('hidden');
+  } else {
+    btn.classList.remove('hidden');
+    msg.classList.add('hidden');
+  }
+}
+
+async function activarPlanGratis() {
+  if (!usuarioActual) { alert('Inicia sesión con Google primero.'); return; }
+
+  if (planGratisUsado) {
+    alert('Ya utilizaste el Plan Gratis anteriormente en esta cuenta.');
+    return;
+  }
+
+  try {
+    const userSnap = await getDoc(doc(db, 'usuarios', usuarioActual.uid));
+    if (userSnap.exists() && userSnap.data().planGratisUsado) {
+      planGratisUsado = true;
+      actualizarBotonPlanGratis();
+      alert('Ya utilizaste el Plan Gratis anteriormente en esta cuenta.');
+      return;
+    }
+  } catch (e) { console.warn(e); }
+
+  if (suscripcionActual && window.tieneAccesoVigente()) {
+    alert('Ya tienes una suscripción activa.');
+    cerrarModalSusc('modal-susc');
+    setTimeout(() => mostrarEstadoSuscripcion(), 150);
+    return;
+  }
+
+  if (!confirm('¿Activar el Plan Gratis por 3 meses?\n\n⚠️ Solo puede usarse UNA VEZ por cuenta.')) return;
+
+  const ahora = new Date();
+  const venc  = new Date(ahora);
+  venc.setMonth(venc.getMonth() + PLANES_DISPONIBLES.gratis.mesesDuracion);
+
+  try {
+    await setDoc(doc(db, 'suscripciones', usuarioActual.uid), {
+      plan: 'gratis',
+      precio: 0,
+      estado: 'activa',
+      fechaInicio: Timestamp.fromDate(ahora),
+      fechaVencimiento: Timestamp.fromDate(venc),
+      fechaSolicitud: serverTimestamp(),
+      fechaAprobacion: serverTimestamp(),
+      fechaUltimaActualizacion: serverTimestamp(),
+      uid: usuarioActual.uid,
+      correo: usuarioActual.email || '',
+      nombre: usuarioActual.displayName || '',
+      solicitudId: 'FREE-' + usuarioActual.uid.slice(0, 8) + '-' + Date.now()
+    }, { merge: true });
+
+    await setDoc(doc(db, 'usuarios', usuarioActual.uid), {
+      planGratisUsado: true,
+      planGratisFechaUso: serverTimestamp()
+    }, { merge: true });
+
+    planGratisUsado = true;
+    actualizarBotonPlanGratis();
+
+    cerrarModalSusc('modal-susc');
+    setTimeout(() => mostrarEstadoSuscripcion(), 200);
+  } catch (e) {
+    console.error('activarPlanGratis:', e);
+    alert('Error al activar el Plan Gratis: ' + e.message);
+  }
+}
+
+document.querySelectorAll('.btn-plan').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    if (!usuarioActual) { alert('Inicia sesión con Google primero.'); return; }
+
+    const planKey = btn.dataset.plan;
+    const plan    = PLANES_DISPONIBLES[planKey];
+    if (!plan) return;
+
+    if (planKey === 'gratis') { await activarPlanGratis(); return; }
+
+    const estActual = String(suscripcionActual?.estado || '').toLowerCase();
+
+    if (estActual === 'pendiente') {
+      cerrarModalSusc('modal-susc');
+      setTimeout(() => mostrarEstadoSuscripcion(), 200);
+      return;
+    }
+    if ((estActual === 'aprobado' || estActual === 'activa') && window.tieneAccesoVigente()) {
+      cerrarModalSusc('modal-susc');
+      setTimeout(() => mostrarEstadoSuscripcion(), 200);
+      return;
+    }
+
+    planSeleccionadoParaPago = planKey;
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'GENERANDO PDF...';
+
+    try {
+      await descargarComprobantePDF(planKey);
+      cerrarModalSusc('modal-susc');
+      setTimeout(() => {
+        const f = document.querySelector('#pagoForm input[name="fechaPago"]');
+        if (f && !f.value) f.value = new Date().toISOString().split('T')[0];
+
+        const planInput = document.querySelector('#pagoForm input[name="plan"]');
+        if (planInput) {
+          planInput.value = 'Plan ' + plan.nombre + ' · $' + plan.precio + ' MXN · ' + plan.etiqueta;
+        }
+        abrirModalSusc('modal-pago');
+      }, 200);
+    } catch (e) {
+      console.error('Elegir plan:', e);
+      alert('No se pudo generar el PDF. Intenta de nuevo.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  });
+});
+
+document.getElementById('pagoForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('pagoMsg');
+  const btn = e.target.querySelector('.pago-submit');
+  msg.className = 'pago-msg';
+  msg.textContent = '';
+
+  if (!usuarioActual) {
+    msg.classList.add('error');
+    msg.textContent = 'Inicia sesión primero.';
+    return;
+  }
+
+  const fd = new FormData(e.target);
+  const comprobante = fd.get('comprobante').trim();
+
+  if (!fd.get('nombreTitular').trim() || !fd.get('monto') ||
+      !fd.get('fechaPago') || !fd.get('referencia').trim() ||
+      !fd.get('banco').trim() || !comprobante) {
+    msg.classList.add('error');
+    msg.textContent = 'Completa todos los campos.';
+    return;
+  }
+  if (!/^https?:\/\//i.test(comprobante)) {
+    msg.classList.add('error');
+    msg.textContent = 'El enlace debe iniciar con https://';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'ENVIANDO...';
+  msg.textContent = 'Guardando solicitud...';
+
+  try {
+    const ref = doc(db, 'suscripciones', usuarioActual.uid);
+    const snap = await getDoc(ref);
+    const previa = snap.exists() ? snap.data() : null;
+    const estPrevia = String(previa?.estado || '').toLowerCase();
+
+    if ((estPrevia === 'aprobado' || estPrevia === 'activa') && window.tieneAccesoVigente()) {
+      msg.classList.add('ok');
+      msg.textContent = '✅ Ya tienes una suscripción activa.';
+      setTimeout(() => {
+        cerrarModalSusc('modal-pago');
+        mostrarEstadoSuscripcion();
+      }, 1500);
+      return;
+    }
+
+    const limiteActual = tsToDate(previa?.fechaLimiteValidacion);
+    const yaEnRevision =
+      previa &&
+      estPrevia === 'pendiente' &&
+      previa.fechaSolicitud &&
+      (!limiteActual || new Date() < limiteActual);
+
+    const ahora = new Date();
+    const fechaLimite = new Date(
+      ahora.getTime() + PLAN_SUSC.horasLimitePago * 60 * 60 * 1000
+    );
+
+    const planKey  = planSeleccionadoParaPago || 'omega450';
+    const planData = obtenerPlan(planKey);
+
+    const datos = {
+      nombreTitular: fd.get('nombreTitular').trim(),
+      monto:         parseFloat(fd.get('monto')) || 0,
+      fechaPago:     fd.get('fechaPago'),
+      referencia:    fd.get('referencia').trim(),
+      banco:         fd.get('banco').trim(),
+      plan:          planKey,
+      precio:        planData.precio,
+      comprobante,
+      uid:           usuarioActual.uid,
+      solicitudId:   previa?.solicitudId || ('SOL-' + usuarioActual.uid.slice(0, 8) + '-' + Date.now()),
+      nombre:        usuarioActual.displayName || '',
+      correo:        usuarioActual.email || '',
+      estado:        'pendiente',
+      fechaUltimaActualizacion: serverTimestamp()
+    };
+
+    if (!yaEnRevision) {
+      datos.fechaSolicitud = serverTimestamp();
+      datos.fechaLimiteValidacion = Timestamp.fromDate(fechaLimite);
+    }
+
+    await setDoc(ref, datos, { merge: true });
+
+    msg.classList.add('ok');
+    msg.textContent = yaEnRevision
+      ? '🟡 Comprobante actualizado. Tu solicitud SIGUE EN REVISIÓN (no se reinició el tiempo).'
+      : '🟡 ¡Comprobante enviado! Tu pago quedó EN REVISIÓN.';
+
+    setTimeout(() => {
+      cerrarModalSusc('modal-pago');
+      mostrarEstadoSuscripcion();
+    }, 1800);
+  } catch (err) {
+    console.error('Error al enviar:', err);
+    msg.classList.add('error');
+    msg.textContent = 'Error: ' + err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'ENVIAR COMPROBANTE';
+  }
+});
+
+function mostrarEstadoSuscripcion() {
+  const cont = document.getElementById('estadoContenido');
+  if (!cont) return;
+
+  if (!suscripcionActual) {
+    cont.innerHTML = `
+      <h1 class="pago-title">💳 Mi suscripción</h1>
+      <div class="estado-card">
+        <p>No tienes una suscripción registrada.</p>
+        <button class="susc-btn" id="btnVerPlanes" style="margin-top:16px;">VER PLANES</button>
+      </div>
+    `;
+    document.getElementById('btnVerPlanes').onclick = () => {
+      cerrarModalSusc('modal-estado');
+      setTimeout(() => abrirModalSusc('modal-susc'), 120);
+    };
+    abrirModalSusc('modal-estado');
+    return;
+  }
+
+  const s = suscripcionActual;
+  const est = String(s.estado || '').toLowerCase();
+  const venc   = tsToDate(s.fechaVencimiento);
+  const inicio = tsToDate(s.fechaInicio);
+  const planInfo = obtenerPlan(s.plan);
+
+  let emoji = '🟡', txt = 'PAGO EN REVISIÓN', cls = 'estado-pendiente';
+
+  if (est === 'aprobado' || est === 'activa') {
+    const vencida = venc && new Date() >= venc;
+    if (vencida) {
+      emoji = '🔴'; txt = 'VENCIDO'; cls = 'estado-rechazada';
+    } else {
+      emoji = '🟢'; txt = 'ACTIVO'; cls = 'estado-activa';
+    }
+  }
+  if (est === 'vencido')   { emoji = '🔴'; txt = 'VENCIDO';            cls = 'estado-rechazada'; }
+  if (est === 'rechazado') { emoji = '🔴'; txt = 'PAGO RECHAZADO';    cls = 'estado-rechazada'; }
+  if (est === 'expirada')  { emoji = '⏰'; txt = 'SOLICITUD EXPIRADA'; cls = 'estado-expirada'; }
+
+  let avisoTiempo = '';
+  if (est === 'pendiente') {
+    const limite = tsToDate(s.fechaLimiteValidacion);
+    if (limite) {
+      const ms = limite - new Date();
+      const horas = Math.floor(ms / 3600000);
+      const mins  = Math.floor((ms % 3600000) / 60000);
+      if (ms > 0) {
+        avisoTiempo = `<p style="color:#ffd76a;"><strong>⏱ Tiempo restante de revisión:</strong> ${horas}h ${mins}m</p>`;
+      }
+    }
+  }
+
+  cont.innerHTML = `
+    <h1 class="pago-title">💳 Mi suscripción</h1>
+    <div class="estado-card">
+      <p><span class="estado-badge ${cls}">${emoji} ${txt}</span></p>
+      ${avisoTiempo}
+      <p style="margin-top:14px;"><strong>ID de solicitud:</strong> ${s.solicitudId || s.uid || '—'}</p>
+      <p><strong>Plan actual:</strong> ${planInfo.nombre} — ${planInfo.etiqueta}</p>
+      <p><strong>Precio:</strong> $${s.precio ?? s.monto ?? planInfo.precio} MXN</p>
+      <p><strong>Titular:</strong> ${s.nombreTitular || '—'}</p>
+      <p><strong>Referencia:</strong> ${s.referencia || '—'}</p>
+      <p><strong>Banco:</strong> ${s.banco || '—'}</p>
+      <p><strong>Fecha de pago:</strong> ${s.fechaPago || '—'}</p>
+      <p><strong>Solicitud creada:</strong> ${fmtFecha(tsToDate(s.fechaSolicitud))}</p>
+      <p><strong>Última actualización:</strong> ${fmtFecha(tsToDate(s.fechaUltimaActualizacion))}</p>
+      <p><strong>Fecha de inicio:</strong> ${fmtFecha(inicio)}</p>
+      <p><strong>Fecha de vencimiento:</strong> ${fmtFecha(venc)}</p>
+      ${s.comprobante ? `<p><strong>Comprobante:</strong> <a href="${s.comprobante}" target="_blank" style="color:#4ade80;">Ver en Dropbox ↗</a></p>` : ''}
+    </div>
+    ${(est === 'rechazado' || est === 'expirada' || est === 'vencido' || ((est === 'aprobado' || est === 'activa') && venc && new Date() >= venc))
+      ? `<button class="susc-btn" id="btnReenviar" style="background:#e63946;">RENOVAR / CONTRATAR PLAN</button>`
+      : ''}
+  `;
+
+  document.getElementById('btnReenviar')?.addEventListener('click', () => {
+    cerrarModalSusc('modal-estado');
+    setTimeout(() => abrirModalSusc('modal-susc'), 120);
+  });
+
+  abrirModalSusc('modal-estado');
+}
+
+function escucharSuscripcion(uid) {
+  if (unsubscribeSusc) unsubscribeSusc();
+
+  unsubscribeSusc = onSnapshot(doc(db, 'suscripciones', uid), async (snap) => {
+    suscripcionActual = snap.exists() ? { ...snap.data() } : null;
+
+    const est = String(suscripcionActual?.estado || '').toLowerCase();
+
+    if (est === 'rechazado') {
+      try {
+        await deleteDoc(doc(db, 'suscripciones', uid));
+      } catch (e) {
+        console.warn('No se pudo eliminar el doc rechazado:', e.message);
+      }
+      suscripcionActual = null;
+    }
+
+    if (suscripcionActual && String(suscripcionActual.estado || '').toLowerCase() === 'pendiente') {
+      const limite = tsToDate(suscripcionActual.fechaLimiteValidacion);
+      if (limite && new Date() >= limite) {
+        suscripcionActual.estado = 'expirada';
+        updateDoc(doc(db, 'suscripciones', uid), { estado: 'expirada' })
+          .catch(err => console.warn('No se pudo marcar como expirada:', err.message));
+      }
+    }
+
+    if (suscripcionActual) {
+      const est2 = String(suscripcionActual.estado || '').toLowerCase();
+      if (est2 === 'aprobado' || est2 === 'activa') {
+        const venc = tsToDate(suscripcionActual.fechaVencimiento);
+        if (venc && new Date() >= venc) {
+          suscripcionActual.estado = 'vencido';
+          updateDoc(doc(db, 'suscripciones', uid), { estado: 'vencido' })
+            .catch(err => console.warn('No se pudo marcar como vencido:', err.message));
+        }
+      }
+    }
+
+    actualizarAccesoSubida();
+  }, (err) => console.error('Error suscripción:', err));
+}
+
+async function detectarAdmin(user) {
+  try {
+    const snap = await getDoc(doc(db, 'admins', user.uid));
+    esAdminSusc = snap.exists();
+    document.getElementById('btn-admin')?.remove();
+    if (esAdminSusc) {
+      const b = document.createElement('button');
+      b.id = 'btn-admin';
+      b.textContent = '🛡️ Panel admin';
+      b.className = 'susc-btn-inline';
+      b.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:900;box-shadow:0 8px 24px rgba(0,0,0,0.2);';
+      b.onclick = () => { abrirModalSusc('modal-admin'); cargarAdminSuscripciones(); };
+      document.body.appendChild(b);
+    }
+  } catch (e) { console.warn('detectarAdmin:', e); }
+}
+
+async function cargarAdminSuscripciones() {
+  if (!esAdminSusc) return;
+  const cont = document.getElementById('adminLista');
+  cont.innerHTML = '<p style="color:#aaa;">Cargando solicitudes…</p>';
+
+  try {
+    const snap = await getDocs(collection(db, 'suscripciones'));
+    if (snap.empty) {
+      cont.innerHTML = '<p style="color:#aaa;">No hay solicitudes.</p>';
+      return;
+    }
+
+    let html = `<table class="admin-tabla">
+      <thead><tr>
+        <th>Usuario</th><th>Correo</th><th>Titular</th>
+        <th>Plan</th><th>Monto</th><th>Referencia</th><th>Banco</th>
+        <th>Fecha</th><th>Estado</th><th>Comprobante</th><th>Acciones</th>
+      </tr></thead><tbody>`;
+
+    snap.forEach(d => {
+      const s = d.data();
+      const est = String(s.estado || '').toLowerCase();
+      const planInfo = obtenerPlan(s.plan);
+
+      let badge = 'estado-pendiente', emoji = '🟡';
+      if (est === 'aprobado' || est === 'activa') { badge = 'estado-activa';    emoji = '🟢'; }
+      if (est === 'rechazado')                    { badge = 'estado-rechazada'; emoji = '🔴'; }
+      if (est === 'expirada')                     { badge = 'estado-expirada';  emoji = '⏰'; }
+      if (est === 'vencido')                      { badge = 'estado-rechazada'; emoji = '🔴'; }
+
+      html += `<tr>
+        <td>${s.nombre || '—'}</td>
+        <td style="font-size:11px;">${s.correo || '—'}</td>
+        <td>${s.nombreTitular || '—'}</td>
+        <td>${planInfo.nombre} — ${planInfo.etiqueta}</td>
+        <td>$${s.monto || s.precio || 0}</td>
+        <td style="font-size:11px;">${s.referencia || '—'}</td>
+        <td>${s.banco || '—'}</td>
+        <td style="font-size:11px;">${s.fechaPago || fmtFecha(tsToDate(s.fechaSolicitud))}</td>
+        <td><span class="estado-badge ${badge}">${emoji} ${(est || '').toUpperCase()}</span></td>
+        <td>${s.comprobante ? `<a href="${s.comprobante}" target="_blank" class="admin-btn ver" style="text-decoration:none;">👁️ Ver</a>` : '—'}</td>
+        <td>
+          ${!(est === 'aprobado' || est === 'activa') ? `<button class="admin-btn ok" data-uid="${d.id}" data-act="aprobar">✅ Aprobar</button>` : ''}
+          <button class="admin-btn no" data-uid="${d.id}" data-act="rechazar">❌ Rechazar y borrar</button>
+        </td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    cont.innerHTML = html;
+
+    cont.querySelectorAll('.admin-btn[data-act]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const uid = btn.dataset.uid;
+        const act = btn.dataset.act;
+        if (act === 'aprobar') aprobarSuscripcion(uid);
+        if (act === 'rechazar') rechazarSuscripcion(uid);
+      });
+    });
+  } catch (e) {
+    console.error('Error admin:', e);
+    cont.innerHTML = '<p style="color:#ff7a7a;">Error al cargar.</p>';
+  }
+}
+
+async function aprobarSuscripcion(uid) {
+  if (!esAdminSusc) return;
+  try {
+    const snap = await getDoc(doc(db, 'suscripciones', uid));
+    const s = snap.exists() ? snap.data() : {};
+    const planData = obtenerPlan(s.plan);
+
+    if (!confirm(`¿Aprobar esta suscripción?\nPlan: ${planData.nombre} (${planData.etiqueta})`)) return;
+
+    const ahora = new Date();
+    const venc = new Date(ahora);
+    venc.setMonth(venc.getMonth() + planData.mesesDuracion);
+
+    await updateDoc(doc(db, 'suscripciones', uid), {
+      estado: 'aprobado',
+      fechaInicio: Timestamp.fromDate(ahora),
+      fechaVencimiento: Timestamp.fromDate(venc),
+      fechaAprobacion: serverTimestamp(),
+      fechaUltimaActualizacion: serverTimestamp()
+    });
+
+    await addDoc(collection(db, 'historial_pagos', uid, 'pagos'), {
+      plan: s.plan || 'omega450',
+      precio: planData.precio,
+      estado: 'aprobado',
+      fechaAprobacion: serverTimestamp(),
+      fechaInicio: Timestamp.fromDate(ahora),
+      fechaVencimiento: Timestamp.fromDate(venc)
+    });
+
+    cargarAdminSuscripciones();
+  } catch (e) {
+    console.error('aprobar:', e);
+    alert('Error al aprobar: ' + e.message);
+  }
+}
+
+async function rechazarSuscripcion(uid) {
+  if (!esAdminSusc) return;
+  if (!confirm(
+    '⚠️ ¿Rechazar y ELIMINAR definitivamente esta solicitud?\n\n' +
+    'El documento de /suscripciones/{uid} será borrado.\n' +
+    'El usuario tendrá que enviar un comprobante nuevo.'
+  )) return;
+
+  try {
+    await deleteDoc(doc(db, 'suscripciones', uid));
+    cargarAdminSuscripciones();
+  } catch (e) {
+    console.error('rechazar:', e);
+    alert('Error al rechazar: ' + e.message);
+  }
+}
+
+document.getElementById('suscBtn')?.addEventListener('click', () => {
+  cerrarMenu();
+  setTimeout(() => {
+    if (suscripcionActual) mostrarEstadoSuscripcion();
+    else abrirModalSusc('modal-susc');
+  }, 120);
+});
+
+document.getElementById('verSuscBtn')?.addEventListener('click', () => {
+  abrirModalSusc('modal-susc');
+});
+
+document.getElementById('tutorialBtn')?.addEventListener('click', () => {
+  cerrarMenu();
+  setTimeout(() => abrirModalSusc('modal-tutorial'), 120);
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   💿 SUBIDA DE ÁLBUM COMPLETO
+   ═══════════════════════════════════════════════════════════════ */
+
+let modoSubida = 'single';
+
+const uploadModeBtns = document.querySelectorAll('#uploadMode .mode-btn');
+const singleModeWrap = document.getElementById('singleModeWrap');
+const albumModeWrap  = document.getElementById('albumModeWrap');
+const albumNombre    = document.getElementById('albumNombre');
+const albumCantidad  = document.getElementById('albumCantidad');
+const albumImagen    = document.getElementById('albumImagen');
+const albumSongsCont = document.getElementById('albumSongsContainer');
+const albumSubmitBtn = document.getElementById('albumSubmitBtn');
+
+uploadModeBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const modo = btn.dataset.mode;
+    if (modo === modoSubida) return;
+    modoSubida = modo;
+    uploadModeBtns.forEach(b => b.classList.toggle('active', b === btn));
+    singleModeWrap?.classList.toggle('hidden', modo !== 'single');
+    albumModeWrap?.classList.toggle('hidden', modo !== 'album');
+  });
+});
+
+function crearFilaAlbum(num) {
+  const wrap = document.createElement('div');
+  wrap.className = 'album-song';
+  wrap.innerHTML = `
+    <div class="album-song-head">
+      <span class="album-song-title">Canción ${num}</span>
+    </div>
+    <div class="form-group">
+      <label>1. Nombre del artista</label>
+      <input type="text" class="alb-artista" placeholder="Ej: Artista">
+    </div>
+    <div class="form-group">
+      <label>2. Título de la canción</label>
+      <input type="text" class="alb-titulo" placeholder="Ej: Nombre de la canción">
+    </div>
+    <div class="form-group">
+      <label>3. Género musical</label>
+      <select class="alb-genero">
+        <option value="">Selecciona un género</option>
+        ${GENEROS.map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>4. Link de audio (Dropbox)</label>
+      <input type="url" class="alb-audio"
+             placeholder="https://www.dropbox.com/s/.../cancion.mp3?dl=0">
+    </div>
+  `;
+  return wrap;
+}
+
+function renderAlbumSongs(cantidad) {
+  if (!albumSongsCont) return;
+  const n = Math.max(0, Math.min(50, parseInt(cantidad, 10) || 0));
+  const actuales = albumSongsCont.children.length;
+
+  if (n > actuales) {
+    for (let i = actuales; i < n; i++) {
+      albumSongsCont.appendChild(crearFilaAlbum(i + 1));
+    }
+  } else if (n < actuales) {
+    for (let i = actuales; i > n; i--) {
+      albumSongsCont.removeChild(albumSongsCont.lastElementChild);
+    }
+  }
+
+  Array.from(albumSongsCont.children).forEach((el, i) => {
+    const t = el.querySelector('.album-song-title');
+    if (t) t.textContent = 'Canción ' + (i + 1);
+  });
+}
+
+albumCantidad?.addEventListener('input', (e) => {
+  let n = parseInt(e.target.value, 10);
+  if (isNaN(n) || n < 1) { renderAlbumSongs(0); return; }
+  if (n > 50) { n = 50; e.target.value = 50; }
+  renderAlbumSongs(n);
+});
+
+async function subirAlbum() {
+  if (!usuarioActual) {
+    mostrarStatus('Debes iniciar sesión primero', 'error');
+    return;
+  }
+  if (!window.tieneAccesoVigente()) {
+    mostrarStatus('Necesitas una suscripción activa para subir música.', 'error');
+    abrirModalSusc('modal-susc');
+    return;
+  }
+
+  const nombreAlbum  = albumNombre.value.trim();
+  const imagenRaw    = albumImagen.value.trim();
+  const filas        = Array.from(albumSongsCont.querySelectorAll('.album-song'));
+
+  if (!nombreAlbum) {
+    mostrarStatus('Escribe el nombre del álbum', 'error');
+    albumNombre.focus();
+    return;
+  }
+  if (!filas.length) {
+    mostrarStatus('Agrega al menos una canción', 'error');
+    return;
+  }
+
+  const canciones = [];
+  for (let i = 0; i < filas.length; i++) {
+    const f = filas[i];
+    const artista  = f.querySelector('.alb-artista').value.trim();
+    const titulo   = f.querySelector('.alb-titulo').value.trim();
+    const genero   = f.querySelector('.alb-genero').value;
+    const audioRaw = f.querySelector('.alb-audio').value.trim();
+
+    if (!artista || !titulo || !audioRaw) {
+      mostrarStatus(`Completa artista, título y audio en la canción ${i + 1}`, 'error');
+      f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    canciones.push({ artista, titulo, genero, audioRaw });
+  }
+
+  const imagenUrl = imagenRaw ? dropboxDirecto(imagenRaw) : '';
+
+  albumSubmitBtn.disabled = true;
+  albumSubmitBtn.innerHTML = '<span class="loader"></span>Subiendo álbum...';
+  mostrarStatus(`Subiendo álbum (${canciones.length} canciones)...`, 'loading');
+
+  try {
+    const uid = usuarioActual.uid;
+    for (const c of canciones) {
+      const audioUrl = dropboxDirecto(c.audioRaw);
+      await addDoc(collection(db, 'historial_usuarios', uid, 'canciones'), {
+        artista: c.artista,
+        titulo:  c.titulo,
+        album:   nombreAlbum,
+        genero:  c.genero || '',
+        subgenero: '',
+        colaboradores: [],
+        audioUrl,
+        imagenUrl,
+        origen: 'dropbox',
+        esAlbum: true,
+        albumNombre: nombreAlbum,
+        uid,
+        email: usuarioActual.email,
+        fecha: serverTimestamp()
+      });
+      await asegurarRegistroOyentes(c.titulo);
+    }
+
+    mostrarStatus(`✅ Álbum "${nombreAlbum}" subido correctamente (${canciones.length} canciones)`, 'ok');
+
+    albumNombre.value = '';
+    albumImagen.value = '';
+    albumCantidad.value = 1;
+    renderAlbumSongs(1);
+  } catch (err) {
+    console.error('Error al subir álbum:', err);
+    mostrarStatus('Error al guardar: ' + err.message, 'error');
+  } finally {
+    albumSubmitBtn.disabled = false;
+    albumSubmitBtn.textContent = 'Subir álbum completo';
+  }
+}
+
+albumSubmitBtn?.addEventListener('click', subirAlbum);
+
+/* Estado inicial: 1 canción de ejemplo */
+renderAlbumSongs(1);
