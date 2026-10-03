@@ -56,85 +56,128 @@
     </div>
 
     <form id="formCancion" class="hidden">
+
+      <!-- ═══ SELECTOR DE TIPO DE SUBIDA ═══ -->
       <div class="form-group">
-        <label for="artista">1. Nombre del artista</label>
-        <input type="text" id="artista" placeholder="Ej: Artista" required>
+        <label>Tipo de subida</label>
+        <div class="upload-mode" id="uploadMode">
+          <button type="button" class="mode-btn active" data-mode="single">🎵 Canción individual</button>
+          <button type="button" class="mode-btn" data-mode="album">💿 Álbum completo</button>
+        </div>
       </div>
-      <div class="form-group">
-        <label for="titulo">2. Título de la canción</label>
-        <input type="text" id="titulo" placeholder="Ej: Nombre de la cancion" required>
+
+      <!-- ═══ MODO 1: CANCIÓN INDIVIDUAL ═══ -->
+      <div id="singleModeWrap">
+        <div class="form-group">
+          <label for="artista">1. Nombre del artista</label>
+          <input type="text" id="artista" placeholder="Ej: Artista" required>
+        </div>
+        <div class="form-group">
+          <label for="titulo">2. Título de la canción</label>
+          <input type="text" id="titulo" placeholder="Ej: Nombre de la cancion" required>
+        </div>
+        <div class="form-group">
+          <label for="album">3. Nombre del álbum</label>
+          <input type="text" id="album" placeholder="Ej: Nombre del Album">
+        </div>
+        <div class="form-group">
+          <label for="collaboratorsContainer">3b. Colaboradores</label>
+          <div class="collaborators" id="collaboratorsContainer"></div>
+          <button type="button" id="addCollaboratorBtn" class="btn-add-collab">
+            <span class="plus-icon">+</span> Agregar colaborador
+          </button>
+          <p class="hint">Opcional. Agrega uno o más colaboradores de la canción.</p>
+        </div>
+        <div class="form-group">
+          <label for="genreToggle">4. Género musical</label>
+          <div class="genre-select" id="genreSelect">
+            <button type="button" id="genreToggle" class="genre-toggle"
+                    aria-haspopup="listbox" aria-expanded="false" aria-controls="genrePanel">
+              <span id="genreValue" class="genre-value placeholder">Selecciona un género</span>
+              <span class="genre-arrow" aria-hidden="true">▾</span>
+            </button>
+            <div id="genrePanel" class="genre-panel hidden">
+              <div class="genre-search-wrap">
+                <input type="text" id="genreSearch" class="genre-search"
+                       placeholder="🔍 Buscar género..." autocomplete="off">
+              </div>
+              <div id="genreList" class="genre-list" role="listbox"></div>
+              <p id="genreEmpty" class="genre-empty hidden">No se encontraron géneros</p>
+            </div>
+          </div>
+          <input type="hidden" id="genero" name="genero" value="">
+          <p class="hint">Opcional. Abre la lista y usa el buscador.</p>
+        </div>
+        <div class="form-group hidden" id="subgenreGroup">
+          <label for="subgenreToggle">4b. Subgénero (Regional Mexicano)</label>
+          <div class="genre-select" id="subgenreSelect">
+            <button type="button" id="subgenreToggle" class="genre-toggle"
+                    aria-haspopup="listbox" aria-expanded="false" aria-controls="subgenrePanel">
+              <span id="subgenreValue" class="genre-value placeholder">Selecciona un subgénero</span>
+              <span class="genre-arrow" aria-hidden="true">▾</span>
+            </button>
+            <div id="subgenrePanel" class="genre-panel hidden">
+              <div class="genre-search-wrap">
+                <input type="text" id="subgenreSearch" class="genre-search"
+                       placeholder="🔍 Buscar subgénero..." autocomplete="off">
+              </div>
+              <div id="subgenreList" class="genre-list" role="listbox"></div>
+              <p id="subgenreEmpty" class="genre-empty hidden">No se encontraron subgéneros</p>
+            </div>
+          </div>
+          <input type="hidden" id="subgenero" name="subgenero" value="">
+          <p class="hint">Elige el subgénero específico.</p>
+        </div>
+        <div class="form-group">
+          <label for="audio">5. Link de audio (Dropbox)</label>
+          <input type="url" id="audio" placeholder="https://www.dropbox.com/s/.../cancion.mp3?dl=0" required>
+          <p class="hint">Pega el link normal de Dropbox. Se convertirá automáticamente.</p>
+        </div>
+        <div class="form-group">
+          <label for="imagen">6. Link de imagen (Dropbox)</label>
+          <input type="url" id="imagen" placeholder="https://www.dropbox.com/s/.../portada.jpg?dl=0">
+          <p class="hint">Opcional. Si lo dejas vacío se mostrará una imagen por defecto.</p>
+        </div>
+        <div id="preview" class="preview">
+          <img id="previewImg" src="" alt="">
+          <div class="preview-info">
+            <strong id="previewTitulo">—</strong>
+            <small id="previewArtista">—</small>
+            <span class="Album">Reggeton 1</span>
+          </div>
+        </div>
+        <button type="submit" id="submitBtn">Subir canción</button>
       </div>
-      <div class="form-group">
-        <label for="album">3. Nombre del álbum</label>
-        <input type="text" id="album" placeholder="Ej: Nombre del Album">
-      </div>
-      <div class="form-group">
-        <label for="collaboratorsContainer">3b. Colaboradores</label>
-        <div class="collaborators" id="collaboratorsContainer"></div>
-        <button type="button" id="addCollaboratorBtn" class="btn-add-collab">
-          <span class="plus-icon">+</span> Agregar colaborador
+
+      <!-- ═══ MODO 2: ÁLBUM COMPLETO ═══ -->
+      <div id="albumModeWrap" class="hidden">
+
+        <div class="form-group">
+          <label for="albumNombre">1. Nombre del álbum</label>
+          <input type="text" id="albumNombre" placeholder="Ej: Mi Álbum">
+          <p class="hint">Se aplicará automáticamente a todas las canciones.</p>
+        </div>
+
+        <div class="form-group">
+          <label for="albumCantidad">2. ¿Cuántas canciones vas a subir?</label>
+          <input type="number" id="albumCantidad" min="1" max="50" value="1" step="1">
+          <p class="hint">Máximo 50 canciones por álbum.</p>
+        </div>
+
+        <div class="form-group">
+          <label for="albumImagen">3. Portada del álbum (Dropbox)</label>
+          <input type="url" id="albumImagen"
+                 placeholder="https://www.dropbox.com/s/.../portada.jpg?dl=0">
+          <p class="hint">Una sola portada para todas las canciones del álbum.</p>
+        </div>
+
+        <div id="albumSongsContainer" class="album-songs"></div>
+
+        <button type="button" id="albumSubmitBtn" class="album-submit-btn">
+          Subir álbum completo
         </button>
-        <p class="hint">Opcional. Agrega uno o más colaboradores de la canción.</p>
       </div>
-      <div class="form-group">
-        <label for="genreToggle">4. Género musical</label>
-        <div class="genre-select" id="genreSelect">
-          <button type="button" id="genreToggle" class="genre-toggle"
-                  aria-haspopup="listbox" aria-expanded="false" aria-controls="genrePanel">
-            <span id="genreValue" class="genre-value placeholder">Selecciona un género</span>
-            <span class="genre-arrow" aria-hidden="true">▾</span>
-          </button>
-          <div id="genrePanel" class="genre-panel hidden">
-            <div class="genre-search-wrap">
-              <input type="text" id="genreSearch" class="genre-search"
-                     placeholder="🔍 Buscar género..." autocomplete="off">
-            </div>
-            <div id="genreList" class="genre-list" role="listbox"></div>
-            <p id="genreEmpty" class="genre-empty hidden">No se encontraron géneros</p>
-          </div>
-        </div>
-        <input type="hidden" id="genero" name="genero" value="">
-        <p class="hint">Opcional. Abre la lista y usa el buscador.</p>
-      </div>
-      <div class="form-group hidden" id="subgenreGroup">
-        <label for="subgenreToggle">4b. Subgénero (Regional Mexicano)</label>
-        <div class="genre-select" id="subgenreSelect">
-          <button type="button" id="subgenreToggle" class="genre-toggle"
-                  aria-haspopup="listbox" aria-expanded="false" aria-controls="subgenrePanel">
-            <span id="subgenreValue" class="genre-value placeholder">Selecciona un subgénero</span>
-            <span class="genre-arrow" aria-hidden="true">▾</span>
-          </button>
-          <div id="subgenrePanel" class="genre-panel hidden">
-            <div class="genre-search-wrap">
-              <input type="text" id="subgenreSearch" class="genre-search"
-                     placeholder="🔍 Buscar subgénero..." autocomplete="off">
-            </div>
-            <div id="subgenreList" class="genre-list" role="listbox"></div>
-            <p id="subgenreEmpty" class="genre-empty hidden">No se encontraron subgéneros</p>
-          </div>
-        </div>
-        <input type="hidden" id="subgenero" name="subgenero" value="">
-        <p class="hint">Elige el subgénero específico.</p>
-      </div>
-      <div class="form-group">
-        <label for="audio">5. Link de audio (Dropbox)</label>
-        <input type="url" id="audio" placeholder="https://www.dropbox.com/s/.../cancion.mp3?dl=0" required>
-        <p class="hint">Pega el link normal de Dropbox. Se convertirá automáticamente.</p>
-      </div>
-      <div class="form-group">
-        <label for="imagen">6. Link de imagen (Dropbox)</label>
-        <input type="url" id="imagen" placeholder="https://www.dropbox.com/s/.../portada.jpg?dl=0">
-        <p class="hint">Opcional. Si lo dejas vacío se mostrará una imagen por defecto.</p>
-      </div>
-      <div id="preview" class="preview">
-        <img id="previewImg" src="" alt="">
-        <div class="preview-info">
-          <strong id="previewTitulo">—</strong>
-          <small id="previewArtista">—</small>
-          <span class="Album">Reggeton 1</span>
-        </div>
-      </div>
-      <button type="submit" id="submitBtn">Subir canción</button>
+
     </form>
 
     <div id="status" class="status"></div>
