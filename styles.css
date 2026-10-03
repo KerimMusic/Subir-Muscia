@@ -409,3 +409,115 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   .tutorial-body p,
   .tutorial-body li { font-size: 12.5px; }
 }
+
+/* ═══════════ SUBIDA DE ÁLBUM ═══════════ */
+.upload-mode {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.mode-btn {
+  width: 100%;
+  margin: 0;
+  padding: 14px 10px;
+  background: #fff;
+  border: 1.5px solid #d0d0d0;
+  border-radius: 10px;
+  color: #000;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background .2s, border-color .2s, color .2s;
+}
+.mode-btn:hover:not(:disabled) {
+  background: #fff;
+  border-color: #000;
+  transform: none;
+  box-shadow: 0 0 0 3px rgba(0,0,0,.06);
+}
+.mode-btn.active {
+  background: #000;
+  color: #fff;
+  border-color: #000;
+}
+@media (max-width: 420px) {
+  .upload-mode { grid-template-columns: 1fr; }
+  .mode-btn { font-size: 13px; padding: 12px 10px; }
+}
+
+.album-songs {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+.album-song {
+  background: #fafafa;
+  border: 1.5px solid #e8e8e8;
+  border-radius: 12px;
+  padding: 16px;
+  animation: fadeIn .2s ease;
+}
+.album-song-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.album-song-title {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #000;
+}
+.album-song .form-group { margin-bottom: 12px; }
+.album-song .form-group:last-child { margin-bottom: 0; }
+.album-song label {
+  font-size: 11px;
+  letter-spacing: .8px;
+}
+.album-song input,
+.album-song select {
+  width: 100%;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1.5px solid #d0d0d0;
+  border-radius: 10px;
+  color: #000;
+  font-size: 14px;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.album-song input:focus,
+.album-song select:focus {
+  border-color: #000;
+  box-shadow: 0 0 0 3px rgba(0,0,0,.08);
+}
+.album-song select { cursor: pointer; }
+
+.album-submit-btn {
+  width: 100%;
+  margin-top: 16px;
+  padding: 16px;
+  background: #000;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  cursor: pointer;
+  transition: background .2s, transform .15s, box-shadow .2s;
+}
+.album-submit-btn:hover:not(:disabled) {
+  background: #222;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0,0,0,.15);
+}
+.album-submit-btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
